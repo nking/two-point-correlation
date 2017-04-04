@@ -14,8 +14,7 @@
       <h1 class="project-name">two-point-correlation</h1>
       <h2 class="project-tagline">Unsupervised Density Based Clustering</h2>
       <a href="https://github.com/nking/two-point-correlation" class="btn">View on GitHub</a>
-      <a href="https://github.com/nking/two-point-correlation/zipball/master" class="btn">Download .zip</a>
-      <a href="https://github.com/nking/two-point-correlation/tarball/master" class="btn">Download .tar.gz</a>
+      <a href="https://github.com/nking/two-point-correlation/raw/master/dist/com.climbwithyourfeet.clustering.jar" class="btn">Download jar file</a>
     </section>
 
     <section class="main-content">
@@ -36,7 +35,7 @@ The scatter plots and histograms below use <a href="http://d3js.org">d3 js</a></
     DTClusterFinder clusterFinder = new DTClusterFinder(points,
         imageWidth, imageHeight);
 
-    clusterFinder.calculateCriticalDensity();
+	    clusterFinder.calculateCriticalDensity();
 
     // or, set density instead of calculate (for use in pca or lda, for example):
     //clusterFinder.setCriticalDensity(dens);
