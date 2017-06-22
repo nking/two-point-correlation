@@ -1,3 +1,16 @@
+-- create a density curve as an alternative to histogram
+   using knn with fixed number of points.
+   -- for the knn, find the critical density
+      relatonship:
+      is it calculable from the GEV and density curve
+      or approx it as smallest density value...
+-- create ability for multiple dimensions
+   -- that is n^2/2 number of dts and/or knn
+-- need improvements in hist...
+
+-- update the javadocs
+-- update coverage reports
+
 -- redo a couple of "other" snapshots on two-pt-correl web page:
    the dbscan and the curved arrow from the finnish data set
 

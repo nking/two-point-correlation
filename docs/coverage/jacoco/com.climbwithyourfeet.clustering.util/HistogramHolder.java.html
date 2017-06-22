@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>HistogramHolder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering.util</a> &gt; <span class="el_source">HistogramHolder.java</span></div><h1>HistogramHolder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering.util;
+
+import com.climbwithyourfeet.clustering.CriticalDensitySolver;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author nichole
+ */
+<span class="fc" id="L13">public class HistogramHolder {</span>
+    
+    private static final long serialVersionUID = -7105371701539621066L;
+
+    /**
+     *
+     */
+<span class="fc" id="L20">    protected float[] xHist = null;</span>
+
+    /**
+     *
+     */
+<span class="fc" id="L25">    protected int[] yHist = null;</span>
+
+    /**
+     *
+     */
+<span class="fc" id="L30">    protected float[] yHistFloat = null;</span>
+
+    /**
+     *
+     */
+<span class="fc" id="L35">    protected float[] yErrors = null;</span>
+
+    /**
+     *
+     */
+<span class="fc" id="L40">    protected float[] xErrors = null;</span>
+
+    /**
+     * @return the xHist
+     */
+    public float[] getXHist() {
+<span class="fc" id="L46">        return xHist;</span>
+    }
+
+    /**
+     * @return the yHist
+     */
+    public int[] getYHist() {
+<span class="fc" id="L53">        return yHist;</span>
+    }
+
+    /**
+     * @return the yHistFloat
+     */
+    public float[] getYHistFloat() {
+<span class="fc" id="L60">        return yHistFloat;</span>
+    }
+
+    /**
+     * @return the yErrors
+     */
+    public float[] getYErrors() {
+<span class="nc" id="L67">        return yErrors;</span>
+    }
+
+    /**
+     * @return the xErrors
+     */
+    public float[] getXErrors() {
+<span class="nc" id="L74">        return xErrors;</span>
+    }
+
+    /**
+     * @param xHist the xHist to set
+     */
+    public void setXHist(float[] xHist) {
+<span class="fc" id="L81">        this.xHist = xHist;</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * @param yHist the yHist to set
+     */
+    public void setYHist(int[] yHist) {
+<span class="fc" id="L88">        this.yHist = yHist;</span>
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * @param yHistFloat the yHistFloat to set
+     */
+    public void setYHistFloat(float[] yHistFloat) {
+<span class="fc" id="L95">        this.yHistFloat = yHistFloat;</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * @param yErrors the yErrors to set
+     */
+    public void setYErrors(float[] yErrors) {
+<span class="fc" id="L102">        this.yErrors = yErrors;</span>
+<span class="fc" id="L103">    }</span>
+
+    /**
+     * @param xErrors the xErrors to set
+     */
+    public void setXErrors(float[] xErrors) {
+<span class="fc" id="L109">        this.xErrors = xErrors;</span>
+<span class="fc" id="L110">    }</span>
+    
+    public String toString() {
+        
+<span class="nc" id="L114">        StringBuilder sb = new StringBuilder();</span>
+        
+<span class="nc" id="L116">        sb.append(&quot;histogram=[&quot;);</span>
+        
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        for (int i = 0; i &lt; xHist.length; i++) {</span>
+            
+<span class="nc" id="L120">            sb.append(&quot;(&quot;).append(xHist[i]).append(&quot;, &quot;);</span>
+            
+<span class="nc bnc" id="L122" title="All 2 branches missed.">            if (yHist != null) {</span>
+<span class="nc" id="L123">                sb.append(yHist[i]);</span>
+            } else {
+<span class="nc" id="L125">                sb.append(yHistFloat[i]);</span>
+            }
+<span class="nc" id="L127">            sb.append(&quot;) &quot;);</span>
+            
+        }
+        
+<span class="nc" id="L131">        sb.append(&quot;]\n&quot;);</span>
+        
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (xErrors != null) {</span>
+            
+<span class="nc" id="L135">            sb.append(&quot;histogram errors=[&quot;);</span>
+            
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            for (int i = 0; i &lt; xErrors.length; i++) {</span>
+
+<span class="nc" id="L139">                sb.append(&quot;(&quot;).append(xErrors[i]).append(&quot;, &quot;);</span>
+
+<span class="nc" id="L141">                sb.append(yErrors[i]).append(&quot;) &quot;);</span>
+            }
+            
+<span class="nc" id="L144">            sb.append(&quot;]\n&quot;);</span>
+        }      
+        
+<span class="nc" id="L147">        return sb.toString();</span>
+    }
+
+    /**
+     * if a specific class exists in the classpath, this will plot the
+     * histogram to an html file.
+     * @param label
+     * @param outputFileSuffix
+     * @return
+     */
+    @SuppressWarnings(&quot;rawtypes&quot;)
+    public String plotHistogram(String label, String outputFileSuffix) {
+                
+        try {
+            // only using a class if it exists already in classpath. 
+            // class not imported to avoid a dependency in the packaged jar
+<span class="fc" id="L163">            ClassLoader cls = this.getClass().getClassLoader();</span>
+<span class="fc" id="L164">            Class&lt;?&gt; plotClass = cls.loadClass(&quot;algorithms.util.PolygonAndPointPlotter&quot;);</span>
+         
+<span class="fc" id="L166">            Class&lt;?&gt;[] argTypes0 = new Class&lt;?&gt;[]{float.class, float.class, </span>
+                float.class, float.class, float[].class, float[].class, 
+                float[].class, float[].class, String.class};
+            
+<span class="fc" id="L170">            Method method0 = plotClass.getMethod(&quot;addPlot&quot;, argTypes0);</span>
+            
+<span class="fc" id="L172">            Constructor constructor = null;</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">            for (Constructor c : plotClass.getConstructors()) {</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">                if (c.getParameterCount() == 0) {</span>
+<span class="fc" id="L175">                    constructor = c;</span>
+<span class="fc" id="L176">                    break;</span>
+                }
+            }
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">            if (constructor == null) {</span>
+<span class="nc" id="L180">                return null;</span>
+            }
+            
+<span class="fc" id="L183">            Object plotterObj = constructor.newInstance();</span>
+
+<span class="fc" id="L185">            float[] xh = xHist;</span>
+<span class="fc" id="L186">            float[] yh = yHistFloat;</span>
+
+<span class="fc" id="L188">            float yMin = MiscMath.findMin(yh);</span>
+<span class="fc" id="L189">            int yMaxIdx = MiscMath.findYMaxIndex(yh);</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">            if (yMaxIdx == -1) {</span>
+<span class="nc" id="L191">                return null;</span>
+            }
+<span class="fc" id="L193">            float yMax = yh[yMaxIdx];</span>
+
+<span class="fc" id="L195">            float xMin = MiscMath.findMin(xh);</span>
+<span class="fc" id="L196">            float xMax = MiscMath.findMax(xh);</span>
+            
+<span class="fc" id="L198">            Object[] args0 = new Object[]{xMin, xMax, yMin, yMax, xh, yh, xh, yh, label};</span>
+
+<span class="fc" id="L200">            method0.invoke(plotterObj, args0);</span>
+            
+<span class="fc" id="L202">            Class&lt;?&gt;[] argTypes1 = new Class&lt;?&gt;[]{String.class};</span>
+            
+<span class="fc" id="L204">            Method method1 = plotClass.getMethod(&quot;writeFile&quot;, argTypes1);</span>
+            
+<span class="fc" id="L206">            Object[] args1 = new Object[]{outputFileSuffix};</span>
+            
+<span class="fc" id="L208">            String filePath = (String) method1.invoke(plotterObj, args1);</span>
+        
+<span class="fc" id="L210">            return filePath;</span>
+            
+<span class="nc" id="L212">        } catch (Exception ex) {</span>
+<span class="nc" id="L213">            Logger.getLogger(CriticalDensitySolver.class.getName()).</span>
+<span class="nc" id="L214">                log(Level.SEVERE, null, ex);</span>
+        }
+        
+<span class="nc" id="L217">        return null;</span>
+    }
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

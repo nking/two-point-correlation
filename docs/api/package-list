@@ -1,9 +1,2 @@
-algorithms.compGeometry
-algorithms.compGeometry.clustering.twopointcorrelation
-algorithms.compGeometry.convexHull
-algorithms.curves
-algorithms.misc
-algorithms.sorting
-algorithms.util
 com.climbwithyourfeet.clustering
 com.climbwithyourfeet.clustering.util

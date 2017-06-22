@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DTGroupFinder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">DTGroupFinder.java</span></div><h1>DTGroupFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import com.climbwithyourfeet.clustering.util.PairInt;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author nichole
+ * @param &lt;T&gt;
+ */
+public class DTGroupFinder&lt;T extends PairInt&gt; {
+    /**
+     * an array to hold each group as an item. Note that the original point
+     * given in points is preserved so any specialization information available
+     * to the copy() method is present in the grouped points too.
+     * One use case is the point being scaled CIE XY colors and a specialization 
+     * of PairInt that has a field holding the pixel index
+     */
+<span class="fc" id="L26">    protected List&lt;Set&lt;T&gt; &gt; groupMembership = new ArrayList&lt;Set&lt;T&gt;&gt;();</span>
+    
+    /**
+     *
+     */
+<span class="fc" id="L31">    protected Logger log = null;</span>
+        
+     /*
+     * map w/ key holding indexes for a point to the group it belongs to.
+     * note that the point index is relative to indexer.x and indexer.y
+     */
+
+    /**
+     *
+     */
+    
+<span class="fc" id="L42">    protected Map&lt;T, Integer&gt; pointToGroupMap = new HashMap&lt;T, Integer&gt;();</span>
+    
+    /**
+      key = group receiving merges, value = set of integers to merge into this
+      key.  note that values are all greater than key
+     */
+<span class="fc" id="L48">    protected TreeMap&lt;Integer, Set&lt;Integer&gt;&gt; mergeGroupsBeforePrune = new</span>
+        TreeMap&lt;Integer, Set&lt;Integer&gt;&gt;();
+    
+    /**
+     *
+     */
+<span class="fc" id="L54">    protected int minimumNumberInCluster = 3;</span>
+    
+    /**
+     *
+     */
+<span class="fc" id="L59">    protected boolean notValue = false;</span>
+    
+    /**
+     *
+     */
+<span class="fc" id="L64">    protected boolean debug = false;</span>
+    
+    /**
+     *
+     */
+<span class="fc" id="L69">    protected float threshholdFactor = 2.5f;</span>
+    
+    /**
+     *
+     */
+<span class="fc" id="L74">    protected float critDensity = 0;</span>
+            
+    /**
+     *
+     */
+<span class="fc" id="L79">    public DTGroupFinder() {                </span>
+<span class="fc" id="L80">        this.log = Logger.getLogger(this.getClass().getName());</span>
+<span class="fc" id="L81">    }</span>
+        
+    /**
+     *
+     * @param n
+     */
+    public void setMinimumNumberInCluster(int n) {
+<span class="fc" id="L88">        this.minimumNumberInCluster = n;</span>
+<span class="fc" id="L89">    }</span>
+    
+    /**
+     *
+     * @param setDebugToTrue
+     */
+    public void setDebug(boolean setDebugToTrue) {
+<span class="nc" id="L96">        this.debug = setDebugToTrue;</span>
+<span class="nc" id="L97">    }</span>
+    
+    /**
+     *
+     * @param factor
+     */
+    public void setThreshholdFactor(float factor) {
+<span class="fc" id="L104">        this.threshholdFactor = factor;</span>
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * given the critical density and having the threshold factor, find the
+     * groups of points within a critical distance of one another.
+     * runtime complexity is O(N_points * lg2(N_points)).
+     * @param criticalDensity
+     * @param points
+     */
+    void calculateGroups(float criticalDensity, Set&lt;T&gt; points) {
+        
+<span class="fc" id="L116">        this.critDensity = criticalDensity;</span>
+        
+        /*
+        TODO: revisit the scale
+        if critDensity == 1, clustered points are adjcent to one another,
+        and the final crit sep needs to be '1',
+        so a correction to thrsh is made here for that.
+        */
+        
+<span class="fc" id="L125">        float thrsh = criticalDensity * threshholdFactor;</span>
+        
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">        if (critDensity == 1) {</span>
+            // fudge to result in critical separation of 1
+<span class="nc" id="L129">            thrsh = 2.f;</span>
+        }
+        
+<span class="fc" id="L132">        findGroups(thrsh, points);</span>
+        
+<span class="fc" id="L134">        merge();</span>
+        
+<span class="fc" id="L136">        prune(); </span>
+<span class="fc" id="L137">    }</span>
+    
+    /**
+     * find groups within points using the threshold to calculate the critical
+     * separation, then groups are connected points closer to one another than
+     * the critical separation.
+     * @param thrsh
+     * @param points 
+     */
+    private void findGroups(float thrsh, Set&lt;T&gt; points) {
+        
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">        if (points.isEmpty()) {</span>
+<span class="nc" id="L149">            return;</span>
+        }
+        
+        // association of 2 points for separation &lt;= critSeparation
+<span class="fc" id="L153">        float critSep = 2.f/thrsh;</span>
+        
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">        if (critSep &lt; 1) {</span>
+            // each point is a group
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            if (minimumNumberInCluster &lt; 2) {</span>
+<span class="nc" id="L158">                setEachPointAsAGroup(points);</span>
+            }
+<span class="nc" id="L160">            return;</span>
+        }
+        
+<span class="fc" id="L163">        log.info(&quot;critSep=&quot; + critSep);</span>
+        
+        //TODO: consider data structures with point location as part of their
+        // structure... spatial indexing, RTrees...
+        /*
+        Sort the points by x then y to be able to make small searches around a
+        point as traverse the sorted array.
+        The runtime complexity is O(N*lg2(N)).
+        Note that if the dataset were sparse, could assume only need to sort
+        on x and could hence use the O(N) counting sort (if N=100 for example, 
+        and the dataset were sparse and there are fewer than 7 points with the 
+        same y for each x, O(N) and search all points with a specific x is 
+        faster than O(N*lg2(N))).
+        */
+        
+<span class="fc" id="L178">        PairInt[] sorted = new PairInt[points.size()];</span>
+<span class="fc" id="L179">        int count = 0;</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        for (PairInt p : points) {</span>
+<span class="fc" id="L181">            sorted[count] = p;</span>
+<span class="fc" id="L182">            count++;</span>
+<span class="fc" id="L183">        }</span>
+<span class="fc" id="L184">        PISort.mergeSortByXThenY(sorted);</span>
+                
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        for (int i = 0; i &lt; sorted.length; ++i) {</span>
+            
+            @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L189">            T uPoint = (T)sorted[i];</span>
+            
+            // process the pair when their point density is higher than thrsh:
+            //  
+            //   2/sep_u_v  &gt; thrsh  where thrsh is 2.5*the background linear density
+            
+            // association of 2 points for separation &lt;= critSeparation
+            
+<span class="fc" id="L197">            float uX = uPoint.getX();</span>
+<span class="fc" id="L198">            float minXAssoc = uX - critSep;</span>
+<span class="fc" id="L199">            float maxXAssoc = uX + critSep;</span>
+<span class="fc" id="L200">            float uY = uPoint.getY();</span>
+<span class="fc" id="L201">            float minYAssoc = uY - critSep;</span>
+<span class="fc" id="L202">            float maxYAssoc = uY + critSep;</span>
+            
+<span class="fc" id="L204">            boolean assocFound = false;</span>
+            
+            /*
+            uX = sorted[0].x
+                search backward while x &gt;= minXAssoc
+                    while x == minXAssoc, only proceed for y &gt;= minYAssoc
+                search forward while x &lt;= maxXAssoc
+                    while x == maxXAssoc, only proceed for y &lt;= maxYAssoc
+            */
+            
+            // search backward within radius critSep
+<span class="fc bfc" id="L215" title="All 2 branches covered.">            for (int j = (i - 1); j &gt; -1; --j) {</span>
+                
+                @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L218">                T vPoint = (T)sorted[j];</span>
+                
+<span class="fc" id="L220">                float vX = vPoint.getX();</span>
+                
+<span class="fc bfc" id="L222" title="All 2 branches covered.">                if (vX &lt; minXAssoc) {</span>
+<span class="fc" id="L223">                    break;</span>
+                }
+                
+<span class="fc bfc" id="L226" title="All 2 branches covered.">                if (vX == minXAssoc) {</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">                    if (vPoint.getY() &lt; minYAssoc) {</span>
+<span class="fc" id="L228">                        break;</span>
+                    }
+                }
+                // for given x, if y &lt; minYAssoc can skip, but not break
+<span class="fc bfc" id="L232" title="All 2 branches covered.">                if (vPoint.getY() &lt; minYAssoc) {</span>
+<span class="fc" id="L233">                    continue;</span>
+                }
+                
+                // check the diagonal distances:
+<span class="fc" id="L237">                double sep = Math.sqrt((vX - uX)*(vX - uX) + </span>
+<span class="fc" id="L238">                    (vPoint.getY() - uY)*(vPoint.getY() - uY));</span>
+                  
+                // TODO: consider using the chessboard distance (diag dist treated as '1')
+<span class="fc bfc" id="L241" title="All 2 branches covered.">                if (sep &gt; critSep) {</span>
+<span class="fc" id="L242">                    continue;</span>
+                }
+                
+                // if arrive here, vX is within an assoc radius and so is vY
+<span class="fc" id="L246">                processPair(uPoint, vPoint);</span>
+                                
+<span class="fc" id="L248">                assocFound = true;</span>
+            }
+            
+            // search forward within radius critSep
+<span class="fc bfc" id="L252" title="All 2 branches covered.">            for (int j = (i + 1); j &lt; sorted.length; ++j) {</span>
+                
+                @SuppressWarnings(&quot;unchecked&quot;)
+<span class="fc" id="L255">                T vPoint = (T)sorted[j];</span>
+                
+<span class="fc" id="L257">                float vX = vPoint.getX();</span>
+                
+<span class="fc bfc" id="L259" title="All 2 branches covered.">                if (vX &gt; maxXAssoc) {</span>
+<span class="fc" id="L260">                    break;</span>
+                }
+                
+<span class="fc bfc" id="L263" title="All 2 branches covered.">                if (vX == maxXAssoc) {</span>
+<span class="fc bfc" id="L264" title="All 2 branches covered.">                    if (vPoint.getY() &gt; maxYAssoc) {</span>
+<span class="fc" id="L265">                        break;</span>
+                    }
+                }
+                // for given x, if y &gt; maxYAssoc can skip, but not break
+<span class="fc bfc" id="L269" title="All 2 branches covered.">                if (vPoint.getY() &gt; maxYAssoc) {</span>
+                    //TODO: if knew where next x was in sorted, could increment j to that
+<span class="fc" id="L271">                    continue;</span>
+                }
+                
+                // check the diagonal distances:
+<span class="fc" id="L275">                double sep = Math.sqrt((vX - uX)*(vX - uX) + </span>
+<span class="fc" id="L276">                    (vPoint.getY() - uY)*(vPoint.getY() - uY));</span>
+                  
+<span class="fc bfc" id="L278" title="All 2 branches covered.">                if (sep &gt; critSep) {</span>
+<span class="fc" id="L279">                    continue;</span>
+                }
+                
+                // if arrive here, vX is within an assoc radius and so is vY
+<span class="fc" id="L283">                processPair(uPoint, vPoint);</span>
+                                
+<span class="fc" id="L285">                assocFound = true;</span>
+            }
+            
+            // if no points were within assoc distance, this becomes its
+            // own group
+<span class="pc bpc" id="L290" title="3 of 4 branches missed.">            if ((minimumNumberInCluster &lt; 2) &amp;&amp; !assocFound) {</span>
+<span class="nc" id="L291">                process(uPoint);</span>
+            }            
+        }
+        
+<span class="fc" id="L295">    }</span>
+    
+    int getNumberOfGroups() {
+<span class="fc" id="L298">        return groupMembership.size();</span>
+    }
+    
+    Set&lt;T&gt; getGroup(int groupIdx) {
+        
+<span class="pc bpc" id="L303" title="1 of 2 branches missed.">        if (groupMembership.isEmpty()) {</span>
+<span class="nc" id="L304">            return new HashSet&lt;T&gt;();</span>
+        }
+<span class="pc bpc" id="L306" title="2 of 4 branches missed.">        if (groupIdx &gt; (groupMembership.size() - 1) || (groupIdx &lt; 0)) {</span>
+<span class="nc" id="L307">            throw new IllegalArgumentException(&quot;groupIdx=&quot; + groupIdx </span>
+<span class="nc" id="L308">            + &quot; is outside of range of nGroups=&quot; + groupMembership.size());</span>
+        }
+        
+<span class="fc" id="L311">        Set&lt;T&gt; set = groupMembership.get(groupIdx);</span>
+       
+<span class="fc" id="L313">        return set;</span>
+    }
+
+    private void setEachPointAsAGroup(Set&lt;T&gt; points) {
+        
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        for (T p : points) {</span>
+            
+<span class="nc" id="L320">            int sz = groupMembership.size();</span>
+            
+<span class="nc" id="L322">            pointToGroupMap.put(p, Integer.valueOf(sz));</span>
+            
+<span class="nc" id="L324">            Set&lt;T&gt; set = new HashSet&lt;T&gt;();</span>
+            
+<span class="nc" id="L326">            set.add(p);</span>
+            
+<span class="nc" id="L328">            groupMembership.add(set);</span>
+<span class="nc" id="L329">        }</span>
+<span class="nc" id="L330">    }</span>
+
+    private void processPair(T uPoint, T vPoint) {
+        
+<span class="fc" id="L334">        Integer groupId = pointToGroupMap.get(uPoint);</span>
+        
+<span class="fc" id="L336">        Integer vGroupId = pointToGroupMap.get(vPoint);</span>
+        
+<span class="fc bfc" id="L338" title="All 4 branches covered.">        if ((groupId != null) &amp;&amp; (vGroupId == null)) {</span>
+                    
+<span class="fc" id="L340">            groupMembership.get(groupId).add(vPoint);</span>
+            
+<span class="fc" id="L342">            pointToGroupMap.put(vPoint, groupId);</span>
+                        
+<span class="fc bfc" id="L344" title="All 4 branches covered.">        } else if ((groupId == null) &amp;&amp; (vGroupId != null)) {</span>
+
+<span class="fc" id="L346">            groupId = vGroupId;</span>
+
+<span class="fc" id="L348">            groupMembership.get(groupId).add(uPoint);</span>
+            
+<span class="fc" id="L350">            pointToGroupMap.put(uPoint, groupId);</span>
+            
+<span class="pc bpc" id="L352" title="1 of 4 branches missed.">        } else if ((groupId == null) &amp;&amp; (vGroupId == null)) {</span>
+            
+<span class="fc" id="L354">            groupId = Integer.valueOf(groupMembership.size());</span>
+            
+<span class="fc" id="L356">            pointToGroupMap.put(uPoint, groupId);</span>
+            
+<span class="fc" id="L358">            pointToGroupMap.put(vPoint, groupId);</span>
+            
+<span class="fc" id="L360">            Set&lt;T&gt; set = new HashSet&lt;T&gt;();</span>
+<span class="fc" id="L361">            set.add(uPoint);</span>
+<span class="fc" id="L362">            set.add(vPoint);</span>
+            
+<span class="fc" id="L364">            groupMembership.add(set);</span>
+                      
+<span class="pc bpc" id="L366" title="2 of 4 branches missed.">        } else if ((groupId != null) &amp;&amp; (vGroupId != null)) {</span>
+            
+<span class="fc" id="L368">            Integer uIdx = groupId;</span>
+            
+<span class="fc" id="L370">            Integer vIdx = vGroupId;</span>
+            
+<span class="fc bfc" id="L372" title="All 2 branches covered.">            if (uIdx != vIdx) {</span>
+<span class="fc bfc" id="L373" title="All 2 branches covered.">                if (uIdx &gt; vIdx) {</span>
+<span class="fc" id="L374">                    Integer swap = uIdx;</span>
+<span class="fc" id="L375">                    uIdx = vIdx;</span>
+<span class="fc" id="L376">                    vIdx = swap;</span>
+                }
+                
+                // now uIdx is &lt; vIdx
+                
+                /*
+                key = group receiving merges, value = set of integers to merge into this
+                key.  note that values are all greater than key
+                */
+                
+<span class="fc" id="L386">                Set&lt;Integer&gt; group = mergeGroupsBeforePrune.get(uIdx);</span>
+<span class="fc bfc" id="L387" title="All 2 branches covered.">                if (group == null) {</span>
+<span class="fc" id="L388">                    group = new HashSet&lt;Integer&gt;();</span>
+<span class="fc" id="L389">                    mergeGroupsBeforePrune.put(uIdx, group);</span>
+                }
+<span class="fc" id="L391">                group.add(vIdx);</span>
+            }
+        }
+<span class="fc" id="L394">    }</span>
+    
+    /**
+     *
+     * @param uPoint
+     */
+    protected void process(T uPoint) {
+                
+<span class="nc" id="L402">        Integer groupId = pointToGroupMap.get(uPoint);</span>
+        
+<span class="nc bnc" id="L404" title="All 2 branches missed.">        if (groupId == null) {</span>
+                        
+<span class="nc" id="L406">            groupId = Integer.valueOf(groupMembership.size());</span>
+            
+<span class="nc" id="L408">            pointToGroupMap.put(uPoint, groupId);</span>
+            
+<span class="nc" id="L410">            Set&lt;T&gt; set = new HashSet&lt;T&gt;();</span>
+<span class="nc" id="L411">            set.add(uPoint);</span>
+            
+<span class="nc" id="L413">            groupMembership.add(set);</span>
+        }
+<span class="nc" id="L415">    }</span>
+    
+    private void prune() {
+        
+<span class="fc" id="L419">        log.finest(&quot;number of groups before prune=&quot; + groupMembership.size());</span>
+        
+        //TODO: the data structures used could be written at the expense
+        // of space complexity to reduce changes needed when group number
+        // changes
+        
+        /*
+         * [------] 0
+         * [------] 1 &lt;---- too few
+         * [------] 2
+         */
+        // iterate backwards so can move items up without conflict with iterator
+<span class="fc bfc" id="L431" title="All 2 branches covered.">        for (int i = (groupMembership.size() - 1); i &gt; -1; i--) {</span>
+            
+<span class="fc" id="L433">            Set&lt;T&gt; group = groupMembership.get(i);</span>
+            
+<span class="fc" id="L435">            int count = group.size();</span>
+            
+<span class="fc" id="L437">            log.finest(&quot;  group &quot; + i + &quot; has &quot; + count </span>
+                + &quot; members before prune (min=&quot; + minimumNumberInCluster + &quot;)&quot;);
+<span class="fc bfc" id="L439" title="All 2 branches covered.">            if (count &lt; minimumNumberInCluster) {</span>
+            
+                // remove this group and move up all groups w/ index &gt; i by one index
+<span class="fc bfc" id="L442" title="All 2 branches covered.">                for (int j = (i + 1); j &lt; groupMembership.size(); j++) {</span>
+                    
+<span class="fc" id="L444">                    int newGroupId = j - 1;</span>
+                                        
+                    // update members in pointToGroupIndex
+<span class="fc" id="L447">                    Set&lt;T&gt; latest = groupMembership.get(j);</span>
+                    
+<span class="fc bfc" id="L449" title="All 2 branches covered.">                    for (T p : latest) {</span>
+<span class="fc" id="L450">                        pointToGroupMap.put(p, Integer.valueOf(newGroupId));</span>
+<span class="fc" id="L451">                    }</span>
+                }
+                
+<span class="fc" id="L454">                Set&lt;T&gt; removed = groupMembership.remove(i);</span>
+            }
+        }
+        
+<span class="fc" id="L458">        log.finest(&quot;number of groups after prune=&quot; + groupMembership.size());</span>
+<span class="fc" id="L459">    }</span>
+
+    private void merge() {
+        
+<span class="fc" id="L463">        log.finest(&quot;merge &quot; + mergeGroupsBeforePrune.size() + &quot; groups&quot;);</span>
+    
+        /*
+        merge values in tree first:
+          9-&gt;10           is move 10 into group 9
+          7-&gt;{8, 10}      is move 10 which is now 9) into group 7
+        */
+<span class="fc" id="L470">        Map&lt;Integer, Set&lt;Integer&gt;&gt; merged = new HashMap&lt;Integer, Set&lt;Integer&gt;&gt;();</span>
+        
+<span class="fc bfc" id="L472" title="All 2 branches covered.">        for (Integer moveToGroupIndex : mergeGroupsBeforePrune.descendingKeySet()) {</span>
+            
+<span class="fc" id="L474">            Set&lt;Integer&gt; moveIndexes = mergeGroupsBeforePrune.get(moveToGroupIndex);</span>
+            
+            // if any value in moveIndexes is a key in merged, add its values
+            // to moveIndexes
+<span class="fc" id="L478">            Set&lt;Integer&gt; add = new HashSet&lt;Integer&gt;();</span>
+<span class="fc bfc" id="L479" title="All 2 branches covered.">            for (Integer moveGroupIndex : moveIndexes) {</span>
+<span class="fc" id="L480">                Set&lt;Integer&gt; set2 = merged.get(moveGroupIndex);</span>
+<span class="fc bfc" id="L481" title="All 2 branches covered.">                if (set2 != null) {</span>
+<span class="fc" id="L482">                    add.addAll(set2);</span>
+                }
+<span class="fc" id="L484">            }</span>
+<span class="fc" id="L485">            moveIndexes.addAll(add);</span>
+            
+<span class="fc bfc" id="L487" title="All 2 branches covered.">            for (Integer moveGroupIndex : moveIndexes) {</span>
+                        
+<span class="fc" id="L489">                Set&lt;T&gt; moveGroup = groupMembership.get(moveGroupIndex);</span>
+            
+<span class="fc bfc" id="L491" title="All 2 branches covered.">                for (T p : moveGroup) {</span>
+<span class="fc" id="L492">                    pointToGroupMap.put(p, moveToGroupIndex);</span>
+<span class="fc" id="L493">                }</span>
+
+<span class="fc" id="L495">                groupMembership.get(moveToGroupIndex).addAll(moveGroup);</span>
+
+<span class="fc" id="L497">                groupMembership.get(moveGroupIndex).clear();</span>
+                
+<span class="fc" id="L499">                Set&lt;Integer&gt; set2 = merged.get(moveGroupIndex);</span>
+<span class="fc bfc" id="L500" title="All 2 branches covered.">                if (set2 == null) {</span>
+<span class="fc" id="L501">                    set2 = new HashSet&lt;Integer&gt;();</span>
+<span class="fc" id="L502">                    merged.put(moveGroupIndex, set2);</span>
+                }
+<span class="fc" id="L504">                set2.add(moveToGroupIndex);</span>
+<span class="fc" id="L505">            }</span>
+<span class="fc" id="L506">        }</span>
+        
+<span class="fc" id="L508">        mergeGroupsBeforePrune.clear();</span>
+<span class="fc" id="L509">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
