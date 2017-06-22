@@ -1,8 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.misc.Histogram;
-import algorithms.misc.HistogramHolder;
-import algorithms.misc.MiscMath;
+import com.climbwithyourfeet.clustering.util.*;
 import algorithms.util.Errors;
 import algorithms.util.ResourceFinder;
 import algorithms.util.Util;
@@ -14,6 +12,7 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -207,7 +206,25 @@ public class DistanceTransformTest extends TestCase {
         
         Set<PairInt> points = getWikipediaDBScanExampleData();
         
-        int[] minMaxXY = MiscMath.findMinMaxXY(points);
+        int[] minMaxXY = new int[4];
+        minMaxXY[0] = Integer.MAX_VALUE;
+        minMaxXY[1] = Integer.MIN_VALUE;
+        minMaxXY[2] = Integer.MAX_VALUE;
+        minMaxXY[3] = Integer.MIN_VALUE;
+        for (PairInt p : points) {
+            if (p.getX() < minMaxXY[0]) {
+                minMaxXY[0] = p.getX();
+            }
+            if (p.getY() < minMaxXY[2]) {
+                minMaxXY[2] = p.getY();
+            }
+            if (p.getX() > minMaxXY[1]) {
+                minMaxXY[1] = p.getX();
+            }
+            if (p.getY() > minMaxXY[3]) {
+                minMaxXY[3] = p.getY();
+            }
+        }
         
         int w = minMaxXY[1] + 1;
         int h = minMaxXY[3] + 1;
@@ -230,10 +247,14 @@ public class DistanceTransformTest extends TestCase {
             }
         }
         
+        float[] tmp = Arrays.copyOf(values, values.length); 
+        
         float[] vErrors = Errors.populateYErrorsBySqrt(values);
         float[] vSqrtInvErrors = Errors.populateYErrorsBySqrt(valuesSqrtInv);
         
-        HistogramHolder hist = Histogram.createSimpleHistogram(1.0f, values, vErrors);
+        HistogramHolder hist = Histogram.createSimpleHistogram(
+            tmp[0], tmp[tmp.length - 1], 25,
+            values, vErrors);
         Util.plotHistogram(hist, "clstr", "_cluster_");
        
         HistogramHolder histSqrtInv = Histogram.createSimpleHistogram(

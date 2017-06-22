@@ -19,8 +19,6 @@
 
     src/test           unit tests small enough to run with every build
 
-    src/test-large     unit tests with long run times
-
     bin      compiled classes, code coverage results, and static analysis results
  ====================================================================== -->
 <project xmlns:jacoco="antlib:org.jacoco.ant" name="twoPointCorrelation" default="listTargets" basedir=".">
@@ -39,13 +37,10 @@
     <property name="src.out.dir"         value="${classes.dir}/classes"/>
     <property name="doc.dir"             value="${basedir}/docs"/>
     <property name="tests.dir"           value="${basedir}/src/test/java"/>
-    <property name="aspects.dir"         value="${basedir}/src/test/aspects"/>
     <property name="tests.out.dir"       value="${classes.dir}/test-classes"/>
     <property name="instr.out.dir"       value="${classes.dir}/instr-classes" />
     <property name="log.dir"             value="${basedir}/log"/>
     <property name="logfile"             value="${log.dir}/build.log"/>
-    <property name="tests.large.dir"     value="${basedir}/src/test-large/java"/>
-    <property name="tests.large.out.dir" value="${classes.dir}/test-large-classes"/>
 
     <!-- set compiler options -->
     <!--<property name="compile.debug"   value="false"/>-->
@@ -63,7 +58,6 @@
         <echo message="compileTests:               compile test files"/>
         <echo message="compileLargeTests:          compile large test files"/>
         <echo message="runTests:                   run tests"/>
-        <echo message="runTestsWithAspects:        run tests that have aspects"/>
         <echo message="runLargeTests:              run tests in tests_large"/>
         <echo message="runTest:                    run test with -Dtest=fqn of test"/>
         <echo message="runLargeTest:               run large test with -Dtest=fqn of test"/>
@@ -72,8 +66,7 @@
         <echo message="debugLargeTest:             debug test with -Dtest= fqn of test and jdwp"/>
         <echo message="javadoc:                    create javadocs"/>
         <echo message="runCoverage                 create code coverage reports"/>
-        <echo message="package                     build jar"/>
-        <echo message="package2                    build jar with clustering based on distance transform"/>
+        <echo message="package                     build jar with clustering based on distance transform"/>
     </target>
     
     <property name="jacoco.exec.dir" location="bin/jacoco"/>
@@ -86,10 +79,6 @@
         <isset property="extra.src" />
     </condition>
 
-    <condition property="jar.mf" value="${package.mf}" else="${resources.dir}/two-point-correlation.mf">
-        <isset property="package.mf" />
-    </condition>
-    
     <condition property="jar2.mf" value="${package2.mf}" else="${resources.dir}/clustering_dist_trans.mf">
         <isset property="package2.mf" />
     </condition>
@@ -111,11 +100,6 @@
         <pathelement location="${tests.large.dir}" />
         <path refid="compile.classpath"/>
     </path>
-    <path id="aspect.classpath">
-        <pathelement location="${lib.dir}/aspectjrt-1.8.0.jar"/>
-        <pathelement location="${lib.dir}/aspectjweaver-1.8.0.jar"/>
-        <pathelement location="${aspects.dir}/META-INF/"/>
-    </path>
 
     <target name="debug" description="sets compile.debug to true" >
         <property name="compile.debug" value="true" />
@@ -126,7 +110,6 @@
         description="Delete dirs: build, doc/api, and src tree classes">
         <delete failonerror="false">
             <fileset dir="${classes.dir}" />
-            <fileset dir="${aspects.dir}" includes="**/*.class" excludes="*.jar" />
         </delete>
         <delete failonerror="false">
             <fileset dir="${log.dir}" includes="*" />
@@ -251,40 +234,6 @@
                 </fileset>
             </batchtest>
         </junit>
-        <antcall target="runTestsWithAspects" />
-    </target>
-
-    <target name="compileTestAspects" description="Compile aspects for tests" depends="compile">
-
-        <record name="${logfile}" append="yes" loglevel="debug"/>
-
-        <taskdef resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties"
-            classpath="${lib.dir}/aspectjtools-1.8.0.jar" />
-
-        <!-- compile aspect .aj files -->
-        <fileset id="ajFileSet" dir="${aspects.dir}" includes="**/*.aj"/>
-        <pathconvert pathsep="${line.separator}" property="ajFiles" refid="ajFileSet"/>
-        <echo file="${aspects.dir}/aj-files.txt" >${ajFiles}</echo>
-
-        <path id="weave.path">
-            <pathelement path="${src.out.dir}"/>
-        </path>
-
-        <!--
-        compile aspects alone to classes binary directory
-        -->
-        <iajc source="1.6" destDir="${src.out.dir}"  verbose="false" >
-            <argfiles>
-                <pathelement location="${aspects.dir}/aj-files.txt"/>
-            </argfiles>
-            <inpath>
-                <path refid="weave.path"/>
-            </inpath>
-            <classpath>
-                <pathelement location="${lib.dir}/aspectjrt-1.8.0.jar"/>
-            </classpath>
-        </iajc>
-
     </target>
 
     <!-- prepare,clean,debug,compile,JUnit,compileTests -->
@@ -312,39 +261,6 @@
             <jvmarg value="-enableassertions" />
             <sysproperty key="java.util.logging.config.file" value="${src.out.dir}/logging.properties"/>
             <test name="${test}" fork="yes" haltonfailure="yes">
-                <formatter type="plain" usefile="false"/>
-            </test>
-        </junit>
-    </target>
-
-    <target name="runTestsWithAspects" if="junit.present" depends="runAspectTest1">
-        <record name="${logfile}" append="yes" loglevel="debug"/>
-        <echo message="ran tests that have aspects" />
-    </target>
-
-    <target name="runAspectTest1" if="junit.present" depends="compileTestAspects,compileTests,JUnit">
-        <record name="${logfile}" append="yes" loglevel="debug"/>
-
-        <condition property="aspect.exists">
-            <available file="${src.out.dir}/algorithms/compGeometry/clustering/twopointcorrelation/TwoPointVoidStatsAspect.class" type="file"/>
-        </condition>
-        <echo message="${aspect.exists}" />
-        <fail unless="aspect.exists">
-            did not find compiled TwoPointVoidStatsAspect
-        </fail>
-
-        <junit fork="yes" showoutput="false" filtertrace="off" printsummary="yes" haltonerror="true" haltonfailure="true">
-            <jvmarg line="-javaagent:${lib.dir}/aspectjweaver-1.8.0.jar"/>
-            <classpath>
-                <pathelement location="${tests.out.dir}"/>
-                <path refid="aspect.classpath"/>
-                <path refid="test.classpath"/>
-                <pathelement location="${src.out.dir}"/>
-            </classpath>
-            <formatter type="plain" usefile="true"/>
-            <jvmarg value="-XX:-UseSplitVerifier" />
-            <sysproperty key="java.util.logging.config.file" value="${src.out.dir}/logging.properties"/>
-            <test name="algorithms.compGeometry.clustering.twopointcorrelation.TwoPointVoidStats3Test" fork="yes" haltonfailure="yes">
                 <formatter type="plain" usefile="false"/>
             </test>
         </junit>
@@ -476,30 +392,13 @@
         </available>
     </target>
 
-    <target name="package" depends="compile">
-        <record name="${logfile}" append="yes" loglevel="debug"/>
-        <echo message="making jar file of class files, output is in ${classes.dir}/two-point-correlation.jar" />
-        <tstamp>
-            <format property="TS" pattern="yyyy-MM-dd" locale="en,US"/>
-        </tstamp>
-        <jar destfile="${classes.dir}/two-point-correlation_${TS}.jar" manifest="${jar.mf}">
-            <fileset dir="${src.out.dir}" includes="**"/>
-            <fileset dir="${resources.dir}" includes="*.html"/>
-            <fileset dir="${basedir}" includes="LICENSE.txt"/>
-            <fileset dir="${basedir}" includes="README.txt"/>
-        </jar>
-        <mkdir dir="dist" />
-        <copy file="${classes.dir}/two-point-correlation_${TS}.jar" tofile="dist/two-point-correlation.jar" />
-    </target>
-    
-    <target name="package2" depends="compileTests">
+    <target name="package" depends="compileTests">
         <record name="${logfile}" append="yes" loglevel="debug"/>
         <echo message="making jar file of class files, output is in ${classes.dir}/com.climbwithyourfeet.clustering.jar" />
         <tstamp>
             <format property="TS" pattern="yyyy-MM-dd" locale="en,US"/>
         </tstamp>
         <jar destfile="${classes.dir}/com.climbwithyourfeet.clustering_${TS}.jar" manifest="${jar2.mf}">
-            <fileset dir="${src.out.dir}" includes="algorithms/sorting/**"/>
             <fileset dir="${src.out.dir}" includes="com/climbwithyourfeet/clustering/**"/>
             <fileset dir="${basedir}" includes="LICENSE.txt"/>
             <fileset dir="${basedir}" includes="README2.txt"/>

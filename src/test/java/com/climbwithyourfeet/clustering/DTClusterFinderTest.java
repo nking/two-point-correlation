@@ -4,9 +4,8 @@ import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBa
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
-import algorithms.misc.MiscMath;
+import com.climbwithyourfeet.clustering.util.*;
 import algorithms.util.ResourceFinder;
-import com.climbwithyourfeet.clustering.util.PairInt;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -100,14 +99,30 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 
                 log.info(" " + count + " (" + indexer.getNXY() + " points) ... ");
 
+                int[] minMaxXY = new int[4];
+                minMaxXY[0] = Integer.MAX_VALUE;
+                minMaxXY[1] = Integer.MIN_VALUE;
+                minMaxXY[2] = Integer.MAX_VALUE;
+                minMaxXY[3] = Integer.MIN_VALUE;
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(Math.round(indexer.getX()[k]),
                         Math.round(indexer.getY()[k]));
                     points.add(p);
+                    if (p.getX() < minMaxXY[0]) {
+                        minMaxXY[0] = p.getX();
+                    }
+                    if (p.getY() < minMaxXY[2]) {
+                        minMaxXY[2] = p.getY();
+                    }
+                    if (p.getX() > minMaxXY[1]) {
+                        minMaxXY[1] = p.getX();
+                    }
+                    if (p.getY() > minMaxXY[3]) {
+                        minMaxXY[3] = p.getY();
+                    }
                 }
-
-                int[] minMaxXY = MiscMath.findMinMaxXY(points);
+                
                 int width = minMaxXY[1] + 1;
                 int height = minMaxXY[3] + 1;
                     
@@ -204,14 +219,30 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             AxisIndexer indexer = CreateClusterDataTest.getUEFClusteringDataset(
                 fileName);
             
+            int[] minMaxXY = new int[4];
+            minMaxXY[0] = Integer.MAX_VALUE;
+            minMaxXY[1] = Integer.MIN_VALUE;
+            minMaxXY[2] = Integer.MAX_VALUE;
+            minMaxXY[3] = Integer.MIN_VALUE;
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(Math.round(indexer.getX()[k]),
                     Math.round(indexer.getY()[k]));
                 points.add(p);
+                if (p.getX() < minMaxXY[0]) {
+                    minMaxXY[0] = p.getX();
+                }
+                if (p.getY() < minMaxXY[2]) {
+                    minMaxXY[2] = p.getY();
+                }
+                if (p.getX() > minMaxXY[1]) {
+                    minMaxXY[1] = p.getX();
+                }
+                if (p.getY() > minMaxXY[3]) {
+                    minMaxXY[3] = p.getY();
+                }
             }
 
-            int[] minMaxXY = MiscMath.findMinMaxXY(points);
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
 
@@ -337,14 +368,30 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                         
             log.info(" " + ii + " (" + indexer.getNumberOfPoints() + " points) ... ");
 
+            int[] minMaxXY = new int[4];
+            minMaxXY[0] = Integer.MAX_VALUE;
+            minMaxXY[1] = Integer.MIN_VALUE;
+            minMaxXY[2] = Integer.MAX_VALUE;
+            minMaxXY[3] = Integer.MIN_VALUE;
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(Math.round(indexer.getX()[k]),
                     Math.round(indexer.getY()[k]));
                 points.add(p);
+                if (p.getX() < minMaxXY[0]) {
+                    minMaxXY[0] = p.getX();
+                }
+                if (p.getY() < minMaxXY[2]) {
+                    minMaxXY[2] = p.getY();
+                }
+                if (p.getX() > minMaxXY[1]) {
+                    minMaxXY[1] = p.getX();
+                }
+                if (p.getY() > minMaxXY[3]) {
+                    minMaxXY[3] = p.getY();
+                }
             }
 
-            int[] minMaxXY = MiscMath.findMinMaxXY(points);
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
 

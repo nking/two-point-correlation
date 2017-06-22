@@ -1,8 +1,9 @@
 package algorithms.compGeometry.clustering.twopointcorrelation;
 
-import algorithms.misc.HistogramHolder;
+import com.climbwithyourfeet.clustering.util.*;
 import algorithms.util.PolygonAndPointPlotter;
 import algorithms.util.ResourceFinder;
+import algorithms.util.Util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
@@ -455,7 +456,7 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
      */
     public static HistogramHolder readHistogram(String filePath) throws IOException {
 
-        HistogramHolder histogram = new HistogramHolder();
+        HistogramHolder histogram = null;
 
         FileInputStream fileInputStream = null;
         FilterInputStream filterInputStream = null;
@@ -467,7 +468,7 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
 
             objectInputStream = new ObjectInputStream(fileInputStream);
 
-            histogram.readExternal(objectInputStream);
+            histogram = Util.readExternal(objectInputStream);
 
             return histogram;
 
@@ -506,7 +507,7 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
 
             objectOutputStream = new ObjectOutputStream(fileOutputStream);
 
-            histogram.writeExternal(objectOutputStream);
+            Util.writeExternal(objectOutputStream, histogram);
 
         } finally {
             if (fileOutputStream != null) {
@@ -518,28 +519,6 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
             if (objectOutputStream != null) {
                 objectOutputStream.close();
             }
-        }
-    }
-
-    /**
-     *
-     */
-    protected class TwoPointVoidStatsExt extends TwoPointVoidStats {
-
-        public TwoPointVoidStatsExt(AxisIndexer indexer) {
-            super(indexer);
-        }
-
-        /**
-         *
-         * @return
-         * @throws TwoPointVoidStatsException
-         */
-        public HistogramHolder constructAndFitHistogram() throws TwoPointVoidStatsException {
-
-            calc();
-
-            return statsHistogram;
         }
     }
     

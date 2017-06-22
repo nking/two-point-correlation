@@ -1,6 +1,5 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.sorting.MultiArrayMergeSort;
 import com.climbwithyourfeet.clustering.util.Histogram;
 import com.climbwithyourfeet.clustering.util.HistogramHolder;
 import com.climbwithyourfeet.clustering.util.MiscMath;
