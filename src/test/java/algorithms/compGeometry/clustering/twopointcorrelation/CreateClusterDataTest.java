@@ -530,9 +530,13 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
      */
     public static AxisIndexer getUEFClusteringDataset(String fileName) throws IOException {
         
-        String dirPath = ResourceFinder.findDirectory("uEasternFinlandClustering");
+        String dirPath = ResourceFinder.findTestResourcesDirectory();
+
+        String sep = System.getProperty("file.separator");
+
+        dirPath = dirPath + sep + "uEasternFinlandClustering";
         
-        String filePath = dirPath + "/" + fileName;
+        String filePath = dirPath + sep + fileName;
         
         BufferedReader in = null;
         FileReader reader = null;
