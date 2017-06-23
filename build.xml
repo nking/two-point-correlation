@@ -305,7 +305,7 @@
         <jar destfile="${classes.dir}/com.climbwithyourfeet.clustering_${TS}.jar" manifest="${jar2.mf}">
             <fileset dir="${src.out.dir}" includes="com/climbwithyourfeet/clustering/**"/>
             <fileset dir="${basedir}" includes="LICENSE.txt"/>
-            <fileset dir="${basedir}" includes="README2.txt"/>
+            <fileset dir="${basedir}" includes="README.txt"/>
         </jar>
         <mkdir dir="dist" />
         <copy file="${classes.dir}/com.climbwithyourfeet.clustering_${TS}.jar" 
