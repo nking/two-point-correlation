@@ -1,6 +1,3 @@
--- look at details of this test
-    bin/test-classes/clusters2.html
-    the test may need to be updated for new changes.
 -- add the nearest neighbors to the shared library
    and then implement the group finder method to use it.
 -- move the knearest neighbors into shared library... 
