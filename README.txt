@@ -25,24 +25,21 @@ Usage as an API:
 
     int nGroups = clusterFinder.getNumberOfClusters();
 
-    List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>();
-    for (int k = 0; k < nGroups; ++k) {
-        Set<PairInt> set = clusterFinder.getCluster(k);
-        groupList.add(set);
-    }
+    // the groups as pixel indexes:
+    List<TIntSet> groupListPix = clusterFinder.getGroups();
 
 -----
 Build
 -----
 Requires java to run the code and ant to build it.
+The project build file also contains a dependency on jacoco.
 The other libraries are contained in the project.
 
 To list the targets:
   ant
 
-To build and package just the latest clustering package that uses a 
-distance transform:
-  ant package2
+To build and package just the project code:
+  ant package
 
 To compile the main source code:
   ant compile
@@ -82,23 +79,6 @@ similarity functions, one would want to apply the exponential operations
 to the data before use here and scale the data for numerical resolution 
 such that an integer holds the significant difference between points
     exp(a - b) is exp(a)/exp(b) 
-
----------------------
-Miscellaneous Advice
----------------------
-To keep track of which point in Set<PairInt> points belongs to which 
-pixel, one can extend PairInt and add a field for the pixel index.  The 
-final groups will have the same points given to the code so will retain 
-the specialization.
-(Note that extending PairInt requires the specialization object to use
-the same hashcode and equals method because of 2 comparisons in 
-DistanceTransform).
-
-Note that if you extend PairInt and have deep members that Arrays.copyOf(...)
-will not handle correctly, change the code in DTGroupFinder.java to
-use quick sort.  It's using merge sort currently.
-Specifically, 
-change PISort.mergeSortByXThenY(sorted) to PISort.quickSortByXThenY(sorted)
 
 ----------------------
 Citation and Licensing
