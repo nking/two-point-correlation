@@ -1,4 +1,17 @@
--- add and use the disjoint forest label code
+-- look at details of this test
+    bin/test-classes/clusters2.html
+    the test may need to be updated for new changes.
+-- add the nearest neighbors to the shared library
+   and then implement the group finder method to use it.
+-- move the knearest neighbors into shared library... 
+
+-- this project needs 2 different builds and the explanation
+   added to both added to README.txt and a note considering 
+   mvn to make version control clearer.
+   (1) build including shared and trove
+   (2) build excluding shared and trove
+   -- add the dependency information to the build missing the
+      shared class files
 
 -- create a density curve as an alternative to histogram
    using knn with fixed number of points.
@@ -17,7 +30,6 @@
 
 -- update the javadocs
 -- update coverage reports
--- increment version and deploy to nexus
 
 -- redo a couple of "other" snapshots on two-pt-correl web page:
    the dbscan and the curved arrow from the finnish data set
