@@ -143,8 +143,6 @@
         </javac>
 
         <copy file="${resources.dir}/logging.properties" todir="${src.out.dir}" />
-        <copy file="${resources.dir}/plot_minima_stats.html" todir="${src.out.dir}" />
-        <copy file="${resources.dir}/plot_points_and_polygon.html" todir="${src.out.dir}" />
         <copy file="${resources.dir}/plot_twoptcorrelation.html" todir="${src.out.dir}" />
 
     </target>
@@ -306,6 +304,7 @@
             <fileset dir="${src.out.dir}" includes="com/climbwithyourfeet/clustering/**"/>
             <fileset dir="${basedir}" includes="LICENSE.txt"/>
             <fileset dir="${basedir}" includes="README.txt"/>
+            <fileset dir="${resources.dir}" includes="plot_twoptcorrelation.html"/>
         </jar>
         <mkdir dir="dist" />
         <copy file="${classes.dir}/com.climbwithyourfeet.clustering_${TS}.jar" 
