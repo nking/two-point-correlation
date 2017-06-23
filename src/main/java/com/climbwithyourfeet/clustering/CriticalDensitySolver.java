@@ -233,6 +233,8 @@ public class CriticalDensitySolver {
                 count2++;
             }
         }
+        
+        values = filterOutInf(values);
 
         return findCriticalDensity(values);
     }
@@ -284,6 +286,28 @@ public class CriticalDensitySolver {
         float[] xs = hist.getXHist();        
         
         return new float[]{xs[q12Idx], xs[medianIdx], xs[q34Idx], xs[n - 1]};
+    }
+
+    private float[] filterOutInf(float[] values) {
+        
+        int n2 = 0;
+        for (float v : values) {
+            if (Float.isFinite(v)) {
+                n2++;
+            }
+        }
+        if (n2 == values.length) {
+            return values;
+        }
+        float[] out = new float[n2];
+        n2 = 0;
+        for (float v : values) {
+            if (Float.isFinite(v)) {
+                out[n2] = v;
+                n2++;
+            }
+        }
+        return out;
     }
 
 }
