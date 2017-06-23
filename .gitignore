@@ -1,6 +1,9 @@
 tmpdata/
 bin
 TEST*txt
+nbproject/
+log/
+tt
 junit*properties
 /other/GEVSimilarity/target/
 /other/GEVSimilarity/target2/
