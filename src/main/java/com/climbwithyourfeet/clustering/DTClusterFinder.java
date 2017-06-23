@@ -1,13 +1,15 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.util.MiscMath;
-import com.climbwithyourfeet.clustering.util.PairInt;
+import algorithms.imageProcessing.DistanceTransform;
+import algorithms.misc.MiscMath0;
+import gnu.trove.set.TIntSet;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,17 +22,19 @@ import javax.imageio.ImageIO;
  * runtime complexity ~ O(N_pixels) + ~O(N_points * lg2(N_points))
  * 
  * @author nichole
- * @param <T>
  */
-public class DTClusterFinder<T extends PairInt> {
+public class DTClusterFinder {
     
-    private final Set<T> points;
+    /**
+     * pixel indexes
+     */
+    private final TIntSet points;
     private final int width;
     private final int height;
     
     private float critDens = Float.POSITIVE_INFINITY;
     
-    private DTGroupFinder<T> groupFinder = null;
+    private List<TIntSet> groups = null;
 
     private enum STATE {
         INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
@@ -52,7 +56,7 @@ public class DTClusterFinder<T extends PairInt> {
      * @param width
      * @param height
      */
-    public DTClusterFinder(Set<T> thePoints, int width, int height) {
+    public DTClusterFinder(TIntSet thePoints, int width, int height) {
         
         this.points = thePoints;
         this.width = width;
@@ -93,7 +97,7 @@ public class DTClusterFinder<T extends PairInt> {
             return;
         }
         
-        DistanceTransform<T> dtr = new DistanceTransform<T>();
+        DistanceTransform dtr = new DistanceTransform();
         int[][] dt = dtr.applyMeijsterEtAl(points, width, height);
         
         CriticalDensitySolver densSolver = new CriticalDensitySolver();
@@ -105,14 +109,14 @@ public class DTClusterFinder<T extends PairInt> {
             log.info("print dist trans for " + points.size() + " points " +
                 "within width=" + width + " height=" + height);
             
-            int[] minMax = MiscMath.findMinMaxValues(dt);
+            int[] minMax = MiscMath0.findMinMaxValues(dt);
             
             log.info("min and max =" + Arrays.toString(minMax));
             
             try {
                 writeDebugImage(dt, Long.toString(System.currentTimeMillis()));
             } catch (IOException ex) {
-                Logger.getLogger(DTClusterFinder.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
             }
         }
                 
@@ -148,14 +152,13 @@ public class DTClusterFinder<T extends PairInt> {
             return;
         }
         
-        groupFinder = new DTGroupFinder<T>();
+        DTGroupFinder groupFinder = new DTGroupFinder(width, height);
         
         groupFinder.setThreshholdFactor(threshholdFactor);
         
         groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);
         
-        groupFinder.calculateGroups(critDens, points);
-        
+        groups = groupFinder.calculateGroups(critDens, points);        
     }
     
     /**
@@ -164,11 +167,11 @@ public class DTClusterFinder<T extends PairInt> {
      */
     public int getNumberOfClusters() {
         
-        if (groupFinder == null) {
+        if (groups == null) {
             return 0;
         }
         
-        return groupFinder.getNumberOfGroups();
+        return groups.size();
     }
     
     /**
@@ -176,18 +179,22 @@ public class DTClusterFinder<T extends PairInt> {
      * @param idx
      * @return
      */
-    public Set<T> getCluster(int idx) {
+    public TIntSet getCluster(int idx) {
         
-        if (groupFinder == null) {
+        if (groups == null) {
             throw new IllegalArgumentException(
                 "findClusters was not successfully invoked");
         }
         
-        if ((idx < 0) || (idx > (groupFinder.getNumberOfGroups() - 1))) {
+        if ((idx < 0) || (idx > (groups.size() - 1))) {
             throw new IllegalArgumentException("idx is out of bounds");
         }
         
-        return groupFinder.getGroup(idx);
+        return groups.get(idx);
+    }
+    
+    public List<TIntSet> getGroups() {
+        return groups;
     }
     
     /**

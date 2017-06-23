@@ -1,7 +1,10 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.util.PairInt;
+import algorithms.util.PairInt;
+import algorithms.util.PixelHelper;
+import gnu.trove.set.TIntSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import junit.framework.TestCase;
 
@@ -13,35 +16,33 @@ public class DTGroupFinderTest extends TestCase {
     
     /**
      *
-     * @param testName
-     */
-    public DTGroupFinderTest(String testName) {
-        super(testName);
-    }
-
-    /**
-     *
      * @throws Exception
      */
     public void testCalculateGroups() throws Exception {
         
         Set<PairInt> points = getData0();
-            
-        DTGroupFinder<PairInt> finder = new DTGroupFinder<PairInt>();
         
-        finder.setThreshholdFactor(1.0f);
+        PixelHelper ph = new PixelHelper();
         
+        TIntSet pixIdxs = ph.convert(points, 8);
+        
+        DTGroupFinder finder = new DTGroupFinder(8, 8);
+                
         //float critSep = 2.f/(criticalDensity * threshholdFactor);
         
         float expectedCritSep = 2;
+        float thresh = finder.getThreshholdFactor();
+        // critDens = (2./critSep)/thresh
         
-        float critDensity = 1.f/expectedCritSep;
+        float critDensity = (2.f/expectedCritSep)/thresh;
         
-        finder.calculateGroups(critDensity, points);
+        List<TIntSet> groups = 
+            finder.calculateGroups(critDensity, pixIdxs);
         
-        assertTrue(finder.getNumberOfGroups() == 1);
+        assertTrue(groups.size() == 1);
         
-        Set<PairInt> g0 = finder.getGroup(0);
+        TIntSet g0p = groups.get(0);
+        Set<PairInt> g0 = ph.convert(g0p, 8);
         
         assertTrue(g0.size() == 6);
         

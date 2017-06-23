@@ -1,11 +1,12 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.util.Histogram;
-import com.climbwithyourfeet.clustering.util.HistogramHolder;
-import com.climbwithyourfeet.clustering.util.MiscMath;
+import algorithms.misc.*;
+import algorithms.util.Errors;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -75,7 +76,7 @@ public class CriticalDensitySolver {
         TODO: This method needs improvements, especially for small numbers.
         */
         
-        float[] vErrors = Histogram.populateYErrorsBySqrt(values);
+        float[] vErrors = Errors.populateYErrorsBySqrt(values);
 
         int nb = 40;
         if (nb > values.length) {
@@ -85,7 +86,7 @@ public class CriticalDensitySolver {
             }
         }
         
-        float xl = MiscMath.findMax(values);
+        float xl = MiscMath0.findMax(values);
                
         HistogramHolder hist = Histogram.createSimpleHistogram(
             0, xl, nb, values, vErrors);
@@ -94,7 +95,7 @@ public class CriticalDensitySolver {
         
         int yFirstPeakIdx = Histogram.findFirstPeakIndex(hist);
                 
-        int yMaxIdx = MiscMath.findYMaxIndex(hist.getYHist());
+        int yMaxIdx = MiscMath0.findYMaxIndex(hist.getYHist());
         
         float xMax = 0;
         
@@ -109,7 +110,7 @@ public class CriticalDensitySolver {
                 idx = -1*(idx + 1);
             }
             values = Arrays.copyOf(values, idx);
-            vErrors = Histogram.populateYErrorsBySqrt(values);
+            vErrors = Errors.populateYErrorsBySqrt(values);
             
             xl = values[values.length - 1];
             
@@ -127,7 +128,7 @@ public class CriticalDensitySolver {
         
             yFirstPeakIdx = Histogram.findFirstPeakIndex(hist);
                 
-            yMaxIdx = MiscMath.findYMaxIndex(hist.getYHist());
+            yMaxIdx = MiscMath0.findYMaxIndex(hist.getYHist());
                   
             xMax = 2.0f * hist.getXHist()[yMaxIdx];
            
@@ -136,7 +137,11 @@ public class CriticalDensitySolver {
 
         if (debug) {
             String outFileSuffix = "_cluster_";
-            hist.plotHistogram("clstr", outFileSuffix);
+            try {
+                hist.plotHistogram("clstr", outFileSuffix);
+            } catch (IOException ex) {
+                Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+            }
         
             System.out.println("1stPeakIdx=" + yFirstPeakIdx +
                  " yMaxIdx=" + yMaxIdx + " out of " + len
@@ -160,7 +165,11 @@ public class CriticalDensitySolver {
 
             if (debug) {
                 String outFileSuffix = "_cluster_2_";
-                hist.plotHistogram("clstr", outFileSuffix);
+                try {
+                    hist.plotHistogram("clstr", outFileSuffix);
+                } catch (IOException ex) {
+                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         
             yFirstPeakIdx = Histogram.findFirstPeakIndex(hist);
@@ -191,10 +200,14 @@ public class CriticalDensitySolver {
         
             if (debug) {
                 String outFileSuffix = "_cluster_2_";
-                hist.plotHistogram("clstr", outFileSuffix);
+                try {
+                    hist.plotHistogram("clstr", outFileSuffix);
+                } catch (IOException ex) {
+                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
             
-            yMaxIdx = MiscMath.findYMaxIndex(hist.getYHist());
+            yMaxIdx = MiscMath0.findYMaxIndex(hist.getYHist());
         
             xMax = 1.1f * hist.getXHist()[yMaxIdx];
         }

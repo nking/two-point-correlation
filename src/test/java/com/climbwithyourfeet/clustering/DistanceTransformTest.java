@@ -1,10 +1,12 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.util.*;
+import algorithms.misc.Histogram;
+import algorithms.misc.HistogramHolder;
+import algorithms.imageProcessing.DistanceTransform;
 import algorithms.util.Errors;
+import algorithms.util.PairInt;
 import algorithms.util.ResourceFinder;
 import algorithms.util.Util;
-import com.climbwithyourfeet.clustering.util.PairInt;
 import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorConvertOp;
@@ -63,7 +65,7 @@ public class DistanceTransformTest extends TestCase {
             }
         }
 
-        DistanceTransform<PairInt> dtr = new DistanceTransform<PairInt>();
+        DistanceTransform dtr = new DistanceTransform();
         int[][] dt = dtr.applyMeijsterEtAl(points, w, h);
 
         int[][] dtInv = dtr.applyMeijsterEtAl(pointsInv, w, h);
@@ -103,7 +105,7 @@ public class DistanceTransformTest extends TestCase {
             }
         }
         
-        DistanceTransform<PairInt> dtr = new DistanceTransform<PairInt>();
+        DistanceTransform dtr = new DistanceTransform();
         int[][] dt = dtr.applyMeijsterEtAl(points, w, h);
 
         int[][] dtInv = dtr.applyMeijsterEtAl(pointsInv, w, h);
@@ -164,7 +166,7 @@ public class DistanceTransformTest extends TestCase {
         pointsM.add(new PairInt(7, 7));
         data[7][7] = 1;
             
-        DistanceTransform<PairInt> dtr = new DistanceTransform<PairInt>();
+        DistanceTransform dtr = new DistanceTransform();
         
         // ----- inverse binary of that  ----------
         Set<PairInt> pointsInv = new HashSet<PairInt>();
@@ -229,7 +231,7 @@ public class DistanceTransformTest extends TestCase {
         int w = minMaxXY[1] + 1;
         int h = minMaxXY[3] + 1;
         
-        DistanceTransform<PairInt> dtr = new DistanceTransform<PairInt>();
+        DistanceTransform dtr = new DistanceTransform();
         int[][] dt = dtr.applyMeijsterEtAl(points, w, h);
         
         writeDebugImage(dt, Long.toString(System.currentTimeMillis()));

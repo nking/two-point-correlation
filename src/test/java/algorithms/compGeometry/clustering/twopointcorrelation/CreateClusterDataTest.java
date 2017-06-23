@@ -1,6 +1,6 @@
 package algorithms.compGeometry.clustering.twopointcorrelation;
 
-import com.climbwithyourfeet.clustering.util.*;
+import algorithms.misc.HistogramHolder;
 import algorithms.util.PolygonAndPointPlotter;
 import algorithms.util.ResourceFinder;
 import algorithms.util.Util;

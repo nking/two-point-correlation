@@ -1,85 +1,64 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.util.PairInt;
+import algorithms.util.PixelHelper;
+import algorithms.disjointSets.DisjointSet2Helper;
+import algorithms.disjointSets.DisjointSet2Node;
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.logging.Logger;
 
 /**
  *
  * @author nichole
- * @param <T>
  */
-public class DTGroupFinder<T extends PairInt> {
-    /**
-     * an array to hold each group as an item. Note that the original point
-     * given in points is preserved so any specialization information available
-     * to the copy() method is present in the grouped points too.
-     * One use case is the point being scaled CIE XY colors and a specialization 
-     * of PairInt that has a field holding the pixel index
-     */
-    protected List<Set<T> > groupMembership = new ArrayList<Set<T>>();
-    
-    /**
-     *
-     */
-    protected Logger log = null;
-        
-     /*
-     * map w/ key holding indexes for a point to the group it belongs to.
-     * note that the point index is relative to indexer.x and indexer.y
-     */
+public class DTGroupFinder {
+
+    private DisjointSet2Helper disjointSetHelper = null;
+
+    // key = pixIdx, value = disjoint set node with key pixIdx
+    private TIntObjectMap<DisjointSet2Node<Integer>> pixNodes = null;
+
+    protected boolean use4Neighbors = false;
 
     /**
-     *
+     * a list to hold each group as an item of pixel indexes
      */
-    
-    protected Map<T, Integer> pointToGroupMap = new HashMap<T, Integer>();
-    
-    /**
-      key = group receiving merges, value = set of integers to merge into this
-      key.  note that values are all greater than key
-     */
-    protected TreeMap<Integer, Set<Integer>> mergeGroupsBeforePrune = new
-        TreeMap<Integer, Set<Integer>>();
-    
-    /**
-     *
-     */
+    protected List<TIntSet> groupList = null;
+
     protected int minimumNumberInCluster = 3;
-    
-    /**
-     *
-     */
-    protected boolean notValue = false;
-    
+
+    private final int imgWidth;
+    private final int imgHeight;
     /**
      *
      */
     protected boolean debug = false;
-    
+
     /**
      *
      */
     protected float threshholdFactor = 2.5f;
-    
+
     /**
      *
      */
     protected float critDensity = 0;
-            
-    /**
-     *
-     */
-    public DTGroupFinder() {                
-        this.log = Logger.getLogger(this.getClass().getName());
+
+    protected Logger log = Logger.getLogger(this.getClass().getName());
+
+    public DTGroupFinder(int imageWidth, int imageHeight) {
+
+        imgWidth = imageWidth;
+
+        imgHeight = imageHeight;
     }
-        
+
     /**
      *
      * @param n
@@ -87,7 +66,7 @@ public class DTGroupFinder<T extends PairInt> {
     public void setMinimumNumberInCluster(int n) {
         this.minimumNumberInCluster = n;
     }
-    
+
     /**
      *
      * @param setDebugToTrue
@@ -95,7 +74,7 @@ public class DTGroupFinder<T extends PairInt> {
     public void setDebug(boolean setDebugToTrue) {
         this.debug = setDebugToTrue;
     }
-    
+
     /**
      *
      * @param factor
@@ -105,407 +84,184 @@ public class DTGroupFinder<T extends PairInt> {
     }
 
     /**
+     *
+     * @return threshold factor for critical density
+     */
+    public float getThreshholdFactor() {
+        return this.threshholdFactor;
+    }
+
+    /**
      * given the critical density and having the threshold factor, find the
      * groups of points within a critical distance of one another.
      * runtime complexity is O(N_points * lg2(N_points)).
      * @param criticalDensity
-     * @param points
+     * @param pixIdxs
+     * @return the groups found using critical density
      */
-    void calculateGroups(float criticalDensity, Set<T> points) {
-        
+    public List<TIntSet> calculateGroups(float criticalDensity, TIntSet pixIdxs) {
+
+        PixelHelper ph = new PixelHelper();
+
+        initMap(pixIdxs);
+
         this.critDensity = criticalDensity;
-        
-        /*
-        TODO: revisit the scale
-        if critDensity == 1, clustered points are adjcent to one another,
-        and the final crit sep needs to be '1',
-        so a correction to thrsh is made here for that.
-        */
-        
+
         float thrsh = criticalDensity * threshholdFactor;
-        
+
         if (critDensity == 1) {
             // fudge to result in critical separation of 1
             thrsh = 2.f;
         }
-        
-        findGroups(thrsh, points);
-        
-        merge();
-        
-        prune(); 
+
+        findGroups(thrsh, pixIdxs);
+
+        prune();
+
+        return groupList;
     }
-    
+
     /**
      * find groups within points using the threshold to calculate the critical
      * separation, then groups are connected points closer to one another than
      * the critical separation.
      * @param thrsh
-     * @param points 
+     * @param points
      */
-    private void findGroups(float thrsh, Set<T> points) {
-        
-        if (points.isEmpty()) {
+    private void findGroups(float thrsh, TIntSet pixIdxs) {
+
+        if (pixIdxs.isEmpty()) {
             return;
         }
-        
+
         // association of 2 points for separation <= critSeparation
         float critSep = 2.f/thrsh;
-        
+
         if (critSep < 1) {
-            // each point is a group
-            if (minimumNumberInCluster < 2) {
-                setEachPointAsAGroup(points);
-            }
+            // each point is already a group
             return;
         }
-        
+
         log.info("critSep=" + critSep);
-        
-        //TODO: consider data structures with point location as part of their
-        // structure... spatial indexing, RTrees...
+
         /*
-        Sort the points by x then y to be able to make small searches around a
-        point as traverse the sorted array.
-        The runtime complexity is O(N*lg2(N)).
-        Note that if the dataset were sparse, could assume only need to sort
-        on x and could hence use the O(N) counting sort (if N=100 for example, 
-        and the dataset were sparse and there are fewer than 7 points with the 
-        same y for each x, O(N) and search all points with a specific x is 
-        faster than O(N*lg2(N))).
+        because the critical separation may be > 1, cannot use the simplest
+        DFS with neighbor search by 1 pixel.
+
+        can either sort by x and y then scan around each point by distance
+        of critical separation,
+        or use DFS traversal and a nearest neigbhors algoirthm to find neighbors
+        within critical separation.
         */
-        
-        PairInt[] sorted = new PairInt[points.size()];
-        int count = 0;
-        for (PairInt p : points) {
-            sorted[count] = p;
-            count++;
-        }
-        PISort.mergeSortByXThenY(sorted);
-                
-        for (int i = 0; i < sorted.length; ++i) {
-            
-            @SuppressWarnings("unchecked")
-            T uPoint = (T)sorted[i];
-            
-            // process the pair when their point density is higher than thrsh:
-            //  
-            //   2/sep_u_v  > thrsh  where thrsh is 2.5*the background linear density
-            
-            // association of 2 points for separation <= critSeparation
-            
-            float uX = uPoint.getX();
-            float minXAssoc = uX - critSep;
-            float maxXAssoc = uX + critSep;
-            float uY = uPoint.getY();
-            float minYAssoc = uY - critSep;
-            float maxYAssoc = uY + critSep;
-            
-            boolean assocFound = false;
-            
-            /*
-            uX = sorted[0].x
-                search backward while x >= minXAssoc
-                    while x == minXAssoc, only proceed for y >= minYAssoc
-                search forward while x <= maxXAssoc
-                    while x == maxXAssoc, only proceed for y <= maxYAssoc
+
+        //TODO: need to port the nearest neighbors code here too.
+        //    paused to make a shared library for projects
+
+        /*
+                int diffX = xy[0] - vX;
+                int diffY = xy[1] - vY;
+                double sep = Math.sqrt(diffX*diffX + diffY*diffY);
+
+System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
+    xy[0], xy[1], vX, vY, diffX, diffY, sep, critSep);
+
+                if (sep > critSep) {
+                    continue;
+                }
+
+                processPair(uIndex, vIndex);
             */
-            
-            // search backward within radius critSep
-            for (int j = (i - 1); j > -1; --j) {
-                
-                @SuppressWarnings("unchecked")
-                T vPoint = (T)sorted[j];
-                
-                float vX = vPoint.getX();
-                
-                if (vX < minXAssoc) {
-                    break;
-                }
-                
-                if (vX == minXAssoc) {
-                    if (vPoint.getY() < minYAssoc) {
-                        break;
-                    }
-                }
-                // for given x, if y < minYAssoc can skip, but not break
-                if (vPoint.getY() < minYAssoc) {
-                    continue;
-                }
-                
-                // check the diagonal distances:
-                double sep = Math.sqrt((vX - uX)*(vX - uX) + 
-                    (vPoint.getY() - uY)*(vPoint.getY() - uY));
-                  
-                // TODO: consider using the chessboard distance (diag dist treated as '1')
-                if (sep > critSep) {
-                    continue;
-                }
-                
-                // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);
-                                
-                assocFound = true;
-            }
-            
-            // search forward within radius critSep
-            for (int j = (i + 1); j < sorted.length; ++j) {
-                
-                @SuppressWarnings("unchecked")
-                T vPoint = (T)sorted[j];
-                
-                float vX = vPoint.getX();
-                
-                if (vX > maxXAssoc) {
-                    break;
-                }
-                
-                if (vX == maxXAssoc) {
-                    if (vPoint.getY() > maxYAssoc) {
-                        break;
-                    }
-                }
-                // for given x, if y > maxYAssoc can skip, but not break
-                if (vPoint.getY() > maxYAssoc) {
-                    //TODO: if knew where next x was in sorted, could increment j to that
-                    continue;
-                }
-                
-                // check the diagonal distances:
-                double sep = Math.sqrt((vX - uX)*(vX - uX) + 
-                    (vPoint.getY() - uY)*(vPoint.getY() - uY));
-                  
-                if (sep > critSep) {
-                    continue;
-                }
-                
-                // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);
-                                
-                assocFound = true;
-            }
-            
-            // if no points were within assoc distance, this becomes its
-            // own group
-            if ((minimumNumberInCluster < 2) && !assocFound) {
-                process(uPoint);
-            }            
-        }
-        
-    }
-    
-    int getNumberOfGroups() {
-        return groupMembership.size();
-    }
-    
-    Set<T> getGroup(int groupIdx) {
-        
-        if (groupMembership.isEmpty()) {
-            return new HashSet<T>();
-        }
-        if (groupIdx > (groupMembership.size() - 1) || (groupIdx < 0)) {
-            throw new IllegalArgumentException("groupIdx=" + groupIdx 
-            + " is outside of range of nGroups=" + groupMembership.size());
-        }
-        
-        Set<T> set = groupMembership.get(groupIdx);
-       
-        return set;
+
     }
 
-    private void setEachPointAsAGroup(Set<T> points) {
-        
-        for (T p : points) {
-            
-            int sz = groupMembership.size();
-            
-            pointToGroupMap.put(p, Integer.valueOf(sz));
-            
-            Set<T> set = new HashSet<T>();
-            
-            set.add(p);
-            
-            groupMembership.add(set);
-        }
+    private void processPair(Integer uPoint, Integer vPoint) {
+
+        DisjointSet2Node<Integer> uNode = pixNodes.get(uPoint);
+        DisjointSet2Node<Integer> uParentNode
+            = disjointSetHelper.findSet(uNode);
+        assert(uParentNode != null);
+
+        int uGroupId = uParentNode.getMember().intValue();
+
+        DisjointSet2Node<Integer> vNode = pixNodes.get(vPoint);
+        DisjointSet2Node<Integer> vParentNode
+            = disjointSetHelper.findSet(vNode);
+        assert(vParentNode != null);
+
+        int vGroupId = vParentNode.getMember().intValue();
+
+        DisjointSet2Node<Integer> merged =
+            disjointSetHelper.union(uParentNode, vParentNode);
+
+        pixNodes.put(uGroupId, merged);
+
+        pixNodes.put(vGroupId, merged);
     }
 
-    private void processPair(T uPoint, T vPoint) {
-        
-        Integer groupId = pointToGroupMap.get(uPoint);
-        
-        Integer vGroupId = pointToGroupMap.get(vPoint);
-        
-        if ((groupId != null) && (vGroupId == null)) {
-                    
-            groupMembership.get(groupId).add(vPoint);
-            
-            pointToGroupMap.put(vPoint, groupId);
-                        
-        } else if ((groupId == null) && (vGroupId != null)) {
-
-            groupId = vGroupId;
-
-            groupMembership.get(groupId).add(uPoint);
-            
-            pointToGroupMap.put(uPoint, groupId);
-            
-        } else if ((groupId == null) && (vGroupId == null)) {
-            
-            groupId = Integer.valueOf(groupMembership.size());
-            
-            pointToGroupMap.put(uPoint, groupId);
-            
-            pointToGroupMap.put(vPoint, groupId);
-            
-            Set<T> set = new HashSet<T>();
-            set.add(uPoint);
-            set.add(vPoint);
-            
-            groupMembership.add(set);
-                      
-        } else if ((groupId != null) && (vGroupId != null)) {
-            
-            Integer uIdx = groupId;
-            
-            Integer vIdx = vGroupId;
-            
-            if (uIdx != vIdx) {
-                if (uIdx > vIdx) {
-                    Integer swap = uIdx;
-                    uIdx = vIdx;
-                    vIdx = swap;
-                }
-                
-                // now uIdx is < vIdx
-                
-                /*
-                key = group receiving merges, value = set of integers to merge into this
-                key.  note that values are all greater than key
-                */
-                
-                Set<Integer> group = mergeGroupsBeforePrune.get(uIdx);
-                if (group == null) {
-                    group = new HashSet<Integer>();
-                    mergeGroupsBeforePrune.put(uIdx, group);
-                }
-                group.add(vIdx);
-            }
-        }
-    }
-    
-    /**
-     *
-     * @param uPoint
-     */
-    protected void process(T uPoint) {
-                
-        Integer groupId = pointToGroupMap.get(uPoint);
-        
-        if (groupId == null) {
-                        
-            groupId = Integer.valueOf(groupMembership.size());
-            
-            pointToGroupMap.put(uPoint, groupId);
-            
-            Set<T> set = new HashSet<T>();
-            set.add(uPoint);
-            
-            groupMembership.add(set);
-        }
-    }
-    
     private void prune() {
-        
-        log.finest("number of groups before prune=" + groupMembership.size());
-        
-        //TODO: the data structures used could be written at the expense
-        // of space complexity to reduce changes needed when group number
-        // changes
-        
-        /*
-         * [------] 0
-         * [------] 1 <---- too few
-         * [------] 2
-         */
-        // iterate backwards so can move items up without conflict with iterator
-        for (int i = (groupMembership.size() - 1); i > -1; i--) {
-            
-            Set<T> group = groupMembership.get(i);
-            
-            int count = group.size();
-            
-            log.finest("  group " + i + " has " + count 
-                + " members before prune (min=" + minimumNumberInCluster + ")");
-            if (count < minimumNumberInCluster) {
-            
-                // remove this group and move up all groups w/ index > i by one index
-                for (int j = (i + 1); j < groupMembership.size(); j++) {
-                    
-                    int newGroupId = j - 1;
-                                        
-                    // update members in pointToGroupIndex
-                    Set<T> latest = groupMembership.get(j);
-                    
-                    for (T p : latest) {
-                        pointToGroupMap.put(p, Integer.valueOf(newGroupId));
-                    }
-                }
-                
-                Set<T> removed = groupMembership.remove(i);
+
+        // key = repr node index, value = set of pixels w/ repr
+        TIntObjectMap<TIntSet> map = new TIntObjectHashMap<TIntSet>();
+
+        TIntObjectIterator<DisjointSet2Node<Integer>> iter =
+            pixNodes.iterator();
+        for (int i = 0; i < pixNodes.size(); ++i) {
+
+            iter.advance();
+
+            int pixIdx = iter.key();
+            DisjointSet2Node<Integer> node = iter.value();
+
+            DisjointSet2Node<Integer> repr = disjointSetHelper.findSet(node);
+
+            int reprIdx = repr.getMember().intValue();
+
+            TIntSet set = map.get(reprIdx);
+            if (set == null) {
+                set = new TIntHashSet();
+                map.put(reprIdx, set);
+            }
+            set.add(pixIdx);
+        }
+
+        log.finest("number of groups before prune=" + map.size());
+
+        // rewrite the above into a list
+        List<TIntSet> groups = new ArrayList<TIntSet>();
+
+        TIntObjectIterator<TIntSet> iter2 = map.iterator();
+        for (int i = 0; i < map.size(); ++i) {
+            iter2.advance();
+
+            TIntSet idxs = iter2.value();
+
+            if (idxs.size() >= minimumNumberInCluster) {
+                groups.add(idxs);
             }
         }
-        
-        log.finest("number of groups after prune=" + groupMembership.size());
+
+        this.groupList = groups;
+
+        log.finest("number of groups after prune=" + groups.size());
     }
 
-    private void merge() {
-        
-        log.finest("merge " + mergeGroupsBeforePrune.size() + " groups");
-    
-        /*
-        merge values in tree first:
-          9->10           is move 10 into group 9
-          7->{8, 10}      is move 10 which is now 9) into group 7
-        */
-        Map<Integer, Set<Integer>> merged = new HashMap<Integer, Set<Integer>>();
-        
-        for (Integer moveToGroupIndex : mergeGroupsBeforePrune.descendingKeySet()) {
-            
-            Set<Integer> moveIndexes = mergeGroupsBeforePrune.get(moveToGroupIndex);
-            
-            // if any value in moveIndexes is a key in merged, add its values
-            // to moveIndexes
-            Set<Integer> add = new HashSet<Integer>();
-            for (Integer moveGroupIndex : moveIndexes) {
-                Set<Integer> set2 = merged.get(moveGroupIndex);
-                if (set2 != null) {
-                    add.addAll(set2);
-                }
-            }
-            moveIndexes.addAll(add);
-            
-            for (Integer moveGroupIndex : moveIndexes) {
-                        
-                Set<T> moveGroup = groupMembership.get(moveGroupIndex);
-            
-                for (T p : moveGroup) {
-                    pointToGroupMap.put(p, moveToGroupIndex);
-                }
+    private void initMap(TIntSet pixIdxs) {
 
-                groupMembership.get(moveToGroupIndex).addAll(moveGroup);
+        pixNodes = new TIntObjectHashMap<DisjointSet2Node<Integer>>();
 
-                groupMembership.get(moveGroupIndex).clear();
-                
-                Set<Integer> set2 = merged.get(moveGroupIndex);
-                if (set2 == null) {
-                    set2 = new HashSet<Integer>();
-                    merged.put(moveGroupIndex, set2);
-                }
-                set2.add(moveToGroupIndex);
-            }
+        disjointSetHelper = new DisjointSet2Helper();
+
+        TIntIterator iter = pixIdxs.iterator();
+
+        while (iter.hasNext()) {
+
+            int pixIdx = iter.next();
+
+            DisjointSet2Node<Integer> pNode =
+                disjointSetHelper.makeSet(
+                    new DisjointSet2Node<Integer>(Integer.valueOf(pixIdx)));
+
+            pixNodes.put(pixIdx, pNode);
         }
-        
-        mergeGroupsBeforePrune.clear();
     }
-
 }

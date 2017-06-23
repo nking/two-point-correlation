@@ -1,7 +1,6 @@
 package algorithms.compGeometry;
 
-import com.climbwithyourfeet.clustering.util.*;
-
+import algorithms.misc.MiscMath0;
 import java.util.Arrays;
 
 /**
@@ -723,7 +722,7 @@ public class LinesAndAngles {
         float[] xTopPolygonError = (xe == null) ? null : new float[x.length + 3];
         float[] yTopPolygonError = (ye == null) ? null : new float[x.length + 3];
         
-        int yPeakIndex = MiscMath.findYMaxIndex(y);
+        int yPeakIndex = MiscMath0.findYMaxIndex(y);
 
         float yFractionLimit = y[yPeakIndex]*topFraction;
 

@@ -327,7 +327,9 @@ public class BaseTwoPointTest extends TestCase {
     static void writeVoidDensitiesToTestResources(String fileName, float[] values, float[] valueErrors) 
         throws Exception {
 
-        String filePath = ResourceFinder.getAFilePathInTestResources(fileName);
+        String sep = System.getProperty("file.separator");
+        String dirPath = ResourceFinder.findTestResourcesDirectory();
+        String filePath = dirPath + sep + fileName;
 
         FileWriter writer = null;
         BufferedWriter out = null;

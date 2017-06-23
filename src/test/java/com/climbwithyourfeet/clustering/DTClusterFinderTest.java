@@ -4,8 +4,11 @@ import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBa
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
-import com.climbwithyourfeet.clustering.util.*;
+import algorithms.util.PairInt;
+import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.set.TIntSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -125,9 +128,12 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 
                 int width = minMaxXY[1] + 1;
                 int height = minMaxXY[3] + 1;
-                    
-                DTClusterFinder<PairInt> clusterFinder = 
-                    new DTClusterFinder<PairInt>(points, width, height);
+                
+                PixelHelper ph = new PixelHelper();
+                TIntSet pixIdxs = ph.convert(points, width);
+                
+                DTClusterFinder clusterFinder = 
+                    new DTClusterFinder(pixIdxs, width, height);
                 
                 clusterFinder.setToDebug();
 
@@ -140,9 +146,21 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
  
                 System.out.println("  nGroups=" + nGroups);
                 
-                List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>();
-                for (int k = 0; k < nGroups; ++k) {
-                    Set<PairInt> set = clusterFinder.getCluster(k);
+                List<TIntSet> groupListPix = clusterFinder.getGroups();
+                
+                TIntIterator iter;
+                int[] xy = new int[2];
+                
+                List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
+                for (int k = 0; k < groupListPix.size(); ++k) {
+                    Set<PairInt> set = new HashSet<PairInt>();
+                    iter = groupListPix.get(k).iterator();
+                    while (iter.hasNext()) {
+                        int pixIdx = iter.next();
+                        ph.toPixelCoords(pixIdx, width, xy);
+                        PairInt p = new PairInt(xy[0], xy[1]);
+                        set.add(p);
+                    }
                     groupList.add(set);
                 }
                 
@@ -246,8 +264,11 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
 
-            DTClusterFinder<PairInt> clusterFinder = 
-                new DTClusterFinder<PairInt>(points, width, height);
+            PixelHelper ph = new PixelHelper();
+            TIntSet pixIdxs = ph.convert(points, width);
+
+            DTClusterFinder clusterFinder
+                = new DTClusterFinder(pixIdxs, width, height);
 
             clusterFinder.setToDebug();
             clusterFinder.calculateCriticalDensity();
@@ -256,9 +277,21 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
             int nGroups = clusterFinder.getNumberOfClusters();
 
-            List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>();
-            for (int k = 0; k < nGroups; ++k) {
-                Set<PairInt> set = clusterFinder.getCluster(k);
+            List<TIntSet> groupListPix = clusterFinder.getGroups();
+
+            TIntIterator iter;
+            int[] xy = new int[2];
+
+            List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
+            for (int k = 0; k < groupListPix.size(); ++k) {
+                Set<PairInt> set = new HashSet<PairInt>();
+                iter = groupListPix.get(k).iterator();
+                while (iter.hasNext()) {
+                    int pixIdx = iter.next();
+                    ph.toPixelCoords(pixIdx, width, xy);
+                    PairInt p = new PairInt(xy[0], xy[1]);
+                    set.add(p);
+                }
                 groupList.add(set);
             }
             
@@ -395,8 +428,11 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
 
-            DTClusterFinder<PairInt> clusterFinder 
-                = new DTClusterFinder<PairInt>(points, width, height);
+            PixelHelper ph = new PixelHelper();
+            TIntSet pixIdxs = ph.convert(points, width);
+
+            DTClusterFinder clusterFinder
+                = new DTClusterFinder(pixIdxs, width, height);
 
             clusterFinder.calculateCriticalDensity();
             clusterFinder.findClusters();
@@ -406,9 +442,21 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             
             float critDensity = clusterFinder.getCriticalDensity();
 
-            List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>();
-            for (int k = 0; k < nGroups; ++k) {
-                Set<PairInt> set = clusterFinder.getCluster(k);
+            List<TIntSet> groupListPix = clusterFinder.getGroups();
+
+            TIntIterator iter;
+            int[] xy = new int[2];
+
+            List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
+            for (int k = 0; k < groupListPix.size(); ++k) {
+                Set<PairInt> set = new HashSet<PairInt>();
+                iter = groupListPix.get(k).iterator();
+                while (iter.hasNext()) {
+                    int pixIdx = iter.next();
+                    ph.toPixelCoords(pixIdx, width, xy);
+                    PairInt p = new PairInt(xy[0], xy[1]);
+                    set.add(p);
+                }
                 groupList.add(set);
             }
             

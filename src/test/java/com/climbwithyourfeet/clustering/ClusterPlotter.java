@@ -1,7 +1,7 @@
 package com.climbwithyourfeet.clustering;
 
+import algorithms.util.PairInt;
 import algorithms.util.ResourceFinder;
-import com.climbwithyourfeet.clustering.util.PairInt;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -205,59 +205,6 @@ public class ClusterPlotter {
 
     /**
      *
-     * @param relDir
-     * @return
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    protected StringBuffer getTemplateHtmlPlotWRTDir(String relDir) throws 
-        FileNotFoundException, IOException {
-        return getTemplateHtmlPlot(relDir, "plot_twoptcorrelation.html");
-    }
-
-    /**
-     *
-     * @param subDir
-     * @param fileName
-     * @return
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    protected StringBuffer getTemplateHtmlPlot(String subDir, String fileName) 
-        throws FileNotFoundException, IOException {
-
-        String path = ResourceFinder.findFileInResources(subDir, fileName);
-
-        StringBuffer sb = new StringBuffer();
-
-        Reader reader = null;
-        BufferedReader in = null;
-
-        try {
-            reader = new FileReader(new File(path));
-            in = new BufferedReader(reader);
-
-            String line = in.readLine();
-
-            while (line != null) {
-                sb.append(line).append("\n");
-                line = in.readLine();
-            }
-
-        } finally {
-            if (in != null) {
-                in.close();
-            }
-            if (reader != null) {
-                reader.close();
-            }
-        }
-
-        return sb;
-    }
-
-    /**
-     *
      * @param fileName
      * @return
      * @throws FileNotFoundException
@@ -266,13 +213,14 @@ public class ClusterPlotter {
     protected StringBuffer getTemplateHtmlPlot(String fileName) throws 
         FileNotFoundException, IOException {
 
+        String path = ResourceFinder.findFileInResources(fileName);
+        
         StringBuffer sb = new StringBuffer();
 
         Reader reader = null;
         BufferedReader in = null;
 
         try {
-            String path = ResourceFinder.findFileInResources(fileName);
 
             reader = new FileReader(new File(path));
             in = new BufferedReader(reader);

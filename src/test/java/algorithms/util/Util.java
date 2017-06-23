@@ -1,6 +1,7 @@
 package algorithms.util;
 
-import com.climbwithyourfeet.clustering.util.*;
+import algorithms.misc.HistogramHolder;
+import algorithms.misc.MiscMath0;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -27,15 +28,15 @@ public class Util {
         float[] xh = hist.getXHist();
         float[] yh = hist.getYHistFloat();
         
-        float yMin = MiscMath.findMin(yh);
-        int yMaxIdx = MiscMath.findYMaxIndex(yh);
+        float yMin = MiscMath0.findMin(yh);
+        int yMaxIdx = MiscMath0.findYMaxIndex(yh);
         if (yMaxIdx == -1) {
             return null;
         }
         float yMax = yh[yMaxIdx];
         
-        float xMin = MiscMath.findMin(xh);
-        float xMax = MiscMath.findMax(xh);        
+        float xMin = MiscMath0.findMin(xh);
+        float xMax = MiscMath0.findMax(xh);        
                 
         PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
 
@@ -65,12 +66,12 @@ public class Util {
             yLogH[i] = (float)Math.log(yh[i]/Math.log(10));
         }
         
-        float yMin = MiscMath.findMin(yLogH);
-        int yMaxIdx = MiscMath.findYMaxIndex(yLogH);
+        float yMin = MiscMath0.findMin(yLogH);
+        int yMaxIdx = MiscMath0.findYMaxIndex(yLogH);
         float yMax = yLogH[yMaxIdx];
         
-        float xMin = MiscMath.findMin(xh);
-        float xMax = MiscMath.findMax(xh);
+        float xMin = MiscMath0.findMin(xh);
+        float xMax = MiscMath0.findMax(xh);
                         
         PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
 
