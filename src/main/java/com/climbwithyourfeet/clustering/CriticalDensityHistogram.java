@@ -11,8 +11,8 @@ import java.util.logging.Logger;
  *
  * @author nichole
  */
-public class CriticalDensitySolver {
-        
+public class CriticalDensityHistogram implements ICriticalDensity {
+    
     private boolean debug = false;
     
     /**
@@ -23,7 +23,7 @@ public class CriticalDensitySolver {
     /**
      *
      */
-    public CriticalDensitySolver() {
+    public CriticalDensityHistogram() {
     }
     
     /**
@@ -41,7 +41,7 @@ public class CriticalDensitySolver {
      * @param values densities
      * @return 
      */
-    protected float findCriticalDensity(float[] values) {
+    public float findCriticalDensity(float[] values) {
         
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
@@ -115,11 +115,12 @@ public class CriticalDensitySolver {
         }
 
         if (debug) {
+            
             String outFileSuffix = "_cluster_";
             try {
                 hist.plotHistogram("clstr", outFileSuffix);
             } catch (IOException ex) {
-                Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
             }
         
             System.out.println("1stPeakIdx=" + yFirstPeakIdx +
@@ -147,7 +148,7 @@ public class CriticalDensitySolver {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         
@@ -182,7 +183,7 @@ public class CriticalDensitySolver {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             

@@ -6,9 +6,28 @@ import java.util.logging.Logger;
 
 /**
  * main class to cluster finder whose logic is based upon distance transform,
- * density threshold, and a signal to noise argument of ~ 3 as a factor.
+ * density threshold, and a signal to noise argument of ~ 2.5 as a factor.
  * 
- * runtime complexity ~ O(N_pixels) + ~O(N_points * lg2(N_points))
+ * The density threshold can be estimated or provided.
+ * 
+ * If estimated, the default is to find the leading edge of the first peak 
+ * of the surface densities with knowledge that the surface densities 
+ * represent a generalized extreme value curve (due to the nature of the
+ * background points being poisson).
+ * The found peak has a relationship to the background density.
+ * 
+ * The methods to estimate density are
+ * <pre>
+ * (1) histogram (default)
+ * (2) kernel density estimator using wavelet transform
+ * (3) k-nearest neighbors
+ * </pre>
+ * 
+ * The runtime complexity:
+ * TODO: add details.  
+ * first the dist trans uses O(N_pixels), then the
+ * complexity uses the number of density points, 
+ * then the number of original data points.
  * 
  * @author nichole
  */
@@ -29,7 +48,13 @@ public class DTClusterFinder {
         INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
     }
     
+    private enum CRIT_DENS_METHOD {
+        PROVIDED, HISTOGRAM, KDE, KNN
+    }
+    
     private STATE state = null;
+    
+    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.HISTOGRAM;
     
     private float threshholdFactor = 2.5f;
     
@@ -86,17 +111,36 @@ public class DTClusterFinder {
             return;
         }
         
+        if (critDensMethod.ordinal() == CRIT_DENS_METHOD.PROVIDED.ordinal()) {
+            throw new IllegalStateException("the critical density has been "
+                + "set so cannot calculate it too.");
+        }
+        
         DensityExtractor densExtr = new DensityExtractor();
         
         if (debug) {
             densExtr.setToDebug();
         }
 
+        ICriticalDensity densSolver = null;
+        
+        if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {
+            
+            throw new UnsupportedOperationException("not yet implemented");
+        
+        } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
+            
+            throw new UnsupportedOperationException("not yet implemented");
+            
+        } else {
+            
+            assert(critDensMethod.equals(CRIT_DENS_METHOD.HISTOGRAM));
+     
+            densSolver = new CriticalDensityHistogram();
+        }
+        
         float[] densities = densExtr.extractSufaceDensity(points, width, height);
         
-        CriticalDensitySolver densSolver = new CriticalDensitySolver();
-        
-       
         this.critDens = densSolver.findCriticalDensity(densities);  
         
         this.state = STATE.HAVE_CLUSTER_DENSITY;
@@ -111,6 +155,8 @@ public class DTClusterFinder {
         if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
             throw new IllegalStateException("cluster density is already set");
         }
+        
+        this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;
         
         this.critDens = dens;
         
