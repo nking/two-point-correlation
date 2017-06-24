@@ -1,19 +1,8 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.imageProcessing.DistanceTransform;
-import algorithms.misc.MiscMath0;
 import gnu.trove.set.TIntSet;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 
 /**
  * main class to cluster finder whose logic is based upon distance transform,
@@ -97,31 +86,18 @@ public class DTClusterFinder {
             return;
         }
         
-        DistanceTransform dtr = new DistanceTransform();
-        int[][] dt = dtr.applyMeijsterEtAl(points, width, height);
+        DensityExtractor densExtr = new DensityExtractor();
+        
+        if (debug) {
+            densExtr.setToDebug();
+        }
+
+        float[] densities = densExtr.extractSufaceDensity(points, width, height);
         
         CriticalDensitySolver densSolver = new CriticalDensitySolver();
         
-        if (debug) {
-            
-            densSolver.setToDebug();
-
-            log.info("print dist trans for " + points.size() + " points " +
-                "within width=" + width + " height=" + height);
-            
-            int[] minMax = MiscMath0.findMinMaxValues(dt);
-            
-            log.info("min and max =" + Arrays.toString(minMax));
-            
-            try {
-                writeDebugImage(dt, Long.toString(System.currentTimeMillis()));
-            } catch (IOException ex) {
-                Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-                
-        this.critDens = densSolver.findCriticalDensity(dt, points.size(), 
-            width, height);  
+       
+        this.critDens = densSolver.findCriticalDensity(densities);  
         
         this.state = STATE.HAVE_CLUSTER_DENSITY;
     }
@@ -203,47 +179,6 @@ public class DTClusterFinder {
      */
     public float getCriticalDensity() {
         return critDens;
-    }
-    
-    private void writeDebugImage(int[][] dt, String fileSuffix) throws IOException {
-        
-        BufferedImage outputImage = new BufferedImage(width, height, 
-            BufferedImage.TYPE_BYTE_GRAY);
-
-        WritableRaster raster = outputImage.getRaster();
-        
-        for (int i = 0; i < dt.length; ++i) {
-            for (int j = 0; j < dt[0].length; ++j) {
-                int v = dt[i][j];
-                raster.setSample(i, j, 0, v);
-            }
-        }
-        
-        // write to an output directory.  we have user.dir from system properties
-        // but no other knowledge of users's directory structure
-        URL baseDirURL = this.getClass().getClassLoader().getResource(".");
-        String baseDir = null;
-        if (baseDirURL != null) {
-            baseDir = baseDirURL.getPath();
-        } else {
-            baseDir = System.getProperty("user.dir");
-        }
-        if (baseDir == null) {
-            return;
-        }
-        File t = new File(baseDir + "/bin");
-        if (t.exists()) {
-            baseDir = t.getPath();
-        } else if ((new File(baseDir + "/target")).exists()) {
-            baseDir = baseDir + "/target";
-        }
-        
-        // no longer need to use file.separator
-        String outFilePath = baseDir + "/distance_transform_" + fileSuffix + ".png";
-        
-        ImageIO.write(outputImage, "PNG", new File(outFilePath));
-        
-        Logger.getLogger(this.getClass().getName()).info("wrote " + outFilePath);
     }
     
 }
