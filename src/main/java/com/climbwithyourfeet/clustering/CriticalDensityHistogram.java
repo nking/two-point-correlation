@@ -8,7 +8,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * uses histograms to find the first peak that determines the critical density.
+ * 
  * @author nichole
  */
 public class CriticalDensityHistogram implements ICriticalDensity {

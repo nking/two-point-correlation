@@ -48,7 +48,7 @@ public class DTClusterFinder {
         INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
     }
     
-    private enum CRIT_DENS_METHOD {
+    public static enum CRIT_DENS_METHOD {
         PROVIDED, HISTOGRAM, KDE, KNN
     }
     
@@ -85,7 +85,7 @@ public class DTClusterFinder {
     public void setToDebug() {
         debug = true;
     }
-    
+   
     /**
      *
      * @param factor
@@ -102,6 +102,26 @@ public class DTClusterFinder {
         this.minimumNumberInCluster = n;
     }
     
+    /**
+     * set to override the default use of histograms in estimating the
+     * critical density, to an alternative method of Kernel Density 
+     * Estimator or k-Nearest Neighbors, or provided by you.
+     * @param cdm
+     */
+    public void setCriticalDensity(CRIT_DENS_METHOD cdm) {
+        
+        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
+            throw new IllegalStateException("cannot set method after critical "
+                + " density has already been estimated");
+        }
+        
+        if (cdm == null) {
+            throw new IllegalArgumentException("cdm cannot be null");
+        }
+        
+        this.critDensMethod = cdm;
+    }
+
     /**
      *
      */
