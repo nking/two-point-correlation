@@ -59,11 +59,6 @@ public class CriticalDensityKDE implements ICriticalDensity {
         
         Arrays.sort(values);
         
-        /*
-        TODO: consider using a decimation based wavelet transform such as
-        the MedianTransform here.
-        */
-        
         ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
                        
         List<OneDFloatArray> outputTransformed = new 
@@ -74,7 +69,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         wave.calculateWithB3SplineScalingFunction(values, outputTransformed, 
             outputCoeff);
         
-        // determine which transform is the best to use.
+        // TODO: determine which transform is the best to use.
         // determine whether should apply wavelet transform once more.
         /*
         one criteria could be that when the freqMap below only contains one 
@@ -91,7 +86,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         TFloatList unique = new TFloatArrayList();
         for (float v : smoothed) {
             int c = freqMap.get(v);
-            // NOTE: trove map default returns 0 when not in map.
+            // NOTE: trove map default returns 0 when key is not in map.
             if (c == 0) {
                 unique.add(v);
             }
@@ -158,7 +153,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
             }
         }
         
-        // for histogram, crit dens = 1.1 * x where ymax is
+        // for histogram, crit dens = 1.1 * density of first peak
         float peak = unique.get(indexes[0]);
         
         return peak;
