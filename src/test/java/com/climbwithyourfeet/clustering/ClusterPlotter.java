@@ -323,6 +323,23 @@ public class ClusterPlotter {
     public String writeFile() throws IOException {
         return writeToFile(this.plotContent.toString(), "clusters.html");
     }
+    
+    /**
+     *
+     * @return
+     * @throws IOException
+     */
+    public String writeFile(String fileName) throws IOException {
+        
+        if (!fileName.endsWith("html")) {
+            fileName = fileName + ".html";
+        }
+        if (!fileName.startsWith("clusters")) {
+            fileName = "vlusters_" + fileName;
+        }
+        
+        return writeToFile(this.plotContent.toString(), fileName);
+    }
 
     /**
      *

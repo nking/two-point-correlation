@@ -108,7 +108,7 @@ public class DTClusterFinder {
      * Estimator or k-Nearest Neighbors, or provided by you.
      * @param cdm
      */
-    public void setCriticalDensity(CRIT_DENS_METHOD cdm) {
+    public void setCriticalDensityMethod(CRIT_DENS_METHOD cdm) {
         
         if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
             throw new IllegalStateException("cannot set method after critical "
