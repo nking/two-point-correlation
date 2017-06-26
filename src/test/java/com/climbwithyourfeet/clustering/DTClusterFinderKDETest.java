@@ -213,7 +213,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -345,6 +345,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         };
                 
         for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 6; i < 7; i++) {
 
             String fileName = fileNames[i];
             
@@ -400,6 +401,42 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             // 5:  approx 0.35 to 0.75
             // 6:  0.285 to 0.35
             // 7:  0.1 to 0.3
+            switch(i) {
+                case 0:
+                    assertTrue(criticalDensity >= 0.3);
+                    assertTrue(criticalDensity <= 0.7);
+                    break;
+                case 1:
+                    assertTrue(criticalDensity >= 0.25);
+                    assertTrue(criticalDensity <= 0.4);
+                    break;
+                case 2:
+                    assertTrue(criticalDensity >= 0.15);
+                    assertTrue(criticalDensity <= 0.42);
+                    break;
+                case 3:
+                    assertTrue(criticalDensity >= 0.3);
+                    assertTrue(criticalDensity <= 0.44);
+                    break;
+                case 4:
+                    assertTrue(criticalDensity >= 0.3);
+                    assertTrue(criticalDensity <= 0.75);
+                    break;
+                case 5:
+                    assertTrue(criticalDensity >= 0.3);
+                    assertTrue(criticalDensity <= 0.75);
+                    break;
+                case 6:
+                    assertTrue(criticalDensity >= 0.285);
+                    assertTrue(criticalDensity <= 0.35);
+                    break;
+                case 7:
+                    assertTrue(criticalDensity >= 0.1);
+                    assertTrue(criticalDensity <= 0.35);//0.3?
+                    break;
+                default:
+                    break;
+            }           
         }
                 
     }

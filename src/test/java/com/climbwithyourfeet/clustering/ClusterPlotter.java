@@ -335,7 +335,7 @@ public class ClusterPlotter {
             fileName = fileName + ".html";
         }
         if (!fileName.startsWith("clusters")) {
-            fileName = "vlusters_" + fileName;
+            fileName = "clusters_" + fileName;
         }
         
         return writeToFile(this.plotContent.toString(), fileName);

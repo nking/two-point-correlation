@@ -140,7 +140,7 @@ public class DTClusterFinder {
         
         if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {
             
-            throw new UnsupportedOperationException("not yet implemented");
+            densSolver = new CriticalDensityKDE();
         
         } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
             
