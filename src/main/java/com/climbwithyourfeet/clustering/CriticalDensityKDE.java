@@ -92,7 +92,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         W r = new W();
         
         int nIter = 0;
-        int nIterMax = 3;
+        int nIterMax = 1;
         /*
         NOTE: this first block is to handle multiple invocation of the
         wavelet transform if needed.
@@ -120,7 +120,50 @@ public class CriticalDensityKDE implements ICriticalDensity {
             nIter++;
             
         } while (r.indexes.length > 9 && (nIter < nIterMax));
+        
+        
+        //System.out.println("transformed=" + Arrays.toString(smoothed));
+        if (debug) {
+
+            String ts = Long.toString(System.currentTimeMillis());
+            ts = ts.substring(ts.length() - 9, ts.length() - 1);
+
+            try {
+                float[] x = new float[values.length];
+                for (int i = 0; i < x.length; ++i) {
+                    x[i] = i;
+                }
+
+                float yMax = MiscMath0.findMax(r.freq);
+
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+                //plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                //    x, values, x, values,
+                //    "input");
+               
+                //plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                //    x, r.smoothed,
+                //    x, r.smoothed,
+                //    "transformed");
                 
+                System.out.println(plotter.writeFile("transformed_" + ts));
+
+                // write the freq curve
+                x = r.unique.toArray(new float[r.unique.size()]);
+                plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0.f, 1.2f * x[x.length - 1],
+                    0.f, 1.2f * yMax,
+                    x, r.freq, x, r.freq,
+                    "freq curve");
+
+                System.out.println(plotter.writeFile("freq_" + ts));
+
+            } catch (IOException e) {
+                log.severe(e.getMessage());
+            }
+        }
+        
+        
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
         
@@ -198,57 +241,18 @@ public class CriticalDensityKDE implements ICriticalDensity {
                     weightedMean += weight * r.unique.get(peakIdx);
                 }
                 System.out.println("nPeaks=" + r.indexes.length);
-                System.out.println("weighted=" + weightedMean);
+                System.out.println("weighted critDens=" + weightedMean);
                 return weightedMean;
             }
             System.out.println("nPeaks=" + r.indexes.length);
             return r.unique.get(r.indexes[0]);
         }
         
-        //System.out.println("transformed=" + Arrays.toString(smoothed));
-        
-        /*if (debug) {
-            
-            String ts = Long.toString(System.currentTimeMillis());
-            ts = ts.substring(ts.length() - 9, ts.length() - 1);
-            
-            try {
-                float[] x = new float[values.length];
-                for (int i = 0; i < x.length; ++i) {
-                    x[i] = i;
-                }
-
-                float yMax = MiscMath0.findMax(values);
-
-                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
-                    x, values, x, values,
-                    "input");
-                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
-                    x, r.smoothed,
-                    x, r.smoothed,
-                    "transformed");
-
-                System.out.println(plotter.writeFile("transformed_" + ts));
-
-                // write the freq curve
-                x = unique.toArray(new float[unique.size()]);
-                plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0.f, 1.2f * x[x.length - 1], 
-                    0.f, 1.2f * freqMax,
-                    x, r.freq, x, r.freq,
-                    "freq curve");
-
-                System.out.println(plotter.writeFile("freq_" + ts));
-                
-            } catch (IOException e) {
-                log.severe(e.getMessage());
-            }
-        }*/
         
         // for histogram, crit dens = 1.1 * density of first peak
         float peak = r.unique.get(r.indexes[0]);
         
+        System.out.println("* critDens=" + peak);
         return peak;
     }
 

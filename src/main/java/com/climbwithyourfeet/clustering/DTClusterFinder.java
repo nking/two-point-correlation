@@ -156,7 +156,7 @@ public class DTClusterFinder {
         DensityExtractor densExtr = new DensityExtractor();
                 
         if (debug) {
-            densExtr.setToDebug();
+            //densExtr.setToDebug();
             densSolver.setToDebug();
         }
         
