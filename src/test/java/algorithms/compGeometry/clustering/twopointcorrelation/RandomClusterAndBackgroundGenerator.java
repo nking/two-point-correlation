@@ -1,6 +1,5 @@
 package algorithms.compGeometry.clustering.twopointcorrelation;
 
-import algorithms.compGeometry.LinesAndAngles;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.logging.Logger;
@@ -489,7 +488,9 @@ public class RandomClusterAndBackgroundGenerator {
 
         for (int i = 0; i < nXY; i++) {
 
-            double distSq = LinesAndAngles.distSquared(x0[i], y0[i], xp, yp) + eps;
+            double dx = x0[i] - xp;
+            double dy = y0[i] - yp;
+            double distSq = dx*dx + dy*dy;
 
             if (distSq < minSq) {
                 return false;
