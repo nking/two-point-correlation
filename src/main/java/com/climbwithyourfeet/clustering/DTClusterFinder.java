@@ -23,6 +23,11 @@ import java.util.logging.Logger;
  * (3) k-nearest neighbors
  * </pre>
  * 
+ * NOTE: if automatic calculation of critical density is used by default,
+ * the threshold used when applying the critical density to the points
+ * to find clusters is either the default for sparse points or if
+ * the density curve appears to be dense, the higher threshold of 5 is used.
+ * 
  * The runtime complexity:
  * TODO: add details.  
  * first the dist trans uses O(N_pixels), then the
@@ -56,7 +61,13 @@ public class DTClusterFinder {
     
     private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.HISTOGRAM;
     
-    private float threshholdFactor = 2.5f;
+    public static float denseThreshholdFactor = 5f;
+    
+    public static float defaultThreshholdFactor = 2.5f;
+    
+    protected boolean userSetThreshold = false;
+   
+    private float threshholdFactor = defaultThreshholdFactor;
     
     private int minimumNumberInCluster = 3;
     
@@ -92,6 +103,7 @@ public class DTClusterFinder {
      */
     public void setThreshholdFactor(float factor) {
         this.threshholdFactor = factor;
+        userSetThreshold = true;
     }
     
     /**
@@ -163,6 +175,12 @@ public class DTClusterFinder {
         float[] densities = densExtr.extractSufaceDensity(points, width, height);
         
         this.critDens = densSolver.findCriticalDensity(densities);  
+        
+        if (!userSetThreshold) {
+            if (!densSolver.isSparse()) {
+                threshholdFactor = denseThreshholdFactor;
+            }
+        }
         
         this.state = STATE.HAVE_CLUSTER_DENSITY;
     }

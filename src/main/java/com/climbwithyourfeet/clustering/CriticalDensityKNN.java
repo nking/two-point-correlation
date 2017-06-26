@@ -8,7 +8,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityKNN implements ICriticalDensity {
+public class CriticalDensityKNN extends AbstractCriticalDensity {
     
     private boolean debug = false;
     

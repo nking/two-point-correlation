@@ -37,12 +37,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      */
     public void testFindRanGenClusters() throws Exception {
         
-        //NOTE: high density should use higher threshold
-        //   looking at how to return that
-        //   information when calculating the critical density.
-        //   (can distiguish between sparse and dense from
-        //   the quartiles of the density curve)
-        float threshFactor = 2.5f;
+        //NOTE: high density results in using a higher threshold during the
+        //   stage of finding clusters with the estimated critical density
+        //float threshFactor = 2.5f;
         
         float xmin = 0;
         float xmax = 300;
@@ -143,7 +140,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 
                 clusterFinder.setToDebug();
                 
-                clusterFinder.setThreshholdFactor(threshFactor);
+                //clusterFinder.setThreshholdFactor(threshFactor);
 
                 clusterFinder.setCriticalDensityMethod(
                     DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -208,7 +205,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -322,7 +319,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estKDEOtherData() throws Exception {
+    public void testKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -440,7 +437,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estNoClusters() throws Exception {
+    public void testNoClusters() throws Exception {
         
         /* Goal of this test is to examine the substructure created by increasing numbers of randomly 
            placed points.
@@ -564,7 +561,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
             
-            clusterFinder.setThreshholdFactor(10.f);
+            //clusterFinder.setThreshholdFactor(10.f);
             
             clusterFinder.calculateCriticalDensity();
             

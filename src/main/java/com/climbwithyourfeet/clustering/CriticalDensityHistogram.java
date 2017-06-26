@@ -12,7 +12,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityHistogram implements ICriticalDensity {
+public class CriticalDensityHistogram extends AbstractCriticalDensity {
     
     private boolean debug = false;
     
