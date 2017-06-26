@@ -1,4 +1,4 @@
--- add to the ciritical density code,
+-- add to the critical density code,
      a method to determine whether the dataset
      is sparse or dense from quartiles of the density curve
      and add a return variable or instance variable
