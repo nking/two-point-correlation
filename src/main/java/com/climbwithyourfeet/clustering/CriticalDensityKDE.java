@@ -64,63 +64,37 @@ public class CriticalDensityKDE implements ICriticalDensity {
         looking at which transform has the best representation of the first peak
         as the critical density.
         
-        working from highest index transformations to smallest:
+        starting from highest index transformations to smallest:
             if there's more than one peak and its
                 frequency is not 1.0
                 then
-                   if 1st peak sigma > 5 o5 10?
+                   if 1st peak sigma > 5 o5 10 ish
                        return that
                    else
                       calc a peak weighted average of the first
                          peaks until a peak has sigma > 5 or so
             else if there's one peak and it's freq is 1.0
             then retreat up the list until that is not true,
-            and at that point take ceil(idx/2) as the starting
-            point to proceed forward, looking at sigma using same
-            logic as above.
+            and at that point take idx/2 as the next index
         
-        caveat is the total number of peaks.
-        nPeaks < 6 or 7
+        also, when calculating weighted average, the sum continues to next
+        frequency if the spacing is small (< 0.05)
         */
-        
-        // check that the numbers have been transformed so that the largest
-        //  index holds less than 6 or 7 or so peaks
-                       
+                    
         List<OneDFloatArray> outputTransformed = null;
         List<OneDFloatArray> outputCoeff = null;
         
         W r = new W();
         
-        int nIter = 0;
-        int nIterMax = 1;
-        /*
-        NOTE: this first block is to handle multiple invocation of the
-        wavelet transform if needed.
-        It's not yet tested and might not be necessary since some of the
-        close spacing is handled below.
-        will revisit this soon.
-        */
-        do {
-            float[] tmp;
-            if (nIter == 0) {
-                tmp = values;
-            } else {
-                tmp = outputTransformed.get(outputTransformed.size() - 1).a;
-            }
-            outputTransformed = new ArrayList<OneDFloatArray>();
-            outputCoeff = new ArrayList<OneDFloatArray>();
+        outputTransformed = new ArrayList<OneDFloatArray>();
+        outputCoeff = new ArrayList<OneDFloatArray>();
 
-            wave.calculateWithB3SplineScalingFunction(tmp, outputTransformed,
-                outputCoeff);
-            
-            populate(r, outputTransformed.get(outputTransformed.size() - 1).a);
-        
-            System.out.println("nIter=" + nIter
-                + " r.indexes.length=" + r.indexes.length);
-            nIter++;
-            
-        } while (r.indexes.length > 9 && (nIter < nIterMax));
-        
+        wave.calculateWithB3SplineScalingFunction(values, outputTransformed,
+            outputCoeff);
+
+        populate(r, outputTransformed.get(outputTransformed.size() - 1).a);
+
+        System.out.println(" r.indexes.length=" + r.indexes.length);                    
         
         //System.out.println("transformed=" + Arrays.toString(smoothed));
         if (debug) {
@@ -136,21 +110,23 @@ public class CriticalDensityKDE implements ICriticalDensity {
 
                 float yMax = MiscMath0.findMax(r.freq);
 
+                /*
                 PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
-                //plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
-                //    x, values, x, values,
-                //    "input");
+                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                    x, values, x, values,
+                    "input");
                
-                //plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
-                //    x, r.smoothed,
-                //    x, r.smoothed,
-                //    "transformed");
+                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                    x, r.smoothed,
+                    x, r.smoothed,
+                    "transformed");
                 
                 System.out.println(plotter.writeFile("transformed_" + ts));
+                */
 
                 // write the freq curve
                 x = r.unique.toArray(new float[r.unique.size()]);
-                plotter = new PolygonAndPointPlotter();
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
                 plotter.addPlot(0.f, 1.2f * x[x.length - 1],
                     0.f, 1.2f * yMax,
                     x, r.freq, x, r.freq,
@@ -213,15 +189,12 @@ public class CriticalDensityKDE implements ICriticalDensity {
                         break;
                     }
                 }
-                
+       
+                // keep adding frequencies if the spacing to the next is close:
                 if (idx > 0 && r.indexes.length > (idx + 1)) {
-                    float diff = 
-                        r.unique.get(r.indexes[idx + 1]) - 
+                    float diff = r.unique.get(r.indexes[idx + 1]) - 
                         r.unique.get(r.indexes[idx]);
                     if (diff < 0.05f) {
-                        // need a weighted sum, but the idx+1 peak frequency is close
-                        //   to the idx peak frequency
-                        //   so include the successive peaks until spacing increases
                         for (int ii = idx+1; ii < r.indexes.length; ++ii) {
                             if ((r.unique.get(r.indexes[ii]) 
                                 - r.unique.get(r.indexes[ii - 1])) 
@@ -247,7 +220,6 @@ public class CriticalDensityKDE implements ICriticalDensity {
             System.out.println("nPeaks=" + r.indexes.length);
             return r.unique.get(r.indexes[0]);
         }
-        
         
         // for histogram, crit dens = 1.1 * density of first peak
         float peak = r.unique.get(r.indexes[0]);

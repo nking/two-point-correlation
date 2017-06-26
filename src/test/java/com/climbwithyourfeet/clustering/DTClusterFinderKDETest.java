@@ -35,7 +35,14 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
+        
+        //NOTE: high density should use higher threshold
+        //   looking at how to return that
+        //   information when calculating the critical density.
+        //   (can distiguish between sparse and dense from
+        //   the quartiles of the density curve)
+        float threshFactor = 2.5f;
         
         float xmin = 0;
         float xmax = 300;
@@ -136,6 +143,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     new DTClusterFinder(pixIdxs, width, height);
                 
                 clusterFinder.setToDebug();
+                
+                clusterFinder.setThreshholdFactor(threshFactor);
 
                 clusterFinder.setCriticalDensityMethod(
                     DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -183,7 +192,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 writeImage(img, "dt_ran_" + ii + "_" + i + ".png");
                 */
                 
-                plotter.writeFile();
+                //plotter.writeFile("random_kde_");
                 
                 float r0 = r0s[count];
                 float r1 = r1s[count];
@@ -213,7 +222,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindClustersOtherData() throws Exception {
+    public void estFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -327,7 +336,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testKDEOtherData() throws Exception {
+    public void estKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -449,6 +458,10 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
         /* Goal of this test is to examine the substructure created by increasing numbers of randomly 
            placed points.
+        
+        NOTE: increased the threshold factor from 2.5 to 10 to assert that
+        the clusters are not found above background for that threshold factor.
+        
            
            1000 x 1000 unit^2 space to place
            
@@ -472,7 +485,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 roughly nGroups is less than or equal to (0.2*N)
          */
         
-        int[] numberOfBackgroundPoints = new int[]{100,450,900,4500,9000,14500,19000,24500,29000};
+        int[] numberOfBackgroundPoints = new int[]{
+            100,450,900,4500,9000,14500,19000,24500,29000
+        };
         
         int[] nGroupsFound = new int[numberOfBackgroundPoints.length];
         float[] expectedLinearDensities = new float[nGroupsFound.length];
@@ -487,7 +502,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
         SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 
-        //seed = 1387775326745l;
+        seed = 1387775326745l;
 
         log.info("SEED=" + seed);
         
@@ -558,8 +573,12 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
+            clusterFinder.setToDebug();
+            
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
+            
+            clusterFinder.setThreshholdFactor(10.f);
             
             clusterFinder.calculateCriticalDensity();
             

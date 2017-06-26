@@ -1,7 +1,12 @@
+-- add to the ciritical density code,
+     a method to determine whether the dataset
+     is sparse or dense from quartiles of the density curve
+     and add a return variable or instance variable
+     for it.
+
 -- add the Knearest neighbors to the shared library
    and 1D wavelets
-   -- implement KDE density curve by applying
-      the atrous wavelet to the density points.
+
    -- implement the knn density curve using
       the knn imported into the shared library
    -- (bishop 2006 pg 147 and before has examples showing
