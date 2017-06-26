@@ -3,18 +3,17 @@ package com.climbwithyourfeet.clustering;
 import algorithms.misc.*;
 import algorithms.util.Errors;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * uses histograms to find the first peak that determines the critical density.
+ * 
  * @author nichole
  */
-public class CriticalDensitySolver {
-        
+public class CriticalDensityHistogram extends AbstractCriticalDensity {
+    
     private boolean debug = false;
     
     /**
@@ -25,7 +24,7 @@ public class CriticalDensitySolver {
     /**
      *
      */
-    public CriticalDensitySolver() {
+    public CriticalDensityHistogram() {
     }
     
     /**
@@ -40,29 +39,10 @@ public class CriticalDensitySolver {
      * of the first peak and return it, else return 0
      * (0 as a critical density should result in an infinite critical separation
      * so no clusters).
-     * @param distTrans
-     * @param nPoints
-     * @param width
-     * @param height
+     * @param values densities
      * @return 
      */
-    float findCriticalDensity(int[][] distTrans, int nPoints, int width, 
-        int height) {
-        
-        float critDens = findCriticalDensity(distTrans);
-
-        return critDens;
-        
-    }
-    
-    /**
-     * using histograms of 1/sqrt(distanceTransform[i][j]), find the center of 
-     * the first peak and return it, else
-     * return 0;
-     * @param values
-     * @return 
-     */
-    protected float findCriticalDensity(float[] values) {
+    public float findCriticalDensity(float[] values) {
         
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
@@ -136,11 +116,12 @@ public class CriticalDensitySolver {
         }
 
         if (debug) {
+            
             String outFileSuffix = "_cluster_";
             try {
                 hist.plotHistogram("clstr", outFileSuffix);
             } catch (IOException ex) {
-                Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
             }
         
             System.out.println("1stPeakIdx=" + yFirstPeakIdx +
@@ -168,7 +149,7 @@ public class CriticalDensitySolver {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         
@@ -203,7 +184,7 @@ public class CriticalDensitySolver {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensitySolver.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             
@@ -217,28 +198,6 @@ public class CriticalDensitySolver {
         }
         
         return xMax;
-    }
-
-    private float findCriticalDensity(int[][] distTrans) {
-        
-        int w = distTrans.length;
-        int h = distTrans[0].length;
-        
-        float[] values = new float[w * h];
-        int count2 = 0;
-        for (int i0 = 0; i0 < w; ++i0) {
-            for (int j0 = 0; j0 < h; ++j0) {
-                int v = distTrans[i0][j0];
-                if (v > 0) {
-                    values[count2] = (float) (1. / Math.sqrt(v));
-                    count2++;
-                }
-            }
-        }
-        
-        values = Arrays.copyOf(values, count2);
-        
-        return findCriticalDensity(values);
     }
 
     private float[] calcXQuartilesAboveZero(HistogramHolder hist) {

@@ -1,6 +1,13 @@
--- add the nearest neighbors to the shared library
-   and then implement the group finder method to use it.
--- move the knearest neighbors into shared library... 
+-- add the Knearest neighbors to the shared library
+   and 1D wavelets
+
+   -- implement the knn density curve using
+      the knn imported into the shared library
+   -- (bishop 2006 pg 147 and before has examples showing
+       representation of histogram, kde, knn for a dataset.
+       need to explore determining k, V, and bin size for
+       large range of data
+
 
 -- this project needs 2 different builds and the explanation
    added to both added to README.txt and a note considering 
@@ -9,17 +16,6 @@
    (2) build excluding shared and trove
    -- add the dependency information to the build missing the
       shared class files
-
--- create a density curve as an alternative to histogram
-   using knn with fixed number of points.
-   -- for the knn, find the critical density
-      relatonship:
-      is it calculable from the GEV and density curve
-      or approx it as smallest density value...
-   -- (bishop 2006 pg 147 and before has examples showing
-       representation of histogram, kde, knn for a dataset.
-       need to explore determining k, V, and bin size for
-       large range of data
 
 -- create ability for multiple dimensions
    -- that is n^2/2 number of dts and/or knn

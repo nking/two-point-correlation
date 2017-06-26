@@ -13,13 +13,13 @@ import junit.framework.TestCase;
  *
  * @author nichole
  */
-public class CriticalDensitySolverTest extends TestCase {
+public class CriticalDensityHistogramTest extends TestCase {
     
     /**
      *
      * @param testName
      */
-    public CriticalDensitySolverTest(String testName) {
+    public CriticalDensityHistogramTest(String testName) {
         super(testName);
     }
 
@@ -46,7 +46,7 @@ public class CriticalDensitySolverTest extends TestCase {
             0.04f, 0.28f, 0.5f
         };
         
-        CriticalDensitySolver dSolver = new CriticalDensitySolver();
+        CriticalDensityHistogram dSolver = new CriticalDensityHistogram();
         dSolver.setToDebug();
         
         for (int i = 0; i < fileNames.length; ++i) {
@@ -101,7 +101,7 @@ public class CriticalDensitySolverTest extends TestCase {
             //0.015f,
         };
         
-        CriticalDensitySolver dSolver = new CriticalDensitySolver();
+        CriticalDensityHistogram dSolver = new CriticalDensityHistogram();
         dSolver.setToDebug();
         
         for (int i = 0; i < fileNames.length; ++i) {
@@ -144,7 +144,7 @@ public class CriticalDensitySolverTest extends TestCase {
             Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY
         };
         
-        CriticalDensitySolver dSolver = new CriticalDensitySolver();
+        CriticalDensityHistogram dSolver = new CriticalDensityHistogram();
         dSolver.setToDebug();
         
         for (int i = 0; i < fileNames.length; ++i) {

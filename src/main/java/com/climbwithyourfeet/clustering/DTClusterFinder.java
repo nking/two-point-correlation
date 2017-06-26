@@ -1,25 +1,38 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.imageProcessing.DistanceTransform;
-import algorithms.misc.MiscMath0;
 import gnu.trove.set.TIntSet;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 
 /**
  * main class to cluster finder whose logic is based upon distance transform,
- * density threshold, and a signal to noise argument of ~ 3 as a factor.
+ * density threshold, and a signal to noise argument of ~ 2.5 as a factor.
  * 
- * runtime complexity ~ O(N_pixels) + ~O(N_points * lg2(N_points))
+ * The density threshold can be estimated or provided.
+ * 
+ * If estimated, the default is to find the leading edge of the first peak 
+ * of the surface densities with knowledge that the surface densities 
+ * represent a generalized extreme value curve (due to the nature of the
+ * background points being poisson).
+ * The found peak has a relationship to the background density.
+ * 
+ * The methods to estimate density are
+ * <pre>
+ * (1) histogram (default)
+ * (2) kernel density estimator using wavelet transform
+ * (3) k-nearest neighbors
+ * </pre>
+ * 
+ * NOTE: if automatic calculation of critical density is used by default,
+ * the threshold used when applying the critical density to the points
+ * to find clusters is either the default for sparse points or if
+ * the density curve appears to be dense, the higher threshold of 5 is used.
+ * 
+ * The runtime complexity:
+ * TODO: add details.  
+ * first the dist trans uses O(N_pixels), then the
+ * complexity uses the number of density points, 
+ * then the number of original data points.
  * 
  * @author nichole
  */
@@ -40,9 +53,21 @@ public class DTClusterFinder {
         INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
     }
     
+    public static enum CRIT_DENS_METHOD {
+        PROVIDED, HISTOGRAM, KDE, KNN
+    }
+    
     private STATE state = null;
     
-    private float threshholdFactor = 2.5f;
+    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.HISTOGRAM;
+    
+    public static float denseThreshholdFactor = 5f;
+    
+    public static float defaultThreshholdFactor = 2.5f;
+    
+    protected boolean userSetThreshold = false;
+   
+    private float threshholdFactor = defaultThreshholdFactor;
     
     private int minimumNumberInCluster = 3;
     
@@ -71,13 +96,14 @@ public class DTClusterFinder {
     public void setToDebug() {
         debug = true;
     }
-    
+   
     /**
      *
      * @param factor
      */
     public void setThreshholdFactor(float factor) {
         this.threshholdFactor = factor;
+        userSetThreshold = true;
     }
     
     /**
@@ -89,6 +115,26 @@ public class DTClusterFinder {
     }
     
     /**
+     * set to override the default use of histograms in estimating the
+     * critical density, to an alternative method of Kernel Density 
+     * Estimator or k-Nearest Neighbors, or provided by you.
+     * @param cdm
+     */
+    public void setCriticalDensityMethod(CRIT_DENS_METHOD cdm) {
+        
+        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
+            throw new IllegalStateException("cannot set method after critical "
+                + " density has already been estimated");
+        }
+        
+        if (cdm == null) {
+            throw new IllegalArgumentException("cdm cannot be null");
+        }
+        
+        this.critDensMethod = cdm;
+    }
+
+    /**
      *
      */
     public void calculateCriticalDensity() {
@@ -97,31 +143,44 @@ public class DTClusterFinder {
             return;
         }
         
-        DistanceTransform dtr = new DistanceTransform();
-        int[][] dt = dtr.applyMeijsterEtAl(points, width, height);
+        if (critDensMethod.ordinal() == CRIT_DENS_METHOD.PROVIDED.ordinal()) {
+            throw new IllegalStateException("the critical density has been "
+                + "set so cannot calculate it too.");
+        }
         
-        CriticalDensitySolver densSolver = new CriticalDensitySolver();
+        ICriticalDensity densSolver = null;
         
+        if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {
+            
+            densSolver = new CriticalDensityKDE();
+        
+        } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
+            
+            throw new UnsupportedOperationException("not yet implemented");
+            
+        } else {
+            
+            assert(critDensMethod.equals(CRIT_DENS_METHOD.HISTOGRAM));
+     
+            densSolver = new CriticalDensityHistogram();
+        }
+        
+        DensityExtractor densExtr = new DensityExtractor();
+                
         if (debug) {
-            
+            //densExtr.setToDebug();
             densSolver.setToDebug();
-
-            log.info("print dist trans for " + points.size() + " points " +
-                "within width=" + width + " height=" + height);
-            
-            int[] minMax = MiscMath0.findMinMaxValues(dt);
-            
-            log.info("min and max =" + Arrays.toString(minMax));
-            
-            try {
-                writeDebugImage(dt, Long.toString(System.currentTimeMillis()));
-            } catch (IOException ex) {
-                Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        float[] densities = densExtr.extractSufaceDensity(points, width, height);
+        
+        this.critDens = densSolver.findCriticalDensity(densities);  
+        
+        if (!userSetThreshold) {
+            if (!densSolver.isSparse()) {
+                threshholdFactor = denseThreshholdFactor;
             }
         }
-                
-        this.critDens = densSolver.findCriticalDensity(dt, points.size(), 
-            width, height);  
         
         this.state = STATE.HAVE_CLUSTER_DENSITY;
     }
@@ -135,6 +194,8 @@ public class DTClusterFinder {
         if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
             throw new IllegalStateException("cluster density is already set");
         }
+        
+        this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;
         
         this.critDens = dens;
         
@@ -203,47 +264,6 @@ public class DTClusterFinder {
      */
     public float getCriticalDensity() {
         return critDens;
-    }
-    
-    private void writeDebugImage(int[][] dt, String fileSuffix) throws IOException {
-        
-        BufferedImage outputImage = new BufferedImage(width, height, 
-            BufferedImage.TYPE_BYTE_GRAY);
-
-        WritableRaster raster = outputImage.getRaster();
-        
-        for (int i = 0; i < dt.length; ++i) {
-            for (int j = 0; j < dt[0].length; ++j) {
-                int v = dt[i][j];
-                raster.setSample(i, j, 0, v);
-            }
-        }
-        
-        // write to an output directory.  we have user.dir from system properties
-        // but no other knowledge of users's directory structure
-        URL baseDirURL = this.getClass().getClassLoader().getResource(".");
-        String baseDir = null;
-        if (baseDirURL != null) {
-            baseDir = baseDirURL.getPath();
-        } else {
-            baseDir = System.getProperty("user.dir");
-        }
-        if (baseDir == null) {
-            return;
-        }
-        File t = new File(baseDir + "/bin");
-        if (t.exists()) {
-            baseDir = t.getPath();
-        } else if ((new File(baseDir + "/target")).exists()) {
-            baseDir = baseDir + "/target";
-        }
-        
-        // no longer need to use file.separator
-        String outFilePath = baseDir + "/distance_transform_" + fileSuffix + ".png";
-        
-        ImageIO.write(outputImage, "PNG", new File(outFilePath));
-        
-        Logger.getLogger(this.getClass().getName()).info("wrote " + outFilePath);
     }
     
 }

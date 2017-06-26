@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DensityExtractor.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">DensityExtractor.java</span></div><h1>DensityExtractor.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import algorithms.imageProcessing.DistanceTransform;
+import algorithms.misc.MiscMath0;
+import gnu.trove.set.TIntSet;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+
+/**
+ * extract surface density points
+ * 
+ * @author nichole
+ */
+<span class="fc" id="L21">public class DensityExtractor {</span>
+    
+<span class="fc" id="L23">    private boolean debug = false;</span>
+    
+<span class="fc" id="L25">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+    public void setToDebug() {
+<span class="nc" id="L28">        debug = true;</span>
+<span class="nc" id="L29">    }</span>
+    
+    /**
+     * extract surface density points using distance transform.
+     * The runtime complexity is O(N_pixels).
+     * 
+     * @param pixelIdxs points within the bounds of width and height
+     * @param width data width with expectation that range starts at 0.
+     * @param height data height with expectation that range starts at 0.
+     * @return 
+     */
+    public float[] extractSufaceDensity(TIntSet pixelIdxs,
+        int width, int height) {
+        
+<span class="fc" id="L43">        DistanceTransform dtr = new DistanceTransform();</span>
+<span class="fc" id="L44">        int[][] distTrans = dtr.applyMeijsterEtAl(pixelIdxs, width, height);</span>
+
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        if (debug) {</span>
+
+<span class="nc" id="L48">            log.info(&quot;print dist trans for &quot; + pixelIdxs.size() + &quot; points &quot;</span>
+                + &quot;within width=&quot; + width + &quot; height=&quot; + height);
+
+<span class="nc" id="L51">            int[] minMax = MiscMath0.findMinMaxValues(distTrans);</span>
+
+<span class="nc" id="L53">            log.info(&quot;min and max =&quot; + Arrays.toString(minMax));</span>
+
+            try {
+<span class="nc" id="L56">                writeDebugImage(distTrans, </span>
+<span class="nc" id="L57">                    Long.toString(System.currentTimeMillis()), width, height);</span>
+<span class="nc" id="L58">            } catch (IOException ex) {</span>
+<span class="nc" id="L59">                Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);</span>
+<span class="nc" id="L60">            }</span>
+        }
+        
+<span class="fc" id="L63">        int w = distTrans.length;</span>
+<span class="fc" id="L64">        int h = distTrans[0].length;</span>
+        
+<span class="fc" id="L66">        float[] values = new float[w * h];</span>
+<span class="fc" id="L67">        int count2 = 0;</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        for (int i0 = 0; i0 &lt; w; ++i0) {</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">            for (int j0 = 0; j0 &lt; h; ++j0) {</span>
+<span class="fc" id="L70">                int v = distTrans[i0][j0];</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                if (v &gt; 0) {</span>
+<span class="fc" id="L72">                    values[count2] = (float) (1. / Math.sqrt(v));</span>
+<span class="fc" id="L73">                    count2++;</span>
+                }
+            }
+        }
+        
+<span class="fc" id="L78">        values = Arrays.copyOf(values, count2);</span>
+    
+<span class="fc" id="L80">        return values;</span>
+    }
+
+    private void writeDebugImage(int[][] dt, String fileSuffix, int width, 
+        int height) throws IOException {
+
+<span class="nc" id="L86">        BufferedImage outputImage = new BufferedImage(width, height,</span>
+            BufferedImage.TYPE_BYTE_GRAY);
+
+<span class="nc" id="L89">        WritableRaster raster = outputImage.getRaster();</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
+<span class="nc" id="L93">                int v = dt[i][j];</span>
+<span class="nc" id="L94">                raster.setSample(i, j, 0, v);</span>
+            }
+        }
+
+        // write to an output directory.  we have user.dir from system properties
+        // but no other knowledge of users's directory structure
+<span class="nc" id="L100">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
+<span class="nc" id="L101">        String baseDir = null;</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
+<span class="nc" id="L103">            baseDir = baseDirURL.getPath();</span>
+        } else {
+<span class="nc" id="L105">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
+        }
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (baseDir == null) {</span>
+<span class="nc" id="L108">            return;</span>
+        }
+<span class="nc" id="L110">        File t = new File(baseDir + &quot;/bin&quot;);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (t.exists()) {</span>
+<span class="nc" id="L112">            baseDir = t.getPath();</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
+<span class="nc" id="L114">            baseDir = baseDir + &quot;/target&quot;;</span>
+        }
+
+        // no longer need to use file.separator
+<span class="nc" id="L118">        String outFilePath = baseDir + &quot;/distance_transform_&quot; + fileSuffix + &quot;.png&quot;;</span>
+
+<span class="nc" id="L120">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
+
+<span class="nc" id="L122">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
+<span class="nc" id="L123">    }</span>
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
