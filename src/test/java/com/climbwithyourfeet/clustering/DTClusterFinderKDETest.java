@@ -138,7 +138,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 DTClusterFinder clusterFinder = 
                     new DTClusterFinder(pixIdxs, width, height);
                 
-                clusterFinder.setToDebug();
+                //clusterFinder.setToDebug();
                 
                 //clusterFinder.setThreshholdFactor(threshFactor);
 
@@ -265,7 +265,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
-            clusterFinder.setToDebug();
+            //clusterFinder.setToDebug();
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -381,7 +381,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 pixIdxs, width, height);
         
             CriticalDensityKDE cd = new CriticalDensityKDE();
-            cd.setToDebug();
+            //cd.setToDebug();
             float criticalDensity = cd.findCriticalDensity(densities);
             
             System.out.println("i=" + i + " critDens=" + criticalDensity);
@@ -556,7 +556,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
-            clusterFinder.setToDebug();
+            //clusterFinder.setToDebug();
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
