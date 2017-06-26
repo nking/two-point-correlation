@@ -92,7 +92,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         W r = new W();
         
         int nIter = 0;
-        
+        int nIterMax = 3;
         /*
         NOTE: this first block is to handle multiple invocation of the
         wavelet transform if needed.
@@ -119,7 +119,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
                 + " r.indexes.length=" + r.indexes.length);
             nIter++;
             
-        } while (r.indexes.length > 9);
+        } while (r.indexes.length > 9 && (nIter < nIterMax));
                 
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
