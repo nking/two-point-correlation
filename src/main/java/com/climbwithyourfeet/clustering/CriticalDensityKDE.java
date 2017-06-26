@@ -21,26 +21,19 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityKDE implements ICriticalDensity {
+public class CriticalDensityKDE extends AbstractCriticalDensity {
     
-    private boolean debug = false;
     
     /**
      *
      */
     protected Logger log = Logger.getLogger(this.getClass().getName());
     
-    /**
-     *
-     */
-    public CriticalDensityKDE() {
-    }
     
     /**
      *
      */
-    public void setToDebug() {
-        debug = true;
+    public CriticalDensityKDE() {
     }
     
     /**
@@ -100,7 +93,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         if (debug) {
 
             String ts = Long.toString(System.currentTimeMillis());
-            ts = ts.substring(ts.length() - 9, ts.length() - 1);
+            //ts = ts.substring(ts.length() - 9, ts.length() - 1);
 
             try {
                 float[] x = new float[values.length];
@@ -215,9 +208,11 @@ public class CriticalDensityKDE implements ICriticalDensity {
                 }
                 System.out.println("nPeaks=" + r.indexes.length);
                 System.out.println("weighted critDens=" + weightedMean);
+                doSparseEstimate(r.freq);
                 return weightedMean;
             }
             System.out.println("nPeaks=" + r.indexes.length);
+            doSparseEstimate(r.freq);
             return r.unique.get(r.indexes[0]);
         }
         
@@ -225,6 +220,7 @@ public class CriticalDensityKDE implements ICriticalDensity {
         float peak = r.unique.get(r.indexes[0]);
         
         System.out.println("* critDens=" + peak);
+        doSparseEstimate(r.freq);
         return peak;
     }
 

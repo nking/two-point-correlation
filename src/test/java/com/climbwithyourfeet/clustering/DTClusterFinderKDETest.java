@@ -58,25 +58,13 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
         sr.setSeed(seed);
 
-        int nSwitches = 3;
+        int nSwitches = 4;
 
         int nIterPerBackground = 3;
 
         AxisIndexer indexer = null;
 
         int count = 0;
-        
-        // these were generated w/ a specifc seed so may need more tolerance
-        float[] r0s = new float[]{
-            0.01f, 0.18f, 0.4f,
-            0.01f, 0.18f, 0.4f,
-            0.02f, 0.18f, 0.4f
-        };
-        float[] r1s = new float[]{
-            0.05f, 0.285f, 0.5f,
-            0.05f, 0.28f, 0.5f,
-            0.04f, 0.28f, 0.5f
-        };
         
         ClusterPlotter plotter = new ClusterPlotter();
 
@@ -91,7 +79,16 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                             //10, 100, 110, 100.0f);
                             3, 33, 33, 0.1f);
                         break;
-                    case 1:
+                    case 1: {
+                        int[] clusterNumbers = new int[]{50, 300, 1000};
+                        int nBackgroundPoints = 500;
+                        CLUSTER_SEPARATION clusterSeparation = CLUSTER_SEPARATION.LARGE;
+
+                        indexer = createIndexerWithRandomPoints(sr, xmin, xmax, ymin, ymax,
+                            clusterNumbers, nBackgroundPoints, clusterSeparation);
+                        break;
+                    }
+                    case 2: {
                         int[] clusterNumbers = new int[]{2000, 300, 1000};
                         int nBackgroundPoints = 10000;
                         CLUSTER_SEPARATION clusterSeparation = CLUSTER_SEPARATION.LARGE;
@@ -99,6 +96,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                         indexer = createIndexerWithRandomPoints(sr, xmin, xmax, ymin, ymax,
                             clusterNumbers, nBackgroundPoints, clusterSeparation);
                         break;
+                    }
                     default: {
                          // 100*100
                          indexer = createIndexerWithRandomPoints(sr, xmin, xmax, ymin, ymax,
@@ -108,6 +106,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 }
                 
                 log.info(" " + count + " (" + indexer.getNXY() + " points) ... ");
+                System.out.println(" " + count + " (" + indexer.getNXY() + " points) ... ");
 
                 int[] minMaxXY = new int[4];
                 minMaxXY[0] = Integer.MAX_VALUE;
@@ -192,23 +191,10 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 writeImage(img, "dt_ran_" + ii + "_" + i + ".png");
                 */
                 
-                //plotter.writeFile("random_kde_");
-                
-                float r0 = r0s[count];
-                float r1 = r1s[count];
+                plotter.writeFile("random_kde_");
                 
                 float critDens = clusterFinder.getCriticalDensity();
             
-                log.info("i=" + i + " ro-" + r0 + " r1=" + r1 + " critDens=" + critDens);
-            
-                /*
-                if (i == 0) {
-                    assertTrue(critDens >= r0 && (critDens <= 0.17));
-                } else {
-                    assertTrue(critDens >= r0 && (critDens <= (r1 + 0.1f*r1)));
-                }
-                */
-                
                 count++;
             }
         }
