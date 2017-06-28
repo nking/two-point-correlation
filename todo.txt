@@ -1,3 +1,24 @@
+-- more KDE:
+   -- add a class to:
+      -- accept point indexes, width, height given to 2ptcorr cluster finder
+      -- internally, calculates new distance transform 
+         from the points which are not in the given points list.
+      -- extracts the densities from new distance transform of them
+      -- gets the DensityHlder from 2ptcorr clustering (already done)
+      -- calculates probability for each new point by
+            finding the normalized count in density holder for the
+            nearest density, then subtract that from 1.
+            -- consider including errors from the density curve, via sums in
+               wuadrature of the wavelet coefficients.
+               -- if/when add this, add a field for it to the
+                   DensityHolder
+      -- create a list of the probabilities
+         and plot confidence intervals over the clusters' xy plot
+
+-- rewrite the one dbscan image unit test if missing since refactoring
+
+-- consider changing default option to KDE
+
 -- add the Knearest neighbors to the shared library
    and 1D wavelets
 
@@ -23,6 +44,7 @@
 
 -- update the javadocs
 -- update coverage reports
+-- update the wiki github io web pages
 
 -- redo a couple of "other" snapshots on two-pt-correl web page:
    the dbscan and the curved arrow from the finnish data set
