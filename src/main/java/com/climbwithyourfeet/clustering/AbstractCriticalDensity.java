@@ -1,5 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
+import gnu.trove.list.TFloatList;
 import java.util.Arrays;
 
 /**
@@ -23,6 +24,49 @@ public abstract class AbstractCriticalDensity implements ICriticalDensity {
 
     public boolean isSparse() {
         return isSparse;
+    }
+    
+    /**
+     * creates an instance of DensityHolder, copies arguments into it, and
+     * calculates the normalized count also.
+     * @param criticalDensity
+     * @param density
+     * @param count
+     * @return 
+     */
+    public DensityHolder createDensityHolder(float criticalDensity, 
+        float[] density, float[] count) {
+        
+        DensityHolder dh = new DensityHolder();
+        dh.critDens = criticalDensity;
+        dh.dens = Arrays.copyOf(density, density.length);
+        dh.count = Arrays.copyOf(count, count.length);
+        dh.normCount = new float[count.length];
+        
+        float tot = 0;
+        for (int i = 0; i < count.length; ++i) {
+            tot += count[i];
+        }
+        for (int i = 0; i < count.length; ++i) {
+            dh.normCount[i] = count[i]/tot;
+        }
+        
+        return dh;
+    }
+    
+    /**
+     * creates an instance of DensityHolder, copies arguments into it, and
+     * calculates the normalized count also.
+     * @param criticalDensity
+     * @param density
+     * @param count
+     * @return 
+     */
+    public DensityHolder createDensityHolder(float criticalDensity, 
+        TFloatList density, float[] count) {
+       
+        return createDensityHolder(criticalDensity, 
+            density.toArray(new float[density.size()]), count);
     }
    
     protected void doSparseEstimate(float[] a) {

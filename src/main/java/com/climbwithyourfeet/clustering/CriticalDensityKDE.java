@@ -43,7 +43,7 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
      * @param values densities 
      * @return 
      */
-    public float findCriticalDensity(float[] values) {
+    public DensityHolder findCriticalDensity(float[] values) {
         
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
@@ -89,11 +89,10 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
 
         System.out.println(" r.indexes.length=" + r.indexes.length);                    
         
+        String ts = Long.toString(System.currentTimeMillis());
+        
         //System.out.println("transformed=" + Arrays.toString(smoothed));
         if (debug) {
-
-            String ts = Long.toString(System.currentTimeMillis());
-            //ts = ts.substring(ts.length() - 9, ts.length() - 1);
 
             try {
                 float[] x = new float[values.length];
@@ -133,7 +132,35 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
                 log.severe(e.getMessage());
             }
         }
-        
+       
+        /*
+        {//DEBUG
+            
+            W r0 = new W();
+
+            populate(r0, outputTransformed.get(0).a);
+
+            //System.out.println("transformed=" + Arrays.toString(smoothed));
+            
+            try {
+                float yMax = MiscMath0.findMax(r0.freq);
+
+                PolygonAndPointPlotter plotter0 = new PolygonAndPointPlotter();
+
+                // write the freq curve
+                float[] x = r0.unique.toArray(new float[r0.unique.size()]);
+                plotter0.addPlot(0.f, 1.2f * x[x.length - 1],
+                    0.f, 1.2f * yMax,
+                    x, r0.freq, x, r0.freq,
+                    "freq curve0");
+
+                System.out.println(plotter0.writeFile("freq_0_" + ts));
+
+            } catch (IOException e) {
+                log.severe(e.getMessage());
+            }
+        }
+        */
         
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
@@ -211,11 +238,16 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
                 System.out.println("nPeaks=" + r.indexes.length);
                 System.out.println("weighted critDens=" + weightedMean);
                 doSparseEstimate(r.freq);
-                return weightedMean;
+                
+                DensityHolder dh = createDensityHolder(weightedMean,
+                    r.unique, r.freq);
+                return dh;
             }
             System.out.println("nPeaks=" + r.indexes.length);
             doSparseEstimate(r.freq);
-            return r.unique.get(r.indexes[0]);
+            DensityHolder dh = createDensityHolder(
+                r.unique.get(r.indexes[0]), r.unique, r.freq);
+            return dh;
         }
         
         // for histogram, crit dens = 1.1 * density of first peak
@@ -223,7 +255,8 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
         
         System.out.println("* critDens=" + peak);
         doSparseEstimate(r.freq);
-        return peak;
+        DensityHolder dh = createDensityHolder(peak, r.unique, r.freq);
+        return dh;
     }
 
     private void populate(W r, float[] values) {

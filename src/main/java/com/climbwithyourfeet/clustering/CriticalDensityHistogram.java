@@ -42,7 +42,7 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
      * @param values densities
      * @return 
      */
-    public float findCriticalDensity(float[] values) {
+    public DensityHolder findCriticalDensity(float[] values) {
         
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
@@ -194,10 +194,14 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
         }
         
         if (yMaxIdx == -1) {
-            return 0;
+            DensityHolder dh = createDensityHolder(
+                0, hist.getXHist(), hist.getYHistFloat());
+            return dh;
         }
         
-        return xMax;
+        DensityHolder dh = createDensityHolder(
+            xMax, hist.getXHist(), hist.getYHistFloat());
+        return dh;
     }
 
     private float[] calcXQuartilesAboveZero(HistogramHolder hist) {

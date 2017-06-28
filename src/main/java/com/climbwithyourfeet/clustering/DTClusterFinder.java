@@ -45,7 +45,7 @@ public class DTClusterFinder {
     private final int width;
     private final int height;
     
-    private float critDens = Float.POSITIVE_INFINITY;
+    private DensityHolder densityHolder = null;
     
     private List<TIntSet> groups = null;
 
@@ -168,13 +168,13 @@ public class DTClusterFinder {
         DensityExtractor densExtr = new DensityExtractor();
                 
         if (debug) {
-            densExtr.setToDebug();
+            //densExtr.setToDebug();
             densSolver.setToDebug();
         }
         
         float[] densities = densExtr.extractSufaceDensity(points, width, height);
         
-        this.critDens = densSolver.findCriticalDensity(densities);  
+        this.densityHolder = densSolver.findCriticalDensity(densities);  
         
         if (!userSetThreshold) {
             if (!densSolver.isSparse()) {
@@ -197,7 +197,8 @@ public class DTClusterFinder {
         
         this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;
         
-        this.critDens = dens;
+        this.densityHolder = new DensityHolder();
+        this.densityHolder.critDens = dens;
         
         this.state = STATE.HAVE_CLUSTER_DENSITY;
     }
@@ -219,7 +220,7 @@ public class DTClusterFinder {
         
         groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);
         
-        groups = groupFinder.calculateGroups(critDens, points);        
+        groups = groupFinder.calculateGroups(densityHolder.critDens, points);        
     }
     
     /**
@@ -263,7 +264,11 @@ public class DTClusterFinder {
      * @return
      */
     public float getCriticalDensity() {
-        return critDens;
+        return densityHolder.critDens;
+    }
+    
+    public DensityHolder getDensities() {
+        return densityHolder;
     }
     
 }
