@@ -3,6 +3,7 @@ package com.climbwithyourfeet.clustering;
 import algorithms.YFastTrie;
 import algorithms.imageProcessing.DistanceTransform;
 import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.MiscMath0;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIterator;
@@ -86,26 +87,26 @@ public class KDEStatsHelper {
         
         TIntFloatIterator iter = pixSurfaceDens.iterator();
         
-        // find closest surface density to point,
-        //   then lookup index.
+        // find closest surface density to point, then lookup prob with index.
         
-        // wanting to only store the surface densities greater than a
-        //   minimum probability if the function is not continuous
-        float[] sortedProb = Arrays.copyOf(prob, prob.length);
-        Arrays.sort(sortedProb);
+        // in the trie, wanting to only store the surface densities greater 
+        //   than a minimum probability if the function is not continuous
+        float minProb = MiscMath0.findMin(prob);
         
         //turning the surface densities into integers so can use a YFastTrie
         //   to retrieve successors and predecessors.
-        //   max surface density = 1.0. will use factor of 64 which is 6 bits
+        //   max surface density = 1.0. will use factor of 63 which is 6 bits
         
-        float factor = 64;
+        float factor = 63;
         
-        YFastTrie yft = new YFastTrie(7);
+        YFastTrie yft = new YFastTrie(6);
         
-        if (sortedProb[0] < (1./sortedProb.length)) {
+        if (minProb < (1./prob.length)) {
             
+            float[] sortedDens = Arrays.copyOf(surfDens, surfDens.length);
+            Arrays.sort(surfDens);
             MinMaxPeakFinder mmpf = new MinMaxPeakFinder();
-            float minMean = mmpf.calculateMeanOfSmallest(sortedProb, 0.04f);
+            float minMean = mmpf.calculateMeanOfSmallest(sortedDens, 0.04f);
         
             for (int i = 0; i < surfDens.length; ++i) {
                 float sd = surfDens[i];
@@ -133,12 +134,14 @@ public class KDEStatsHelper {
         
             int v = yft.find(sdInt);
             if (v > -1) {
+    
                 float vF = (float)v/factor;
                 int vIdx = Arrays.binarySearch(surfDens, vF);
                 if (vIdx < 0) {
                     vIdx = -1*(vIdx + 1);
                 }
                 pMap.put(pixIdx, prob[vIdx]);
+                
                 continue;
             }
             
