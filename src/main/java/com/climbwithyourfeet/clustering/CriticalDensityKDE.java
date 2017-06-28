@@ -104,17 +104,19 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
                 float yMax = MiscMath0.findMax(r.freq);
 
                 /*
-                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                PolygonAndPointPlotter plotter0 = new PolygonAndPointPlotter();
+                plotter0.addPlot(0.f, x.length, 
+                    0.f, 1.2f * MiscMath0.findMax(values),
                     x, values, x, values,
                     "input");
                
-                plotter.addPlot(0.f, x.length, 0.f, 1.2f * yMax,
+                plotter0.addPlot(0.f, x.length, 
+                    0.f, 1.2f * MiscMath0.findMax(r.smoothed),
                     x, r.smoothed,
                     x, r.smoothed,
                     "transformed");
                 
-                System.out.println(plotter.writeFile("transformed_" + ts));
+                System.out.println(plotter0.writeFile("transformed_" + ts));
                 */
 
                 // write the freq curve

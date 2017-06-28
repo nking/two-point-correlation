@@ -9,6 +9,7 @@ import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -224,7 +225,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
         ClusterPlotter plotter = new ClusterPlotter();
         
-        for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 0; i < fileNames.length; i++) {
+        for (int i = 0; i < 1; i++) {
 
             String fileName = fileNames[i];
             
@@ -261,11 +263,11 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
             PixelHelper ph = new PixelHelper();
             TIntSet pixIdxs = ph.convert(points, width);
-
+            
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
-            //clusterFinder.setToDebug();
+            clusterFinder.setToDebug();
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -301,6 +303,28 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, clusterFinder.getCriticalDensity(), 
                 "other_" + i);
+            
+            /* to make confidence intervals:
+               -- need to make a new distance transform for the inverse
+               -- extract densities and apply a new wavelet transform.
+               -- for each point, can then use the cluster density curve
+                  to find the point probability.
+                  the cluster density curve has frequency which should be
+                  converted to probability.
+                  this point's probability is 1-curve probability.
+                  this point's error can be determined by including the
+                  wavelet coefficient information.
+               -- need ability to draw the contours.
+                  -- new d3.js script?
+            */
+            /*
+            TIntSet pixIdxs2 = new TIntHashSet();
+            for (int jj = 0; jj < (width*height); ++jj) {
+                if (!pixIdxs.contains(jj)) {
+                    pixIdxs2.add(jj);
+                }
+            }
+            */
 
             /*
             BufferedImage img = createImage(points, width, height);
