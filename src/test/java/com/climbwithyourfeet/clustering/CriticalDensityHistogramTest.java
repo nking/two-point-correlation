@@ -55,7 +55,8 @@ public class CriticalDensityHistogramTest extends TestCase {
             
             float[] values = readDataset(fileName);
             
-            float critDens = dSolver.findCriticalDensity(values);
+            float critDens = 
+                dSolver.findCriticalDensity(values).critDens;
             
             float r0 = r0s[i];
             float r1 = r1s[i];
@@ -110,7 +111,8 @@ public class CriticalDensityHistogramTest extends TestCase {
             
             float[] values = readDataset(fileName);
             
-            float critDens = dSolver.findCriticalDensity(values);
+            float critDens = dSolver.findCriticalDensity(values)
+                .critDens;
             
             float r0 = r0s[i];
             float r1 = r1s[i];
@@ -154,7 +156,8 @@ public class CriticalDensityHistogramTest extends TestCase {
             
             float[] values = readDataset(fileName);
             
-            float critDens = dSolver.findCriticalDensity(values);
+            float critDens = dSolver.findCriticalDensity(values)
+                .critDens;
             
             float r0 = r0s[i];
             float r1 = r1s[i];

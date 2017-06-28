@@ -406,7 +406,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
             CriticalDensityKDE cd = new CriticalDensityKDE();
             //cd.setToDebug();
-            float criticalDensity = cd.findCriticalDensity(densities);
+            float criticalDensity = 
+                cd.findCriticalDensity(densities).critDens;
             
             System.out.println("i=" + i + " critDens=" + criticalDensity);
             // 0:  0.3 to 0.7
