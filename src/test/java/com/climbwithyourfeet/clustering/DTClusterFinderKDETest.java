@@ -8,6 +8,7 @@ import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.map.TIntFloatMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import java.awt.Color;
@@ -147,7 +148,6 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     DTClusterFinder.CRIT_DENS_METHOD.KDE);
                 
                 clusterFinder.calculateCriticalDensity();
-                //clusterFinder.setCriticalDensity(0.139f);
                 
                 clusterFinder.findClusters();
 
@@ -160,6 +160,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 TIntIterator iter;
                 int[] xy = new int[2];
                 
+                TIntSet allClusters = new TIntHashSet();
+                
                 List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
                 for (int k = 0; k < groupListPix.size(); ++k) {
                     Set<PairInt> set = new HashSet<PairInt>();
@@ -169,6 +171,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                         ph.toPixelCoords(pixIdx, width, xy);
                         PairInt p = new PairInt(xy[0], xy[1]);
                         set.add(p);
+                        allClusters.add(pixIdx);
                     }
                     groupList.add(set);
                 }
@@ -191,7 +194,16 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 
                 plotter.writeFile("random_kde_");
                 
-                float critDens = clusterFinder.getCriticalDensity();
+                
+                
+                DensityHolder dh = clusterFinder.getDensities();
+                
+                KDEStatsHelper kdsh = new KDEStatsHelper();
+                TIntFloatMap probMap = kdsh.calculateProbabilities(
+                    dh, allClusters, width, height);
+                
+                //TODO: need a contour plot maker
+                
             
                 count++;
             }
@@ -377,12 +389,12 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             PixelHelper ph = new PixelHelper();
             TIntSet pixIdxs = ph.convert(points, width);
 
-            DensityExtractor densExtr = new DensityExtractor();
+            SurfDensExtractor densExtr = new SurfDensExtractor();
             //densExtr.setToDebug();
             float[] densities = densExtr.extractSufaceDensity(
                 pixIdxs, width, height);
         
-            CriticalDensityKDE cd = new CriticalDensityKDE();
+            CriticalSurfDensKDE cd = new CriticalSurfDensKDE();
             //cd.setToDebug();
             float criticalDensity = 
                 cd.findCriticalDensity(densities).critDens;

@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityKDE extends AbstractCriticalDensity {
+public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
     
     
     /**
@@ -33,7 +33,7 @@ public class CriticalDensityKDE extends AbstractCriticalDensity {
     /**
      *
      */
-    public CriticalDensityKDE() {
+    public CriticalSurfDensKDE() {
     }
     
     /**

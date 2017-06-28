@@ -4,7 +4,7 @@ package com.climbwithyourfeet.clustering;
  *
  * @author nichole
  */
-public interface ICriticalDensity {
+public interface ICriticalSurfDens {
     
     public void setToDebug();
     

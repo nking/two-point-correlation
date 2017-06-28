@@ -12,7 +12,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityHistogram extends AbstractCriticalDensity {
+public class CriticalSurfDensHistogram extends AbstractCriticalSurfDens {
     
     private boolean debug = false;
     
@@ -24,7 +24,7 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
     /**
      *
      */
-    public CriticalDensityHistogram() {
+    public CriticalSurfDensHistogram() {
     }
     
     /**
@@ -121,7 +121,7 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
             try {
                 hist.plotHistogram("clstr", outFileSuffix);
             } catch (IOException ex) {
-                Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CriticalSurfDensHistogram.class.getName()).log(Level.SEVERE, null, ex);
             }
         
             System.out.println("1stPeakIdx=" + yFirstPeakIdx +
@@ -149,7 +149,7 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalSurfDensHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         
@@ -184,7 +184,7 @@ public class CriticalDensityHistogram extends AbstractCriticalDensity {
                 try {
                     hist.plotHistogram("clstr", outFileSuffix);
                 } catch (IOException ex) {
-                    Logger.getLogger(CriticalDensityHistogram.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(CriticalSurfDensHistogram.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             

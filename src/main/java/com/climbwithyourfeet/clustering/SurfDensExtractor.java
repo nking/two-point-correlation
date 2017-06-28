@@ -18,7 +18,7 @@ import javax.imageio.ImageIO;
  * 
  * @author nichole
  */
-public class DensityExtractor {
+public class SurfDensExtractor {
     
     private boolean debug = false;
     

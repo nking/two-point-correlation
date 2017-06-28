@@ -148,11 +148,11 @@ public class DTClusterFinder {
                 + "set so cannot calculate it too.");
         }
         
-        ICriticalDensity densSolver = null;
+        ICriticalSurfDens densSolver = null;
         
         if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {
             
-            densSolver = new CriticalDensityKDE();
+            densSolver = new CriticalSurfDensKDE();
         
         } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
             
@@ -162,10 +162,10 @@ public class DTClusterFinder {
             
             assert(critDensMethod.equals(CRIT_DENS_METHOD.HISTOGRAM));
      
-            densSolver = new CriticalDensityHistogram();
+            densSolver = new CriticalSurfDensHistogram();
         }
         
-        DensityExtractor densExtr = new DensityExtractor();
+        SurfDensExtractor densExtr = new SurfDensExtractor();
                 
         if (debug) {
             //densExtr.setToDebug();

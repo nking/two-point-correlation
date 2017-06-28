@@ -7,12 +7,12 @@ import java.util.Arrays;
  *
  * @author nichole
  */
-public abstract class AbstractCriticalDensity implements ICriticalDensity {
+public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
     
     protected boolean debug = false;
     protected boolean isSparse = true;
 
-    public AbstractCriticalDensity() {
+    public AbstractCriticalSurfDens() {
     }
 
     /**

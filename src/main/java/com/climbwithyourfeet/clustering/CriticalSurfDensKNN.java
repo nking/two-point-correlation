@@ -8,7 +8,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class CriticalDensityKNN extends AbstractCriticalDensity {
+public class CriticalSurfDensKNN extends AbstractCriticalSurfDens {
     
     private boolean debug = false;
     
@@ -20,7 +20,7 @@ public class CriticalDensityKNN extends AbstractCriticalDensity {
     /**
      *
      */
-    public CriticalDensityKNN() {
+    public CriticalSurfDensKNN() {
     }
     
     /**
