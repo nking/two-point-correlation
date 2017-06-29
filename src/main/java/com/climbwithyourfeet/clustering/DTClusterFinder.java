@@ -18,8 +18,8 @@ import java.util.logging.Logger;
  * 
  * The methods to estimate density are
  * <pre>
- * (1) histogram (default)
- * (2) kernel density estimator using wavelet transform
+ * (1) histogram 
+ * (2) kernel density estimator using wavelet transform (KDE, defaault)
  * (3) k-nearest neighbors
  * </pre>
  * 
@@ -59,7 +59,7 @@ public class DTClusterFinder {
     
     private STATE state = null;
     
-    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.HISTOGRAM;
+    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.KDE;
     
     public static float denseThreshholdFactor = 5f;
     
@@ -115,7 +115,7 @@ public class DTClusterFinder {
     }
     
     /**
-     * set to override the default use of histograms in estimating the
+     * set to override the default use of KDE method in estimating the
      * critical density, to an alternative method of Kernel Density 
      * Estimator or k-Nearest Neighbors, or provided by you.
      * @param cdm

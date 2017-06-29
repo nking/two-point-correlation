@@ -46,4 +46,8 @@ public class CriticalSurfDensKNN extends AbstractCriticalSurfDens {
         throw new UnsupportedOperationException("not yet implmented");
     }
 
+    @Override
+    protected DensityHolder constructDH() {
+        return new DensityHolder();
+    }
 }

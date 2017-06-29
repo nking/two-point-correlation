@@ -4,6 +4,8 @@ import algorithms.YFastTrie;
 import algorithms.imageProcessing.DistanceTransform;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.MiscMath0;
+import algorithms.search.NearestNeighbor2D;
+import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIterator;
@@ -12,6 +14,7 @@ import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import java.util.Arrays;
+import java.util.Set;
 
 /**
  *
@@ -19,38 +22,28 @@ import java.util.Arrays;
  */
 public class KDEStatsHelper {
         
-    public TIntFloatMap calculateProbabilities(DensityHolder dh, 
+    public TIntFloatMap calculateProbabilities(KDEDensityHolder dh, 
         TIntSet pixIdxs, int width, int height) {
         
-//TODO: need to replace the surface density calculation
-
-        int[][] dt = calculateInvTransform(pixIdxs, width, height);
-        
-        TIntFloatMap pixSurfaceDens = calculatePixelSurfaceDensities(pixIdxs, width, dt);
+                
+        TIntFloatMap pixSurfaceDens = calculatePixelSurfaceDensities(pixIdxs, 
+            width, height);
             
         TIntFloatMap pixPs = extractProbabilities(dh, pixSurfaceDens);
         
         return pixPs;
     }
 
-    private int[][] calculateInvTransform(TIntSet pixIdxs, int width, 
-        int height) {
+    private TIntFloatMap calculatePixelSurfaceDensities(TIntSet pixIdxs, 
+        int width, int height) {
         
-        TIntSet pixInv = new TIntHashSet();
-        for (int i = 0; i < (width * height); ++i) {
-            if (!pixIdxs.contains(i)) {
-                pixInv.add(i);
-            }
-        }
+        /*
+        the pixel surface density could be estimated in many ways.
+        since the surface density estimate is pairwise, can make a pairwise
+        estimate for each pixIdxs using its nearest 2D xy neighbor.        
+        */
         
-        DistanceTransform distTrans = new DistanceTransform();
-        int[][] dt = distTrans.applyMeijsterEtAl(pixInv, width, height);
-        
-        return dt;
-    }
-
-    private TIntFloatMap calculatePixelSurfaceDensities(TIntSet pixIdxs, int width, 
-        int[][] dt) {
+        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);
         
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
@@ -65,11 +58,16 @@ public class KDEStatsHelper {
         
             ph.toPixelCoords(pixIdx, width, xy);
             
-            int d = dt[xy[0]][xy[1]];
+            Set<PairInt> nearest = nn.findClosestNotEqual(xy[0], xy[1]);
             
-            if (d > 0) {
+            if (nearest != null && nearest.size() > 0) {
                 
-                float density = (float) (1. / Math.sqrt(d));
+                PairInt p1 = nearest.iterator().next();
+                
+                //chess board distance d
+                int d = Math.abs(p1.getX() - xy[0]) + Math.abs(p1.getY() - xy[1]);
+                
+                float density = (float)(1. / Math.sqrt(d));
             
                 densMap.put(pixIdx, density);
             }
@@ -78,7 +76,7 @@ public class KDEStatsHelper {
         return densMap; 
     }
 
-    private TIntFloatMap extractProbabilities(DensityHolder dh, 
+    private TIntFloatMap extractProbabilities(KDEDensityHolder dh, 
         TIntFloatMap pixSurfaceDens) {
         
         //the variable whose frequency was calculated, surface density:

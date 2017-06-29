@@ -7,6 +7,7 @@ import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataT
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
+import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.map.TIntFloatMap;
 import gnu.trove.set.TIntSet;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +39,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindRanGenClusters() throws Exception {
+    public void estFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -140,7 +142,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 DTClusterFinder clusterFinder = 
                     new DTClusterFinder(pixIdxs, width, height);
                 
-                //clusterFinder.setToDebug();
+                clusterFinder.setToDebug();
                 
                 //clusterFinder.setThreshholdFactor(threshFactor);
 
@@ -194,17 +196,6 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 
                 plotter.writeFile("random_kde_");
                 
-                
-                
-                DensityHolder dh = clusterFinder.getDensities();
-                
-                KDEStatsHelper kdsh = new KDEStatsHelper();
-                TIntFloatMap probMap = kdsh.calculateProbabilities(
-                    dh, allClusters, width, height);
-                
-                //TODO: need a contour plot maker
-                
-            
                 count++;
             }
         }
@@ -237,8 +228,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
         ClusterPlotter plotter = new ClusterPlotter();
         
-        for (int i = 0; i < fileNames.length; i++) {
-        //for (int i = 0; i < 1; i++) {
+        //for (int i = 0; i < fileNames.length; i++) {
+        for (int i = 3; i < 4; i++) {
 
             String fileName = fileNames[i];
             
@@ -295,6 +286,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             TIntIterator iter;
             int[] xy = new int[2];
 
+            TIntSet allClusters = new TIntHashSet();
+            
             List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
             for (int k = 0; k < groupListPix.size(); ++k) {
                 Set<PairInt> set = new HashSet<PairInt>();
@@ -304,6 +297,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     ph.toPixelCoords(pixIdx, width, xy);
                     PairInt p = new PairInt(xy[0], xy[1]);
                     set.add(p);
+                    allClusters.add(pixIdx);
                 }
                 groupList.add(set);
             }
@@ -323,6 +317,26 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
             writeImage(img, "dt_other_" + i + ".png");
             */
+            
+            
+            KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
+
+            KDEStatsHelper kdsh = new KDEStatsHelper();
+            TIntFloatMap probMap = kdsh.calculateProbabilities(
+                dh, allClusters, width, height);
+
+            float[] allProbs = new float[width*height];
+            TIntFloatIterator iter2 = probMap.iterator();
+            for (int ii = 0; ii < probMap.size(); ++ii) {
+                iter2.advance();
+                int pixIdx = iter2.key();
+                float p = iter2.value();
+                allProbs[pixIdx] = p;
+                
+                ph.toPixelCoords(pixIdx, width, xy);
+                System.out.println(Arrays.toString(xy) + " p=" + p);
+            }
+                        
         }
         
         plotter.writeFile("other_kde_");
@@ -333,7 +347,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testKDEOtherData() throws Exception {
+    public void estKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -452,7 +466,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testNoClusters() throws Exception {
+    public void estNoClusters() throws Exception {
         
         /* Goal of this test is to examine the substructure created by increasing numbers of randomly 
            placed points.

@@ -37,7 +37,7 @@ public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
     public DensityHolder createDensityHolder(float criticalDensity, 
         float[] density, float[] count) {
         
-        DensityHolder dh = new DensityHolder();
+        DensityHolder dh = constructDH();
         dh.critDens = criticalDensity;
         dh.dens = Arrays.copyOf(density, density.length);
         dh.count = Arrays.copyOf(count, count.length);
@@ -53,6 +53,8 @@ public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
         
         return dh;
     }
+    
+    protected abstract DensityHolder constructDH();
     
     /**
      * creates an instance of DensityHolder, copies arguments into it, and

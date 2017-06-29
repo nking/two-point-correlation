@@ -37,11 +37,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
     }
     
     /**
-     * uses kernel density smoothing via wavelet transforms to create an alternative
-      to histograms for finding the first peak and hence the critical density.
+      uses kernel density smoothing via wavelet transforms to create an alternative
+      to histograms for finding the first peak and hence the critical 
+      surface density.
  
-     * @param values densities 
-     * @return 
+      @param values densities 
+      @return 
      */
     public DensityHolder findCriticalDensity(float[] values) {
         
@@ -54,6 +55,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
         
         /*
+        TODO: revisit this for extreme case such as:
+            consider inefficiently stored data that has large
+            x,y space between points within clusters and lower density
+            than that in the regions outside of clusters.
+            the current fixed values for some of the logic need revision.
+        
         looking at which transform has the best representation of the first peak
         as the critical density.
         
@@ -165,9 +172,13 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
         
+        int lastIdx = -1;
+        
         for (int i0 = outputTransformed.size() - 1; i0 > -1; --i0) {
             
-            System.out.println("I0=" + i0);
+            lastIdx = i0;
+            
+            System.out.println("I0=" + lastIdx);
             
             populate(r, outputTransformed.get(i0).a);
             
@@ -239,14 +250,16 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 System.out.println("weighted critDens=" + weightedMean);
                 doSparseEstimate(r.freq);
                 
-                DensityHolder dh = createDensityHolder(weightedMean,
+                KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(weightedMean,
                     r.unique, r.freq);
+                dh.copyInCoefficients(outputCoeff, lastIdx);
                 return dh;
             }
             System.out.println("nPeaks=" + r.indexes.length);
             doSparseEstimate(r.freq);
-            DensityHolder dh = createDensityHolder(
+            KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
                 r.unique.get(r.indexes[0]), r.unique, r.freq);
+            dh.copyInCoefficients(outputCoeff, lastIdx);
             return dh;
         }
         
@@ -255,10 +268,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         
         System.out.println("* critDens=" + peak);
         doSparseEstimate(r.freq);
-        DensityHolder dh = createDensityHolder(peak, r.unique, r.freq);
+        KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
+            peak, r.unique, r.freq);
+        dh.copyInCoefficients(outputCoeff, lastIdx);
         return dh;
     }
-
+    
     private void populate(W r, float[] values) {
         
         r.smoothed = values;
@@ -297,6 +312,11 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 + r.unique.get(idx));
         }
             
+    }
+
+    @Override
+    protected DensityHolder constructDH() {
+        return new KDEDensityHolder();
     }
 
     private static class W {

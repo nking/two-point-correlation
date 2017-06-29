@@ -253,4 +253,9 @@ public class CriticalSurfDensHistogram extends AbstractCriticalSurfDens {
         return new float[]{xs[q12Idx], xs[medianIdx], xs[q34Idx], xs[n - 1]};
     }
 
+    @Override
+    protected DensityHolder constructDH() {
+        return new DensityHolder();
+    }
+
 }
