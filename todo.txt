@@ -2,7 +2,7 @@
    that continues to add to weighted average for certain close spacing.
    -- consider inefficiently stored data that has large 
       x,y space between points within clusters and lower density
-      than that outside of clusters.
+      than that in the regions outside of clusters.
       the current fixed values for some of the logic need revision.
 
 -- more KDE:
@@ -36,8 +36,8 @@
               then divied by the normalization to result in errors
               in terms of the probabilities.
               these are just one component of the true error though.
-           more details on the probability errors before normalization
-           are the same as for histograms, but with each stage of
+           more details on the probability errors before normalization.
+           errors are the same as for histograms, but with each stage of
            the transformation calculation the coeff array value is
            the xError due to bandwidth of kernel operation...
            still thinking about this, but the error terms for the
