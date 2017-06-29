@@ -1,4 +1,4 @@
-density based clustering code using a distance transform
+density based clustering using a distance transform
 http://nking.github.io/two-point-correlation/
 ================================================================
 
@@ -17,14 +17,14 @@ from that.
 (NOTE that when the N^2 approach of determing the distance between
 dataset pairs of points is used instead of a distance transform and when
 those are presented as surface density frequencies, one can clearly
-see that the distribution fits a generalized extrme value curve 
+see that the distribution fits a generalized extreme value curve 
 which would be expected when the separations are dominated by random placement,
 that is poisson distribution in x,y as expected for the background 
 points.  The peak of that GEV gives the critical density from which
 a critical separation is determined.  Using the distance transform instead
-of complete pairwise calculations
-results in surface density frequences which are sparse biased samples
-of the GEV, but still provide the peak at lowest surface densities.);
+of complete pairwise calculations results in surface density frequences 
+which are sparse biased samples of the GEV, but still provide the peak at 
+lowest surface densities.);
 
 Usage as an API:
 
