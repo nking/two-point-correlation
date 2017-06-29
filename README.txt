@@ -5,9 +5,26 @@ http://nking.github.io/two-point-correlation/
 Find clusters in data in an unsupervised manner by calculating 
 the distance transform to nearest points and the critical
 two-point density from that.
-The critical density combined with a factor above background
+The critical surface density combined with a factor above background
 is used to define the critical separation of two points,
 below which they are members of the same cluster.
+
+Note that the distance transform provides information on the 
+separation of background points from dataset points and the frequency 
+of the largest separations are what is used to characterize the 
+background surface density and hence a critical surface density
+from that.
+(NOTE that when the N^2 approach of determing the distance between
+dataset pairs of points is used instead of a distance transform and when
+those are presented as surface density frequencies, one can clearly
+see that the distribution fits a generalized extrme value curve 
+which would be expected when the separations are dominated by random placement,
+that is poisson distribution in x,y as expected for the background 
+points.  The peak of that GEV gives the critical density from which
+a critical separation is determined.  Using the distance transform instead
+of complete pairwise calculations
+results in surface density frequences which are sparse biased samples
+of the GEV, but still provide the peak at lowest surface densities.);
 
 Usage as an API:
 
