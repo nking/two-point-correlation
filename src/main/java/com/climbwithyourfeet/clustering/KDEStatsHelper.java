@@ -140,7 +140,7 @@ public class KDEStatsHelper {
                 if (vIdx < 0) {
                     vIdx = -1*(vIdx + 1);
                 }
-                pMap.put(pixIdx, prob[vIdx]);
+                pMap.put(pixIdx, 1.f - prob[vIdx]);
                 
                 continue;
             }
