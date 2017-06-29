@@ -15,7 +15,8 @@
                  but I think the 3 independent parameters of the GEV
                  cannot be presumed to be recoverable from this sparse
                  sampling.
-                 could use maximum likelihood and explore parameter space
+                 could use log likelihood w/ chi sq mimizationn 
+                 and explore parameter space
                  but the parameter space is actually infeasibly large
                  (and the distr doesn't have the simplest relation of
                  peak to location parameter for example to determine
