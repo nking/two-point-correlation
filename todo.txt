@@ -1,19 +1,41 @@
+-- need to revisit the portion of KDE critical density calculation
+   that continues to add to weighted average for certain close spacing.
+   -- consider inefficiently stored data that has large 
+      x,y space between points within clusters and lower density
+      than that outside of clusters.
+      the current fixed values for some of the logic need revision.
+
 -- more KDE:
-   -- add a class to:
-      -- accept point indexes, width, height given to 2ptcorr cluster finder
-      -- internally, calculates new distance transform 
-         from the points which are not in the given points list.
-      -- extracts the densities from new distance transform of them
-      -- gets the DensityHlder from 2ptcorr clustering (already done)
-      -- calculates probability for each new point by
-            finding the normalized count in density holder for the
-            nearest density, then subtract that from 1.
-            -- consider including errors from the density curve, via sums in
-               wuadrature of the wavelet coefficients.
-               -- if/when add this, add a field for it to the
-                   DensityHolder
-      -- create a list of the probabilities
-         and plot confidence intervals over the clusters' xy plot
+   -- for the PMF/PDF of cluster points,
+        -- currently, I'm using the surface density frequency curve
+           used to calculate the critical density.
+           -- may be able to derive a better underlying distribution
+              to use for a PDF.
+              -- it's an incomplete sparsely sampled GEV,
+                 but I think the 3 independent parameters of the GEV
+                 cannot be presumed to be recoverable from this sparse
+                 sampling.
+                 could use maximum likelihood and explore parameter space
+                 but the parameter space is actually infeasibly large
+                 (and the distr doesn't have the simplest relation of
+                 peak to location parameter for example to determine
+                 location parameter first).
+        -- need a fast way to calculate the surface density of points 
+           within a cluster.
+           since the approach is pairwise, need only determine the
+           nearest neighbor within the cluster to get a surface density.
+        -- would like to retain the portion of the surface density
+           frequency errors arising from the use of a kernel,
+           so need to add the wavelet coefficients to the DensityHolder
+           for this use if the KDE stats are requested.
+           -- for each point, the error is the sum of the coefficient
+              values of that point added in quadrature because each is
+              the result of kernel operation of size h bandwith upon
+              the region of that point.
+              then multiplied by the point count,
+              then divied by the normalization to result in errors
+              in terms of the probabilities.
+              these are just one component of the true error though.
 
 -- rewrite the one dbscan image unit test if missing since refactoring
 
@@ -28,7 +50,6 @@
        representation of histogram, kde, knn for a dataset.
        need to explore determining k, V, and bin size for
        large range of data
-
 
 -- this project needs 2 different builds and the explanation
    added to both added to README.txt and a note considering 
