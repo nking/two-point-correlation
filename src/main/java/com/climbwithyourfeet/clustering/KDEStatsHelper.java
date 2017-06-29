@@ -21,7 +21,9 @@ public class KDEStatsHelper {
         
     public TIntFloatMap calculateProbabilities(DensityHolder dh, 
         TIntSet pixIdxs, int width, int height) {
-                
+        
+//TODO: need to replace the surface density calculation
+
         int[][] dt = calculateInvTransform(pixIdxs, width, height);
         
         TIntFloatMap pixSurfaceDens = calculatePixelSurfaceDensities(pixIdxs, width, dt);
