@@ -1,10 +1,10 @@
 package com.climbwithyourfeet.clustering;
 
 import algorithms.YFastTrie;
-import algorithms.imageProcessing.DistanceTransform;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.MiscMath0;
 import algorithms.search.NearestNeighbor2D;
+import algorithms.util.OneDFloatArray;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntFloatIterator;
@@ -12,8 +12,8 @@ import gnu.trove.iterator.TIntIterator;
 import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,16 +22,16 @@ import java.util.Set;
  */
 public class KDEStatsHelper {
         
-    public TIntFloatMap calculateProbabilities(KDEDensityHolder dh, 
-        TIntSet pixIdxs, int width, int height) {
-        
+    public void calculateProbabilities(KDEDensityHolder dh, TIntSet pixIdxs, 
+        int width, int height,
+        TIntFloatMap outputPointProbMap,
+        TIntFloatMap outputPointProbErrMap) {
                 
         TIntFloatMap pixSurfaceDens = calculatePixelSurfaceDensities(pixIdxs, 
             width, height);
-            
-        TIntFloatMap pixPs = extractProbabilities(dh, pixSurfaceDens);
-        
-        return pixPs;
+                            
+        extractProbabilities(dh, pixSurfaceDens, outputPointProbMap, 
+            outputPointProbErrMap);        
     }
 
     private TIntFloatMap calculatePixelSurfaceDensities(TIntSet pixIdxs, 
@@ -68,7 +68,7 @@ public class KDEStatsHelper {
                 int d = Math.abs(p1.getX() - xy[0]) + Math.abs(p1.getY() - xy[1]);
                 
                 float density = (float)(1. / Math.sqrt(d));
-            
+                            
                 densMap.put(pixIdx, density);
             }
         }
@@ -76,9 +76,11 @@ public class KDEStatsHelper {
         return densMap; 
     }
 
-    private TIntFloatMap extractProbabilities(KDEDensityHolder dh, 
-        TIntFloatMap pixSurfaceDens) {
-        
+    private void extractProbabilities(KDEDensityHolder dh, 
+        TIntFloatMap pixSurfaceDens,
+        TIntFloatMap outputProbMap,
+        TIntFloatMap outputProbErrMap) {
+            
         //the variable whose frequency was calculated, surface density:
         float[] surfDens = dh.dens;
         
@@ -122,12 +124,10 @@ public class KDEStatsHelper {
                 yft.add(sdInt);
             }         
         }
-        
-        
-        TIntFloatMap pMap = new TIntFloatHashMap();
-        
+       
         for (int i = 0; i < pixSurfaceDens.size(); ++i) {
             iter.advance();
+            
             int pixIdx = iter.key();
             float sd = iter.value();
             int sdInt = (int) Math.round(sd * factor);
@@ -140,7 +140,11 @@ public class KDEStatsHelper {
                 if (vIdx < 0) {
                     vIdx = -1*(vIdx + 1);
                 }
-                pMap.put(pixIdx, 1.f - prob[vIdx]);
+                outputProbMap.put(pixIdx, prob[vIdx]);
+                
+                float probErr = calcError(dh, vIdx, prob[vIdx]);
+                
+                outputProbErrMap.put(pixIdx, probErr);
                 
                 continue;
             }
@@ -156,8 +160,12 @@ public class KDEStatsHelper {
                 if (predIdx < 0) {
                     predIdx = -1*(predIdx + 1);
                 }
-                pMap.put(pixIdx, prob[predIdx]);
+                outputProbMap.put(pixIdx, prob[predIdx]);
             
+                float probErr = calcError(dh, predIdx, prob[predIdx]);
+                
+                outputProbErrMap.put(pixIdx, probErr);
+                
             } else if (pred < 0 && succ > -1) {
             
                 float succF = (float)succ/factor;
@@ -165,8 +173,12 @@ public class KDEStatsHelper {
                 if (succIdx < 0) {
                     succIdx = -1*(succIdx + 1);
                 }
-                pMap.put(pixIdx, prob[succIdx]);
+                outputProbMap.put(pixIdx, prob[succIdx]);
             
+                float probErr = calcError(dh, succIdx, prob[succIdx]);
+                
+                outputProbErrMap.put(pixIdx, probErr);
+                
             } else {
                 
                 // interpolate between them
@@ -200,11 +212,53 @@ public class KDEStatsHelper {
                 
                 float p = ((sd - predF)/ratio) + predF;
                 
-                pMap.put(pixIdx, p);
+                outputProbMap.put(pixIdx, p);
+            
+                float probErrP = calcError(dh, predIdx, prob[predIdx]);
+                float probErrS = calcError(dh, succIdx, prob[succIdx]);
+                
+                /*
+                pErr - probErrS    probErrP - probErrS
+                ---------------  = -------------------
+                p    - probS       probP - probS
+                
+                pErr = probErrS + (probErrP - probErrS)*(p - probS)/(probP - probS
+                */
+                
+                float pErr = probErrS + 
+                    ((probErrP - probErrS)*(p - succProb)/(predProb - succProb));
+                
+                outputProbErrMap.put(pixIdx, pErr);
+                
             } 
-        }
-       
-        return pMap;
+        }       
+    }        
+        
+    private float calcError(KDEDensityHolder dh, int idx, float prob) {
+
+        //TODO: need to revisit this and compare to other methods of determining
+        //    point-wise error
+        
+        //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
+        
+        float xerrsq = dh.surfDensDiff[idx];
+        xerrsq *= xerrsq;
+
+        float count = dh.normCount[idx];
+        float surfDens = dh.dens[idx];
+
+        float t1 = xerrsq * (prob * prob);
+        float t2 = count * surfDens * surfDens;
+        t2 /= (dh.approxH * dh.approxH);
+
+        float pErr = (float)Math.sqrt(t1 + t2);
+
+        //System.out.println("p=" + prob 
+        //    + " h=" + dh.approxH
+        //    + " sqrt(t1)=" + Math.sqrt(t1) +
+        //    " sqrt(t2_=" + Math.sqrt(t2));
+        
+        return pErr;
     }
     
 }

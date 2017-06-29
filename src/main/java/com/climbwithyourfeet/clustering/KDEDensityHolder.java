@@ -11,24 +11,14 @@ import java.util.List;
  */
 public class KDEDensityHolder extends DensityHolder {
  
-    public List<OneDFloatArray> waveletCoeffs = null;
+    /**
+     * the residuals between the retained kernel transformation
+     * and the first untransformed data.
+     */
+    public float[] surfDensDiff = null;
  
     /**
-     * copy the coefficient arrays to lastIdx, inclusive.
-     * These are made available for later use in deriving errors.
-     * @param coeffs
-     * @param lastIdx
+     * the effective bandwidth of the retained kernel transformation
      */
-    public void copyInCoefficients(List<OneDFloatArray> coeffs, int lastIdx) {
-        
-        waveletCoeffs = new ArrayList<OneDFloatArray>(coeffs.size() - lastIdx);
-        
-        for (int i = 0; i < lastIdx; ++i) {
-            OneDFloatArray a = coeffs.get(i);
-            OneDFloatArray b = new OneDFloatArray(Arrays.copyOf(a.a, a.a.length));
-            waveletCoeffs.add(b);
-        }
-        
-    }
-    
+    public int approxH;
 }

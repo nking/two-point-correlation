@@ -4,12 +4,14 @@ import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBa
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
+import algorithms.util.ContourPlotter;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.map.TIntFloatMap;
+import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import java.awt.Color;
@@ -318,13 +320,15 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             writeImage(img, "dt_other_" + i + ".png");
             */
             
-            
             KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
 
             KDEStatsHelper kdsh = new KDEStatsHelper();
-            TIntFloatMap probMap = kdsh.calculateProbabilities(
-                dh, allClusters, width, height);
-
+            TIntFloatMap probMap = new TIntFloatHashMap();
+            TIntFloatMap probEMap = new TIntFloatHashMap();
+            
+            kdsh.calculateProbabilities(
+                dh, allClusters, width, height, probMap, probEMap);
+            
             float[] allProbs = new float[width*height];
             TIntFloatIterator iter2 = probMap.iterator();
             for (int ii = 0; ii < probMap.size(); ++ii) {
@@ -334,9 +338,14 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 allProbs[pixIdx] = p;
                 
                 ph.toPixelCoords(pixIdx, width, xy);
-                System.out.println(Arrays.toString(xy) + " p=" + p);
+                System.out.println(Arrays.toString(xy) + " p=" + p + 
+                    " err=" + probEMap.get(pixIdx));
             }
-                        
+            
+            ContourPlotter plotter2 = new ContourPlotter();
+            plotter2.writeFile(probMap, width, height, 
+                "other_contour_" + i);
+                
         }
         
         plotter.writeFile("other_kde_");

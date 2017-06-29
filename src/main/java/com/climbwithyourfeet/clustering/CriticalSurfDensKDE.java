@@ -95,7 +95,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             outputCoeff);
 
         populate(r, outputTransformed.get(outputTransformed.size() - 1).a,
-            outputCoeff.get(outputCoeff.size() - 1).a);
+            outputTransformed.get(0).a);
 
         System.out.println(" r.indexes.length=" + r.indexes.length);                    
         
@@ -184,7 +184,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             System.out.println("I0=" + lastIdx);
             
             populate(r, outputTransformed.get(i0).a,
-                outputCoeff.get(i0).a);
+                outputTransformed.get(0).a);
             
             if (idxH == 1) {
                 assert(r.indexes.length > 0);
@@ -254,15 +254,18 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 System.out.println("weighted critDens=" + weightedMean);
                 doSparseEstimate(r.freq);
                 
-                DensityHolder dh = createDensityHolder(weightedMean,
+                KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(weightedMean,
                     r.unique, r.freq);
-                paused
+                dh.surfDensDiff = r.surfDensDiff;
+                dh.approxH = (1 + lastIdx)*2;
                 return dh;
             }
             System.out.println("nPeaks=" + r.indexes.length);
             doSparseEstimate(r.freq);
-            DensityHolder dh = createDensityHolder(
+            KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
                 r.unique.get(r.indexes[0]), r.unique, r.freq);
+            dh.surfDensDiff = r.surfDensDiff;
+            dh.approxH = (1 + lastIdx)*2;
             return dh;
         }
         
@@ -271,13 +274,15 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         
         System.out.println("* critDens=" + peak);
         doSparseEstimate(r.freq);
-        DensityHolder dh = createDensityHolder(peak, r.unique, r.freq);
+        KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(peak, r.unique, r.freq);
+        dh.surfDensDiff = r.surfDensDiff;
+        dh.approxH = (1 + lastIdx)*2;
         return dh;
     }
     
-    private void populate(W r, float[] values, float[] waveCoeff) {
+    private void populate(W r, float[] values, float[] values0) {
         
-        assert(values.length == waveCoeff.length);
+        assert(values.length == values0.length);
         
         r.smoothed = values;
         r.freqMap = new TFloatIntHashMap();
@@ -289,7 +294,8 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         for (int i = 0; i < r.smoothed.length; ++i) {
             
             float v = r.smoothed[i];
-            float coeff = waveCoeff[i];
+            float coeff = values[i] - values0[i];
+            coeff = Math.abs(coeff);
             
             int c = r.freqMap.get(v);
             // NOTE: trove map default returns 0 when key is not in map.
@@ -306,10 +312,10 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
 
         float freqMax = Float.NEGATIVE_INFINITY;
         r.freq = new float[r.unique.size()];
-        r.wCoeff = new float[r.unique.size()];
+        r.surfDensDiff = new float[r.unique.size()];
         for (int i = 0; i < r.unique.size(); ++i) {
             r.freq[i] = r.freqMap.get(r.unique.get(i));
-            r.wCoeff[i] = densCoeffMap.get(r.unique.get(i));
+            r.surfDensDiff[i] = densCoeffMap.get(r.unique.get(i));
             if (r.freq[i] > freqMax) {
                 freqMax = r.freq[i];
             }
@@ -340,7 +346,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         public TFloatIntMap freqMap = null;
         public TFloatList unique = null;
         public float[] freq = null;
-        public float[] wCoeff = null;
+        public float[] surfDensDiff = null;
         public int[] indexes = null;
         public float sigma = 2.5f;
         public float meanLow;
