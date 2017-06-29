@@ -41,7 +41,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -198,6 +198,33 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 
                 plotter.writeFile("random_kde_");
                 
+                
+                KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
+
+                KDEStatsHelper kdsh = new KDEStatsHelper();
+                TIntFloatMap probMap = new TIntFloatHashMap();
+                TIntFloatMap probEMap = new TIntFloatHashMap();
+
+                kdsh.calculateProbabilities(
+                    dh, allClusters, width, height, probMap, probEMap);
+
+                float[] allProbs = new float[width * height];
+                TIntFloatIterator iter2 = probMap.iterator();
+                for (int i2 = 0; i2 < probMap.size(); ++i2) {
+                    iter2.advance();
+                    int pixIdx = iter2.key();
+                    float p = iter2.value();
+                    allProbs[pixIdx] = p;
+
+                    ph.toPixelCoords(pixIdx, width, xy);
+                    System.out.println(Arrays.toString(xy) + " p=" + p
+                        + " err=" + probEMap.get(pixIdx));
+                }
+
+                ContourPlotter plotter2 = new ContourPlotter();
+                plotter2.writeFile(probMap, width, height,
+                    "other_contour_" + i);
+
                 count++;
             }
         }
@@ -211,7 +238,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindClustersOtherData() throws Exception {
+    public void estFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -231,7 +258,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         ClusterPlotter plotter = new ClusterPlotter();
         
         //for (int i = 0; i < fileNames.length; i++) {
-        for (int i = 3; i < 4; i++) {
+        for (int i = 0; i < 1; i++) {
 
             String fileName = fileNames[i];
             
