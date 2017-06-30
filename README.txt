@@ -14,16 +14,17 @@ separation of background points from dataset points and the frequency
 of the largest separations are what is used to characterize the 
 background surface density and hence a critical surface density
 from that.
-(NOTE that when the N^2 approach of determing the distance between
-dataset pairs of points is used instead of a distance transform and when
-those are presented as surface density frequencies, one can clearly
-see that the distribution fits a generalized extreme value curve 
-which would be expected when the separations are dominated by random placement,
-that is poisson distribution in x,y as expected for the background 
-points.  The peak of that GEV gives the critical density from which
-a critical separation is determined.  Using the distance transform instead
-of complete pairwise calculations results in surface density frequences 
-which are sparse biased samples of the GEV, but still provide the peak at 
+(NOTE that when the N^2 approach of determining the distance between
+dataset pairs of points is used instead of a distance transform 
+the distribution fits a generalized extreme value curve 
+which would be expected when the background points are randomly
+placed in x,y, that is a poisson distribution.  The peak of that 
+GEV (which is the distribution of the distance between points 
+spatially) gives the critical density from which a critical 
+separation is determined.  Using the distance transform instead
+of all pairwise calculations results in surface density frequences 
+which are sparse biased samples of the GEV trnsformed to 
+surface densities, but still provide the peak at 
 lowest surface densities.);
 
 Usage as an API:
