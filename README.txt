@@ -27,6 +27,10 @@ which are sparse biased samples of the GEV trnsformed to
 surface densities, but still provide the peak at 
 lowest surface densities.);
 
+NOTE that the project assumes that the data have proportial
+separations for each axis - one critical separation 
+is used for both axes.
+
 Usage as an API:
 
     DTClusterFinder clusterFinder = new DTClusterFinder(points,
