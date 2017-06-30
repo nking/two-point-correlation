@@ -1,5 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
+import com.climbwithyourfeet.clustering.SurfDensExtractor.SurfaceDensityScaled;
 import gnu.trove.set.TIntSet;
 import java.util.List;
 import java.util.logging.Logger;
@@ -18,8 +19,9 @@ import java.util.logging.Logger;
  * 
  * The methods to estimate density are
  * <pre>
- * (1) histogram 
- * (2) kernel density estimator using wavelet transform (KDE, defaault)
+ * (1) kernel density estimator using wavelet transform (KDE, default.
+ * 
+ * Recently removed the histogram methods as they were not as robust.
  * </pre>
  * 
  * NOTE: if automatic calculation of critical density is used by default,
@@ -53,7 +55,7 @@ public class DTClusterFinder {
     }
     
     public static enum CRIT_DENS_METHOD {
-        PROVIDED, HISTOGRAM, KDE
+        PROVIDED, KDE
         //, KNN
     }
     
@@ -148,22 +150,9 @@ public class DTClusterFinder {
                 + "set so cannot calculate it too.");
         }
         
-        ICriticalSurfDens densSolver = null;
+        assert(critDensMethod.equals(CRIT_DENS_METHOD.KDE));
         
-        if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {
-            
-            densSolver = new CriticalSurfDensKDE();
-        
-        //} else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
-            
-        //    throw new UnsupportedOperationException("not yet implemented");
-            
-        } else {
-            
-            assert(critDensMethod.equals(CRIT_DENS_METHOD.HISTOGRAM));
-     
-            densSolver = new CriticalSurfDensHistogram();
-        }
+        ICriticalSurfDens densSolver = new CriticalSurfDensKDE();
         
         SurfDensExtractor densExtr = new SurfDensExtractor();
                 
@@ -172,9 +161,9 @@ public class DTClusterFinder {
             densSolver.setToDebug();
         }
         
-        float[] densities = densExtr.extractSufaceDensity(points, width, height);
+        SurfaceDensityScaled sds = densExtr.extractSufaceDensity(points, width, height);
         
-        this.densityHolder = densSolver.findCriticalDensity(densities);  
+        this.densityHolder = densSolver.findCriticalDensity(sds);  
         
         if (!userSetThreshold) {
             if (!densSolver.isSparse()) {

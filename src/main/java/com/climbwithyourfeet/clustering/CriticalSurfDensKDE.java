@@ -43,14 +43,19 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
       to histograms for finding the first peak and hence the critical 
       surface density.
  
-      @param values densities 
+      @param sds scaled surface densities 
       @return 
      */
-    public KDEDensityHolder findCriticalDensity(float[] values) {
+    public KDEDensityHolder findCriticalDensity(
+        SurfDensExtractor.SurfaceDensityScaled sds) {
         
+        float[] values = sds.values;
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
         }
+        
+        //TODO:
+        //  paused here.  haven't finished scale changes for sds
         
         // the discrete unique values in rr.unique are not necessarily evenly
         // spaced, though they are ordered by surface density.

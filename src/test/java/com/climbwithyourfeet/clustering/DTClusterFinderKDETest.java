@@ -240,7 +240,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindClustersOtherData() throws Exception {
+    public void estFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -383,7 +383,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testKDEOtherData() throws Exception {
+    public void estKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -441,13 +441,15 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
             SurfDensExtractor densExtr = new SurfDensExtractor();
             //densExtr.setToDebug();
-            float[] densities = densExtr.extractSufaceDensity(
+            
+            SurfDensExtractor.SurfaceDensityScaled sds 
+                = densExtr.extractSufaceDensity(
                 pixIdxs, width, height);
         
             CriticalSurfDensKDE cd = new CriticalSurfDensKDE();
             //cd.setToDebug();
             float criticalDensity = 
-                cd.findCriticalDensity(densities).critDens;
+                cd.findCriticalDensity(sds).critDens;
             
             System.out.println("i=" + i + " critDens=" + criticalDensity);
             // 0:  0.3 to 0.7
@@ -502,7 +504,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testNoClusters() throws Exception {
+    public void estNoClusters() throws Exception {
         
         /* Goal of this test is to examine the substructure created by increasing numbers of randomly 
            placed points.
