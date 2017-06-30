@@ -6,14 +6,14 @@
 
    -- first step is that re=gridding of the data may be necessary
       if the peak of frequency of distance transform is not for
-      distance of 1.
+      a distance of 1.
       this happens when the data have spacings larger than 1.
 
-      Note, that the analysis may apply the same factor to the 
+      Note, that the analysis and resampling may apply the same factor to the 
       x and y axis, but never a different factor to each.
       it's assumed that the user has already prepared the relative
       scalings and offsets as needed.
-      (might provide a utility class to wrap frequencies of x spacings
+      (might provide a utility class to provide frequencies of x spacings
       and y spacings for the user to help them re-scale their data.)
 
    -- the second correction needed is to learn the surface

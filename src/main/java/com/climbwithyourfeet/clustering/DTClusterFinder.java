@@ -20,7 +20,6 @@ import java.util.logging.Logger;
  * <pre>
  * (1) histogram 
  * (2) kernel density estimator using wavelet transform (KDE, defaault)
- * (3) k-nearest neighbors
  * </pre>
  * 
  * NOTE: if automatic calculation of critical density is used by default,
@@ -54,7 +53,8 @@ public class DTClusterFinder {
     }
     
     public static enum CRIT_DENS_METHOD {
-        PROVIDED, HISTOGRAM, KDE, KNN
+        PROVIDED, HISTOGRAM, KDE
+        //, KNN
     }
     
     private STATE state = null;
@@ -116,8 +116,8 @@ public class DTClusterFinder {
     
     /**
      * set to override the default use of KDE method in estimating the
-     * critical density, to an alternative method of Kernel Density 
-     * Estimator or k-Nearest Neighbors, or provided by you.
+     * critical density, to an alternative method of Kernel Density, 
+     * or provided by you.
      * @param cdm
      */
     public void setCriticalDensityMethod(CRIT_DENS_METHOD cdm) {
@@ -154,9 +154,9 @@ public class DTClusterFinder {
             
             densSolver = new CriticalSurfDensKDE();
         
-        } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
+        //} else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {
             
-            throw new UnsupportedOperationException("not yet implemented");
+        //    throw new UnsupportedOperationException("not yet implemented");
             
         } else {
             
@@ -168,7 +168,7 @@ public class DTClusterFinder {
         SurfDensExtractor densExtr = new SurfDensExtractor();
                 
         if (debug) {
-            //densExtr.setToDebug();
+            densExtr.setToDebug();
             densSolver.setToDebug();
         }
         
