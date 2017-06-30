@@ -41,14 +41,10 @@ public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
         dh.critDens = criticalDensity;
         dh.dens = Arrays.copyOf(density, density.length);
         dh.count = Arrays.copyOf(count, count.length);
-        dh.normCount = new float[count.length];
         
         float tot = 0;
         for (int i = 0; i < count.length; ++i) {
             tot += count[i];
-        }
-        for (int i = 0; i < count.length; ++i) {
-            dh.normCount[i] = count[i]/tot;
         }
         
         return dh;

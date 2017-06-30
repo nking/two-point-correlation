@@ -20,9 +20,4 @@ public class DensityHolder {
      */
     public float[] count = null;
     
-    /**
-     * the count, normalized to sum to 1.
-     */
-    public float[] normCount = null;
-    
 }

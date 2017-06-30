@@ -30,7 +30,7 @@ public class KDEStatsHelper {
         TIntFloatMap pixSurfaceDens = calculatePixelSurfaceDensities(pixIdxs, 
             width, height);
                             
-        extractProbabilities(dh, pixSurfaceDens, outputPointProbMap, 
+        setProbabilities(dh, pixSurfaceDens, outputPointProbMap, 
             outputPointProbErrMap);        
     }
 
@@ -74,191 +74,28 @@ public class KDEStatsHelper {
         }
         
         return densMap; 
-    }
+    } 
 
-    private void extractProbabilities(KDEDensityHolder dh, 
-        TIntFloatMap pixSurfaceDens,
-        TIntFloatMap outputProbMap,
-        TIntFloatMap outputProbErrMap) {
-            
-        //the variable whose frequency was calculated, surface density:
-        float[] surfDens = dh.dens;
-        
-        //PMF or PDF:
-        float[] prob = dh.normCount;
+    private void setProbabilities(KDEDensityHolder dh, 
+        TIntFloatMap pixSurfaceDens, TIntFloatMap outputPointProbMap, 
+        TIntFloatMap outputPointProbErrMap) {
+
+        float[] pp = new float[2];
         
         TIntFloatIterator iter = pixSurfaceDens.iterator();
-        
-        // find closest surface density to point, then lookup prob with index.
-        
-        // in the trie, wanting to only store the surface densities greater 
-        //   than a minimum probability if the function is not continuous
-        float minProb = MiscMath0.findMin(prob);
-        
-        //turning the surface densities into integers so can use a YFastTrie
-        //   to retrieve successors and predecessors.
-        //   max surface density = 1.0. will use factor of 63 which is 6 bits
-        
-        float factor = 63;
-        
-        YFastTrie yft = new YFastTrie(6);
-        
-        if (minProb < (1./prob.length)) {
-            
-            float[] sortedDens = Arrays.copyOf(surfDens, surfDens.length);
-            Arrays.sort(surfDens);
-            MinMaxPeakFinder mmpf = new MinMaxPeakFinder();
-            float minMean = mmpf.calculateMeanOfSmallest(sortedDens, 0.04f);
-        
-            for (int i = 0; i < surfDens.length; ++i) {
-                float sd = surfDens[i];
-                if (sd > minMean) {
-                    int sdInt = (int)Math.round(sd * factor);
-                    yft.add(sdInt);
-                }
-            }
-        } else {
-            for (int i = 0; i < surfDens.length; ++i) {
-                float sd = surfDens[i];
-                int sdInt = (int)Math.round(sd * factor);
-                yft.add(sdInt);
-            }         
-        }
-       
         for (int i = 0; i < pixSurfaceDens.size(); ++i) {
             iter.advance();
             
             int pixIdx = iter.key();
             float sd = iter.value();
-            int sdInt = (int) Math.round(sd * factor);
+            
+            dh.calcProbabilityAndError(sd, pp);
+            
+            outputPointProbMap.put(pixIdx, pp[0]);
+            
+            outputPointProbErrMap.put(pixIdx, pp[1]);
+        }
         
-            int v = yft.find(sdInt);
-            if (v > -1) {
-    
-                float vF = (float)v/factor;
-                int vIdx = Arrays.binarySearch(surfDens, vF);
-                if (vIdx < 0) {
-                    vIdx = -1*(vIdx + 1);
-                }
-                outputProbMap.put(pixIdx, prob[vIdx]);
-                
-                float probErr = calcError(dh, vIdx, prob[vIdx]);
-                
-                outputProbErrMap.put(pixIdx, probErr);
-                
-                continue;
-            }
-            
-            int pred = yft.predecessor(sdInt);
-            
-            int succ = yft.successor(sdInt);
-            
-            if (pred > -1 && succ < 0) {
-                
-                float predF = (float)pred/factor;
-                int predIdx = Arrays.binarySearch(surfDens, predF);
-                if (predIdx < 0) {
-                    predIdx = -1*(predIdx + 1);
-                }
-                outputProbMap.put(pixIdx, prob[predIdx]);
-            
-                float probErr = calcError(dh, predIdx, prob[predIdx]);
-                
-                outputProbErrMap.put(pixIdx, probErr);
-                
-            } else if (pred < 0 && succ > -1) {
-            
-                float succF = (float)succ/factor;
-                int succIdx = Arrays.binarySearch(surfDens, succF);
-                if (succIdx < 0) {
-                    succIdx = -1*(succIdx + 1);
-                }
-                outputProbMap.put(pixIdx, prob[succIdx]);
-            
-                float probErr = calcError(dh, succIdx, prob[succIdx]);
-                
-                outputProbErrMap.put(pixIdx, probErr);
-                
-            } else {
-                
-                // interpolate between them
-                float predF = (float)pred/factor;
-                
-                float succF = (float)succ/factor;
-            
-                /*
-                ratio = (predF-succF)/(pred-succ)
-                
-                sd - predF
-                ---------- = ratio
-                ?  - predP
-                
-                ? = ((sd - predF)/ratio) + predP
-                */
-                
-                int predIdx = Arrays.binarySearch(surfDens, predF);
-                if (predIdx < 0) {
-                    predIdx = -1*(predIdx + 1);
-                }
-                float predProb = prob[predIdx];
-                
-                int succIdx = Arrays.binarySearch(surfDens, succF);
-                if (succIdx < 0) {
-                    succIdx = -1*(succIdx + 1);
-                }
-                float succProb = prob[succIdx];
-                
-                float ratio = (predF - succF)/(predProb - succProb);
-                
-                float p = ((sd - predF)/ratio) + predF;
-                
-                outputProbMap.put(pixIdx, p);
-            
-                float probErrP = calcError(dh, predIdx, prob[predIdx]);
-                float probErrS = calcError(dh, succIdx, prob[succIdx]);
-                
-                /*
-                pErr - probErrS    probErrP - probErrS
-                ---------------  = -------------------
-                p    - probS       probP - probS
-                
-                pErr = probErrS + (probErrP - probErrS)*(p - probS)/(probP - probS
-                */
-                
-                float pErr = probErrS + 
-                    ((probErrP - probErrS)*(p - succProb)/(predProb - succProb));
-                
-                outputProbErrMap.put(pixIdx, pErr);
-                
-            } 
-        }       
-    }        
-        
-    private float calcError(KDEDensityHolder dh, int idx, float prob) {
-
-        //TODO: need to revisit this and compare to other methods of determining
-        //    point-wise error
-        
-        //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
-        
-        float xerrsq = dh.surfDensDiff[idx];
-        xerrsq *= xerrsq;
-
-        float count = dh.normCount[idx];
-        float surfDens = dh.dens[idx];
-
-        float t1 = xerrsq * (prob * prob);
-        float t2 = count * surfDens * surfDens;
-        t2 /= (dh.approxH * dh.approxH);
-
-        float pErr = (float)Math.sqrt(t1 + t2);
-
-        //System.out.println("p=" + prob 
-        //    + " h=" + dh.approxH
-        //    + " sqrt(t1)=" + Math.sqrt(t1) +
-        //    " sqrt(t2_=" + Math.sqrt(t2));
-        
-        return pErr;
     }
     
 }

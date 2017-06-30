@@ -41,7 +41,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindRanGenClusters() throws Exception {
+    public void estFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -238,7 +238,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -257,8 +257,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
         
         ClusterPlotter plotter = new ClusterPlotter();
         
-        //for (int i = 0; i < fileNames.length; i++) {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 6; i < 7; i++) {
 
             String fileName = fileNames[i];
             

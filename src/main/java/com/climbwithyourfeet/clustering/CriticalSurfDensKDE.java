@@ -46,12 +46,11 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
       @param values densities 
       @return 
      */
-    public DensityHolder findCriticalDensity(float[] values) {
+    public KDEDensityHolder findCriticalDensity(float[] values) {
         
         if (values == null || values.length < 10) {
             throw new IllegalArgumentException("values length must be 10 or more");
         }
-        
         
         // the discrete unique values in rr.unique are not necessarily evenly
         // spaced, though they are ordered by surface density.
@@ -80,17 +79,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         // critical point to the last point, 1.0, or
         // one could create a PDF as a positively sloped ramp between the
         // critical surface density point
-        // and the point at surface density 1.0 and the same decreasing ramp
+        // and the point at surface density 1.0 and a decreasing ramp
         // from critical point to 0.
         // The appeal of the later is that the surface densities below the
         // critical value have small non-negligible clustering probabilities,
         // and that is partially because the critical density has errors in
         // its determination for the background.
-        
-        // REVISING EVERYTHING BELOW -----
-        Arrays.sort(values);
-        
-        ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
         
         /*
         TODO: revisit this for extreme case such as:
@@ -118,96 +112,31 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         also, when calculating weighted average, the sum continues to next
         frequency if the spacing is small (< 0.05)
         */
-                    
-        List<OneDFloatArray> outputTransformed = null;
-        List<OneDFloatArray> outputCoeff = null;
         
-        W r = new W();
+        Arrays.sort(values);
         
-        outputTransformed = new ArrayList<OneDFloatArray>();
-        outputCoeff = new ArrayList<OneDFloatArray>();
+        ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
+        
+        List<OneDFloatArray> outputTransformed = 
+            new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outputCoeff = 
+            new ArrayList<OneDFloatArray>();
 
         wave.calculateWithB3SplineScalingFunction(values, outputTransformed,
             outputCoeff);
 
+        W r = new W();
+        
         populate(r, outputTransformed.get(outputTransformed.size() - 1).a,
             outputTransformed.get(0).a);
 
-        System.out.println(" r.indexes.length=" + r.indexes.length);                    
-        
         String ts = Long.toString(System.currentTimeMillis());
-        
-        //System.out.println("transformed=" + Arrays.toString(smoothed));
         if (debug) {
-
-            try {
-                float[] x = new float[values.length];
-                for (int i = 0; i < x.length; ++i) {
-                    x[i] = i;
-                }
-
-                float yMax = MiscMath0.findMax(r.freq);
-
-                /*
-                PolygonAndPointPlotter plotter0 = new PolygonAndPointPlotter();
-                plotter0.addPlot(0.f, x.length, 
-                    0.f, 1.2f * MiscMath0.findMax(values),
-                    x, values, x, values,
-                    "input");
-               
-                plotter0.addPlot(0.f, x.length, 
-                    0.f, 1.2f * MiscMath0.findMax(r.smoothed),
-                    x, r.smoothed,
-                    x, r.smoothed,
-                    "transformed");
-                
-                System.out.println(plotter0.writeFile("transformed_" + ts));
-                */
-
-                // write the freq curve
-                x = r.unique.toArray(new float[r.unique.size()]);
-                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0.f, 1.2f * x[x.length - 1],
-                    0.f, 1.2f * yMax,
-                    x, r.freq, x, r.freq,
-                    "freq curve");
-
-                System.out.println(plotter.writeFile("freq_" + ts));
-
-            } catch (IOException e) {
-                log.severe(e.getMessage());
-            }
+            plotSurfaceDensities(values, ts);
+            plotCurves(r, outputTransformed, outputCoeff, 
+                0, outputCoeff.size() - 1, ts);
         }
        
-        /*
-        {//DEBUG
-            
-            W r0 = new W();
-
-            populate(r0, outputTransformed.get(0).a);
-
-            //System.out.println("transformed=" + Arrays.toString(smoothed));
-            
-            try {
-                float yMax = MiscMath0.findMax(r0.freq);
-
-                PolygonAndPointPlotter plotter0 = new PolygonAndPointPlotter();
-
-                // write the freq curve
-                float[] x = r0.unique.toArray(new float[r0.unique.size()]);
-                plotter0.addPlot(0.f, 1.2f * x[x.length - 1],
-                    0.f, 1.2f * yMax,
-                    x, r0.freq, x, r0.freq,
-                    "freq curve0");
-
-                System.out.println(plotter0.writeFile("freq_0_" + ts));
-
-            } catch (IOException e) {
-                log.severe(e.getMessage());
-            }
-        }
-        */
-        
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
         
@@ -219,8 +148,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             
             System.out.println("I0=" + lastIdx);
             
-            populate(r, outputTransformed.get(i0).a,
-                outputTransformed.get(0).a);
+            populate(r, outputTransformed.get(i0).a, outputTransformed.get(0).a);
             
             if (idxH == 1) {
                 assert(r.indexes.length > 0);
@@ -292,16 +220,18 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 
                 KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(weightedMean,
                     r.unique, r.freq);
-                dh.surfDensDiff = r.surfDensDiff;
                 dh.approxH = (1 + lastIdx)*2;
+                calcAndStorePDFPoints(r, dh);
+                               
                 return dh;
             }
             System.out.println("nPeaks=" + r.indexes.length);
             doSparseEstimate(r.freq);
             KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
                 r.unique.get(r.indexes[0]), r.unique, r.freq);
-            dh.surfDensDiff = r.surfDensDiff;
             dh.approxH = (1 + lastIdx)*2;
+            calcAndStorePDFPoints(r, dh);
+            
             return dh;
         }
         
@@ -311,8 +241,9 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         System.out.println("* critDens=" + peak);
         doSparseEstimate(r.freq);
         KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(peak, r.unique, r.freq);
-        dh.surfDensDiff = r.surfDensDiff;
         dh.approxH = (1 + lastIdx)*2;
+        calcAndStorePDFPoints(r, dh);
+        
         return dh;
     }
     
@@ -376,6 +307,256 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
     protected DensityHolder constructDH() {
         return new KDEDensityHolder();
     }
+    
+    /*    
+    private void populate0(W0 r, float[] values) {
+                
+        r.freqMap = new TFloatIntHashMap();
+        r.unique = new TFloatArrayList();
+
+        for (int i = 0; i < values.length; ++i) {
+            
+            float v = values[i];
+            
+            int c = r.freqMap.get(v);
+            // NOTE: trove map default returns 0 when key is not in map.
+            if (c == 0) {
+                r.unique.add(v);
+            }
+            c++;
+            r.freqMap.put(v, c);
+        }
+        
+        r.unique.sort();
+        
+        r.freq = new float[r.unique.size()];
+        for (int i = 0; i < r.unique.size(); ++i) {
+            float v = r.unique.get(i);
+            r.freq[i] = r.freqMap.get(v);
+        }
+    }
+
+     public DensityHolder calculatePDF(float[] values) {
+        
+        W0 rr = new W0();
+        populate0(rr, values);
+        
+        ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
+        
+        List<OneDFloatArray> outputTransformed = 
+            new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outputCoeff = 
+            new ArrayList<OneDFloatArray>();
+
+        wave.calculateWithB3SplineScalingFunction(rr.freq, outputTransformed,
+            outputCoeff);
+
+        String ts = Long.toString(System.currentTimeMillis());
+        if (debug) {
+            plotCurves(rr, outputTransformed, outputCoeff, 
+                0, outputCoeff.size() - 1, ts);
+        }
+        
+    }
+   
+    private void plotCurves(W0 rr, List<OneDFloatArray> transformed,
+        List<OneDFloatArray> coeff, int i0, int i1, String ts) {
+
+        TFloatList surfDens = rr.unique;
+        
+        int n = surfDens.size();
+        
+        try {
+            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
+            float[] x = surfDens.toArray(new float[n]);
+            float xMin = 0;
+            float xMax = 1.1f;
+
+            for (int i = i0; i <= i1; ++i) {
+                float[] y = transformed.get(i).a;
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    0.f, 1.2f * yMax,
+                    x, y, x, y,
+                    "transformed");
+            }
+            
+            for (int i = i0; i <= i1; ++i) {
+                float[] y = coeff.get(i).a;
+                float yMin = MiscMath0.findMin(y);
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    yMin, 1.2f * yMax,
+                    x, y, x, y,
+                    "coeff");
+            }
+
+            System.out.println(plotter.writeFile("transformed_" + ts));
+
+        } catch (IOException e) {
+            log.severe(e.getMessage());
+        }
+    }
+    
+    private static class W0 {
+        public TFloatIntMap freqMap = null;
+        public TFloatList unique = null;
+        public float[] freq = null;
+    }
+    */
+   
+    private void plotCurves(W rr, List<OneDFloatArray> transformed,
+        List<OneDFloatArray> coeff, int i0, int i1, String ts) {
+
+        TFloatList surfDens = rr.unique;
+        
+        int n = surfDens.size();
+        
+        try {
+            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
+            float[] x = surfDens.toArray(new float[n]);
+            float xMin = 0;
+            float xMax = 1.1f;
+
+            for (int i = i0; i <= i1; ++i) {
+                float[] y = transformed.get(i).a;
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    0.f, 1.2f * yMax,
+                    x, y, x, y,
+                    "transformed");
+            }
+            
+            for (int i = i0; i <= i1; ++i) {
+                float[] y = coeff.get(i).a;
+                float yMin = MiscMath0.findMin(y);
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    yMin, 1.2f * yMax,
+                    x, y, x, y,
+                    "coeff");
+            }
+
+            System.out.println(plotter.writeFile("transformed_" + ts));
+
+        } catch (IOException e) {
+            log.severe(e.getMessage());
+        }
+    }
+    
+    private void plotSurfaceDensities(float[] values, String ts) {
+
+        int n = values.length;
+        
+        try {
+            
+            float[] x = new float[values.length];
+            for (int i = 0; i < x.length; ++i) {
+                x[i] = i;
+            }
+                
+            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
+            plotter.addPlot(0.f, x.length,
+                0.f, 1.2f * MiscMath0.findMax(values),
+                x, values, x, values,
+                "input");
+
+            System.out.println(plotter.writeFile("sd_data_" + ts));
+
+        } catch (IOException e) {
+            log.severe(e.getMessage());
+        }            
+    }
+    
+    private void calcAndStorePDFPoints(W r, KDEDensityHolder dh) {
+        
+        int firstNZIdx = 0;
+        for (int i = 0; i < r.unique.size(); ++i) {
+            float dens = r.unique.get(i);
+            if (dens >= dh.critDens) {
+                break;
+            }
+            firstNZIdx = i;
+            if (dens >= r.meanLow) {
+                break;
+            }
+        }
+        int critSurfDensIdx = 0;
+        for (int i = 0; i < r.unique.size(); ++i) {
+            float dens = r.unique.get(i);
+            if (dens == dh.critDens) {
+                critSurfDensIdx = i;
+                break;
+            } else if (dens > dh.critDens) {
+                break;
+            }
+            critSurfDensIdx = i;
+        }
+        
+        int lastIdx = r.unique.size() - 1;
+        
+        assert(Math.abs(r.unique.get(lastIdx) - 1.0) < 0.001);
+       
+        dh.threeSDs = new float[]{
+            r.unique.get(firstNZIdx),
+            r.unique.get(critSurfDensIdx),
+            r.unique.get(lastIdx)
+        };
+        
+        float[] threeSDCounts = new float[]{
+            r.freq[firstNZIdx],
+            r.freq[critSurfDensIdx],
+            r.freq[lastIdx]
+        };
+        dh.setAndNormalizeCounts(threeSDCounts);
+        
+        // calculate the errors for the 3 points
+        float[] errors = new float[] {
+            calcError(r, firstNZIdx, dh.threeSDCounts[0], dh.approxH),
+            calcError(r, critSurfDensIdx, dh.threeSDCounts[1], dh.approxH),
+            calcError(r, lastIdx, dh.threeSDCounts[2], dh.approxH)
+        };
+        dh.setTheThreeErrors(errors);
+    }
+    
+    private float calcError(W r, int idx, float prob, float approxH) {
+
+        //TODO: need to revisit this and compare to other methods of determining
+        //    point-wise error
+        
+        //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
+        
+        float xerrsq = r.surfDensDiff[idx];
+        xerrsq *= xerrsq;
+
+        float count = prob;
+        float surfDens = r.unique.get(idx);
+
+        float t1 = xerrsq * (prob * prob);
+        float t2 = count * surfDens * surfDens;
+        t2 /= (approxH * approxH);
+
+        float pErr = (float)Math.sqrt(t1 + t2);
+
+        /*
+        System.out.println(
+            " sd=" + surfDens
+            + " p=" + prob 
+            + " pErr=" + pErr 
+            + " count=" + count
+            + " h=" + approxH
+            + " sqrt(t1)=" + Math.sqrt(t1) +
+            " sqrt(t2_=" + Math.sqrt(t2));
+        */
+        return pErr;
+    }
 
     private static class W {
         public float[] smoothed = null;
@@ -387,4 +568,5 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         public float sigma = 2.5f;
         public float meanLow;
     }
+    
 }
