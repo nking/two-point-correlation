@@ -18,8 +18,8 @@ import java.util.logging.Logger;
  * 
  * The methods to estimate density are
  * &lt;pre&gt;
- * (1) histogram (default)
- * (2) kernel density estimator using wavelet transform
+ * (1) histogram 
+ * (2) kernel density estimator using wavelet transform (KDE, defaault)
  * (3) k-nearest neighbors
  * &lt;/pre&gt;
  * 
@@ -45,7 +45,7 @@ import java.util.logging.Logger;
     private final int width;
     private final int height;
     
-<span class="fc" id="L48">    private float critDens = Float.POSITIVE_INFINITY;</span>
+<span class="fc" id="L48">    private DensityHolder densityHolder = null;</span>
     
 <span class="fc" id="L50">    private List&lt;TIntSet&gt; groups = null;</span>
 
@@ -59,7 +59,7 @@ import java.util.logging.Logger;
     
 <span class="fc" id="L60">    private STATE state = null;</span>
     
-<span class="fc" id="L62">    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.HISTOGRAM;</span>
+<span class="fc" id="L62">    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.KDE;</span>
     
 <span class="fc" id="L64">    public static float denseThreshholdFactor = 5f;</span>
     
@@ -115,7 +115,7 @@ import java.util.logging.Logger;
 <span class="nc" id="L115">    }</span>
     
     /**
-     * set to override the default use of histograms in estimating the
+     * set to override the default use of KDE method in estimating the
      * critical density, to an alternative method of Kernel Density 
      * Estimator or k-Nearest Neighbors, or provided by you.
      * @param cdm
@@ -148,11 +148,11 @@ import java.util.logging.Logger;
                 + &quot;set so cannot calculate it too.&quot;);
         }
         
-<span class="fc" id="L151">        ICriticalDensity densSolver = null;</span>
+<span class="fc" id="L151">        ICriticalSurfDens densSolver = null;</span>
         
 <span class="fc bfc" id="L153" title="All 2 branches covered.">        if (critDensMethod.equals(CRIT_DENS_METHOD.KDE)) {</span>
             
-<span class="fc" id="L155">            densSolver = new CriticalDensityKDE();</span>
+<span class="fc" id="L155">            densSolver = new CriticalSurfDensKDE();</span>
         
 <span class="pc bpc" id="L157" title="1 of 2 branches missed.">        } else if (critDensMethod.equals(CRIT_DENS_METHOD.KNN)) {</span>
             
@@ -162,10 +162,10 @@ import java.util.logging.Logger;
             
 <span class="pc bpc" id="L163" title="3 of 4 branches missed.">            assert(critDensMethod.equals(CRIT_DENS_METHOD.HISTOGRAM));</span>
      
-<span class="fc" id="L165">            densSolver = new CriticalDensityHistogram();</span>
+<span class="fc" id="L165">            densSolver = new CriticalSurfDensHistogram();</span>
         }
         
-<span class="fc" id="L168">        DensityExtractor densExtr = new DensityExtractor();</span>
+<span class="fc" id="L168">        SurfDensExtractor densExtr = new SurfDensExtractor();</span>
                 
 <span class="fc bfc" id="L170" title="All 2 branches covered.">        if (debug) {</span>
             //densExtr.setToDebug();
@@ -174,7 +174,7 @@ import java.util.logging.Logger;
         
 <span class="fc" id="L175">        float[] densities = densExtr.extractSufaceDensity(points, width, height);</span>
         
-<span class="fc" id="L177">        this.critDens = densSolver.findCriticalDensity(densities);  </span>
+<span class="fc" id="L177">        this.densityHolder = densSolver.findCriticalDensity(densities);  </span>
         
 <span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (!userSetThreshold) {</span>
 <span class="fc bfc" id="L180" title="All 2 branches covered.">            if (!densSolver.isSparse()) {</span>
@@ -197,30 +197,31 @@ import java.util.logging.Logger;
         
 <span class="nc" id="L198">        this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;</span>
         
-<span class="nc" id="L200">        this.critDens = dens;</span>
+<span class="nc" id="L200">        this.densityHolder = new DensityHolder();</span>
+<span class="nc" id="L201">        this.densityHolder.critDens = dens;</span>
         
-<span class="nc" id="L202">        this.state = STATE.HAVE_CLUSTER_DENSITY;</span>
-<span class="nc" id="L203">    }</span>
+<span class="nc" id="L203">        this.state = STATE.HAVE_CLUSTER_DENSITY;</span>
+<span class="nc" id="L204">    }</span>
     
     /**
      *
      */
     public void findClusters() {
         
-<span class="pc bpc" id="L210" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &lt; 0) {</span>
-<span class="nc" id="L211">            calculateCriticalDensity();</span>
-<span class="pc bpc" id="L212" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
-<span class="nc" id="L213">            return;</span>
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &lt; 0) {</span>
+<span class="nc" id="L212">            calculateCriticalDensity();</span>
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
+<span class="nc" id="L214">            return;</span>
         }
         
-<span class="fc" id="L216">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
+<span class="fc" id="L217">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
         
-<span class="fc" id="L218">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
+<span class="fc" id="L219">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
         
-<span class="fc" id="L220">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
+<span class="fc" id="L221">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
         
-<span class="fc" id="L222">        groups = groupFinder.calculateGroups(critDens, points);        </span>
-<span class="fc" id="L223">    }</span>
+<span class="fc" id="L223">        groups = groupFinder.calculateGroups(densityHolder.critDens, points);        </span>
+<span class="fc" id="L224">    }</span>
     
     /**
      *
@@ -228,11 +229,11 @@ import java.util.logging.Logger;
      */
     public int getNumberOfClusters() {
         
-<span class="pc bpc" id="L231" title="1 of 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L232">            return 0;</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L233">            return 0;</span>
         }
         
-<span class="fc" id="L235">        return groups.size();</span>
+<span class="fc" id="L236">        return groups.size();</span>
     }
     
     /**
@@ -242,20 +243,20 @@ import java.util.logging.Logger;
      */
     public TIntSet getCluster(int idx) {
         
-<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L246">            throw new IllegalArgumentException(</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L247">            throw new IllegalArgumentException(</span>
                 &quot;findClusters was not successfully invoked&quot;);
         }
         
-<span class="nc bnc" id="L250" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
-<span class="nc" id="L251">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
+<span class="nc bnc" id="L251" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
+<span class="nc" id="L252">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
         }
         
-<span class="nc" id="L254">        return groups.get(idx);</span>
+<span class="nc" id="L255">        return groups.get(idx);</span>
     }
     
     public List&lt;TIntSet&gt; getGroups() {
-<span class="fc" id="L258">        return groups;</span>
+<span class="fc" id="L259">        return groups;</span>
     }
     
     /**
@@ -263,7 +264,11 @@ import java.util.logging.Logger;
      * @return
      */
     public float getCriticalDensity() {
-<span class="fc" id="L266">        return critDens;</span>
+<span class="fc" id="L267">        return densityHolder.critDens;</span>
+    }
+    
+    public DensityHolder getDensities() {
+<span class="fc" id="L271">        return densityHolder;</span>
     }
     
 }

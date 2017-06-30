@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>CriticalSurfDensKDE.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">CriticalSurfDensKDE.java</span></div><h1>CriticalSurfDensKDE.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.MiscMath0;
+import algorithms.signalProcessing.ATrousWaveletTransform1D;
+import algorithms.util.OneDFloatArray;
+import algorithms.util.PolygonAndPointPlotter;
+import gnu.trove.list.TFloatList;
+import gnu.trove.list.array.TFloatArrayList;
+import gnu.trove.map.TFloatFloatMap;
+import gnu.trove.map.TFloatIntMap;
+import gnu.trove.map.hash.TFloatFloatHashMap;
+import gnu.trove.map.hash.TFloatIntHashMap;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
+
+/**
+ * uses kernel density smoothing via wavelet transforms to create an alternative
+ * to histograms for finding the first peak and hence the critical density.
+ * 
+ * @author nichole
+ */
+<span class="pc bpc" id="L26" title="1 of 2 branches missed.">public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {</span>
+    
+    
+    /**
+     *
+     */
+<span class="fc" id="L32">    protected Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+    
+    /**
+     *
+     */
+<span class="fc" id="L38">    public CriticalSurfDensKDE() {</span>
+<span class="fc" id="L39">    }</span>
+    
+    /**
+      uses kernel density smoothing via wavelet transforms to create an alternative
+      to histograms for finding the first peak and hence the critical 
+      surface density.
+ 
+      @param values densities 
+      @return 
+     */
+    public KDEDensityHolder findCriticalDensity(float[] values) {
+        
+<span class="pc bpc" id="L51" title="2 of 4 branches missed.">        if (values == null || values.length &lt; 10) {</span>
+<span class="nc" id="L52">            throw new IllegalArgumentException(&quot;values length must be 10 or more&quot;);</span>
+        }
+        
+        // the discrete unique values in rr.unique are not necessarily evenly
+        // spaced, though they are ordered by surface density.
+        // rr.unique, rr.freq are the density curve version of a histogram
+        // and the points are discrete.
+        // The true density function, however, is continous from the
+        // critical surface density (not yet found) up to the surface density of 1.0.
+        // 
+        // To smooth the curve (rr.unique, rr.freq), one could either
+        //    apply a kernel on adjacent points in the arrays
+        //    (which is a nearest neighbor approach)
+        //    or one could resample (rr.unique, rr.freq) into a finer
+        //    evenly spaced by surface densities and apply the atrous wavelet on 
+        //    the evenly sampled rr.freq array to smooth it.
+        //    The first approach, that of applying the kernel over adjacent array
+        //    points is better for the task of finding the first peak
+        //    as the critical density, so that is what is used here.
+        //    
+        // After the critical surface density is found, 
+        // the smoothed curve (rr.unique, rr.freq) is a discrete sampling of
+        // of a yet uncharacterized continuous PDF for this specific 
+        // problem of pair-wise clustering.
+        // To create the continous PDF, knowing that the critical surface density
+        // represents a limit between 2 states, clustered and not clustered,
+        // one could either create a PDF as a uniform distribution from the
+        // critical point to the last point, 1.0, or
+        // one could create a PDF as a positively sloped ramp between the
+        // critical surface density point
+        // and the point at surface density 1.0 and a decreasing ramp
+        // from critical point to 0.
+        // The appeal of the later is that the surface densities below the
+        // critical value have small non-negligible clustering probabilities,
+        // and that is partially because the critical density has errors in
+        // its determination for the background.
+        
+        /*
+        TODO: revisit this for extreme case such as:
+            consider inefficiently stored data that has large
+            x,y space between points within clusters and lower density
+            than that in the regions outside of clusters.
+            the current fixed values for some of the logic need revision.
+        
+        looking at which transform has the best representation of the first peak
+        as the critical density.
+        
+        starting from highest index transformations to smallest:
+            if there's more than one peak and its
+                frequency is not 1.0
+                then
+                   if 1st peak sigma &gt; 5 o5 10 ish
+                       return that
+                   else
+                      calc a peak weighted average of the first
+                         peaks until a peak has sigma &gt; 5 or so
+            else if there's one peak and it's freq is 1.0
+            then retreat up the list until that is not true,
+            and at that point take idx/2 as the next index
+        
+        also, when calculating weighted average, the sum continues to next
+        frequency if the spacing is small (&lt; 0.05)
+        */
+        
+<span class="fc" id="L116">        Arrays.sort(values);</span>
+        
+<span class="fc" id="L118">        ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();</span>
+        
+<span class="fc" id="L120">        List&lt;OneDFloatArray&gt; outputTransformed = </span>
+            new ArrayList&lt;OneDFloatArray&gt;();
+<span class="fc" id="L122">        List&lt;OneDFloatArray&gt; outputCoeff = </span>
+            new ArrayList&lt;OneDFloatArray&gt;();
+
+<span class="fc" id="L125">        wave.calculateWithB3SplineScalingFunction(values, outputTransformed,</span>
+            outputCoeff);
+
+<span class="fc" id="L128">        W r = new W();</span>
+        
+<span class="fc" id="L130">        populate(r, outputTransformed.get(outputTransformed.size() - 1).a,</span>
+<span class="fc" id="L131">            outputTransformed.get(0).a);</span>
+
+<span class="fc" id="L133">        String ts = Long.toString(System.currentTimeMillis());</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L135">            plotSurfaceDensities(values, ts);</span>
+<span class="fc" id="L136">            plotCurves(r, outputTransformed, outputCoeff, </span>
+<span class="fc" id="L137">                0, outputCoeff.size() - 1, ts);</span>
+        }
+       
+        // 1 = found single peak at freq=1, 2=jumped to half index
+<span class="fc" id="L141">        int idxH = 0;</span>
+        
+<span class="fc" id="L143">        int lastIdx = -1;</span>
+        
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        for (int i0 = outputTransformed.size() - 1; i0 &gt; -1; --i0) {</span>
+            
+<span class="fc" id="L147">            lastIdx = i0;</span>
+            
+<span class="fc" id="L149">            System.out.println(&quot;I0=&quot; + lastIdx);</span>
+            
+<span class="fc" id="L151">            populate(r, outputTransformed.get(i0).a, outputTransformed.get(0).a);</span>
+            
+<span class="fc bfc" id="L153" title="All 2 branches covered.">            if (idxH == 1) {</span>
+<span class="pc bpc" id="L154" title="3 of 4 branches missed.">                assert(r.indexes.length &gt; 0);</span>
+<span class="fc bfc" id="L155" title="All 2 branches covered.">                if (r.indexes.length == 1) {</span>
+<span class="fc" id="L156">                    continue;</span>
+                }
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">                if (i0 &lt; 2) {</span>
+<span class="nc" id="L159">                    continue;</span>
+                }
+                // else, jump to index half of this
+                // TODO: this may need improvements
+<span class="fc" id="L163">                i0 = i0/2;</span>
+<span class="fc" id="L164">                idxH = 2;</span>
+<span class="fc" id="L165">                continue;</span>
+            }
+
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">            if (r.indexes.length == 0) {</span>
+<span class="nc" id="L169">                continue;</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">            } else if (r.indexes.length == 1) {</span>
+                // set a flag and continue
+<span class="fc" id="L172">                idxH = 1;</span>
+<span class="fc" id="L173">                continue;</span>
+            }
+            
+            //TODO: sl may need adjustments:
+<span class="fc" id="L177">            float sl = 9;// 10 percentish</span>
+<span class="fc" id="L178">            float sigma1 = r.freq[r.indexes[0]]/r.meanLow;</span>
+            
+<span class="fc bfc" id="L180" title="All 2 branches covered.">            if (sigma1 &lt;= sl) {</span>
+                
+                // weighted mean of peaks from 0 until a peak has s/n &gt; sl 
+<span class="fc" id="L183">                int idx = 0;</span>
+<span class="fc" id="L184">                float tot = 0;</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">                for (int ii = 0; ii &lt; r.indexes.length; ++ii) {</span>
+<span class="fc" id="L186">                    int peakIdx = r.indexes[ii];</span>
+<span class="fc" id="L187">                    idx = ii;</span>
+<span class="fc" id="L188">                    tot += r.freq[peakIdx];</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">                    if ((r.freq[peakIdx]/r.meanLow) &gt; sl) {</span>
+<span class="fc" id="L190">                        break;</span>
+                    }
+                }
+       
+                // keep adding frequencies if the spacing to the next is close:
+<span class="pc bpc" id="L195" title="2 of 4 branches missed.">                if (idx &gt; 0 &amp;&amp; r.indexes.length &gt; (idx + 1)) {</span>
+<span class="fc" id="L196">                    float diff = r.unique.get(r.indexes[idx + 1]) - </span>
+<span class="fc" id="L197">                        r.unique.get(r.indexes[idx]);</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">                    if (diff &lt; 0.05f) {</span>
+<span class="pc bpc" id="L199" title="1 of 2 branches missed.">                        for (int ii = idx+1; ii &lt; r.indexes.length; ++ii) {</span>
+<span class="fc" id="L200">                            if ((r.unique.get(r.indexes[ii]) </span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">                                - r.unique.get(r.indexes[ii - 1])) </span>
+                                &gt;= 0.05f) {
+<span class="fc" id="L203">                                break;</span>
+                            }
+<span class="fc" id="L205">                            idx = ii;</span>
+<span class="fc" id="L206">                            tot += r.freq[r.indexes[ii]];</span>
+                        }
+                    }
+                }
+                
+<span class="fc" id="L211">                float weightedMean = 0;</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">                for (int ii = 0; ii &lt;= idx; ++ii) {</span>
+<span class="fc" id="L213">                    int peakIdx = r.indexes[ii];</span>
+<span class="fc" id="L214">                    float weight = r.freq[peakIdx]/tot;</span>
+<span class="fc" id="L215">                    weightedMean += weight * r.unique.get(peakIdx);</span>
+                }
+<span class="fc" id="L217">                System.out.println(&quot;nPeaks=&quot; + r.indexes.length);</span>
+<span class="fc" id="L218">                System.out.println(&quot;weighted critDens=&quot; + weightedMean);</span>
+<span class="fc" id="L219">                doSparseEstimate(r.freq);</span>
+                
+<span class="fc" id="L221">                KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(weightedMean,</span>
+                    r.unique, r.freq);
+<span class="fc" id="L223">                dh.approxH = (1 + lastIdx)*2;</span>
+<span class="fc" id="L224">                calcAndStorePDFPoints(r, dh);</span>
+                               
+<span class="fc" id="L226">                return dh;</span>
+            }
+<span class="fc" id="L228">            System.out.println(&quot;nPeaks=&quot; + r.indexes.length);</span>
+<span class="fc" id="L229">            doSparseEstimate(r.freq);</span>
+<span class="fc" id="L230">            KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(</span>
+<span class="fc" id="L231">                r.unique.get(r.indexes[0]), r.unique, r.freq);</span>
+<span class="fc" id="L232">            dh.approxH = (1 + lastIdx)*2;</span>
+<span class="fc" id="L233">            calcAndStorePDFPoints(r, dh);</span>
+            
+<span class="fc" id="L235">            return dh;</span>
+        }
+        
+        // for histogram, crit dens = 1.1 * density of first peak
+<span class="nc" id="L239">        float peak = r.unique.get(r.indexes[0]);</span>
+        
+<span class="nc" id="L241">        System.out.println(&quot;* critDens=&quot; + peak);</span>
+<span class="nc" id="L242">        doSparseEstimate(r.freq);</span>
+<span class="nc" id="L243">        KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(peak, r.unique, r.freq);</span>
+<span class="nc" id="L244">        dh.approxH = (1 + lastIdx)*2;</span>
+<span class="nc" id="L245">        calcAndStorePDFPoints(r, dh);</span>
+        
+<span class="nc" id="L247">        return dh;</span>
+    }
+    
+    private void populate(W r, float[] values, float[] values0) {
+        
+<span class="pc bpc" id="L252" title="3 of 4 branches missed.">        assert(values.length == values0.length);</span>
+        
+<span class="fc" id="L254">        r.smoothed = values;</span>
+<span class="fc" id="L255">        r.freqMap = new TFloatIntHashMap();</span>
+<span class="fc" id="L256">        r.unique = new TFloatArrayList();</span>
+
+        // key = freq, value = added wavelet coefficients
+<span class="fc" id="L259">        TFloatFloatMap densCoeffMap = new TFloatFloatHashMap();</span>
+        
+<span class="fc bfc" id="L261" title="All 2 branches covered.">        for (int i = 0; i &lt; r.smoothed.length; ++i) {</span>
+            
+<span class="fc" id="L263">            float v = r.smoothed[i];</span>
+<span class="fc" id="L264">            float coeff = values[i] - values0[i];</span>
+<span class="fc" id="L265">            coeff = Math.abs(coeff);</span>
+            
+<span class="fc" id="L267">            int c = r.freqMap.get(v);</span>
+            // NOTE: trove map default returns 0 when key is not in map.
+<span class="fc bfc" id="L269" title="All 2 branches covered.">            if (c == 0) {</span>
+<span class="fc" id="L270">                r.unique.add(v);</span>
+            }
+<span class="fc" id="L272">            c++;</span>
+<span class="fc" id="L273">            r.freqMap.put(v, c);</span>
+            
+            //NOTE: trove default returns 0 when key is not in map
+<span class="fc" id="L276">            float coeffSum = densCoeffMap.get(v) + coeff;</span>
+<span class="fc" id="L277">            densCoeffMap.put(v, coeffSum);</span>
+        }
+
+<span class="fc" id="L280">        float freqMax = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L281">        r.freq = new float[r.unique.size()];</span>
+<span class="fc" id="L282">        r.surfDensDiff = new float[r.unique.size()];</span>
+<span class="fc bfc" id="L283" title="All 2 branches covered.">        for (int i = 0; i &lt; r.unique.size(); ++i) {</span>
+<span class="fc" id="L284">            r.freq[i] = r.freqMap.get(r.unique.get(i));</span>
+<span class="fc" id="L285">            r.surfDensDiff[i] = densCoeffMap.get(r.unique.get(i));</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">            if (r.freq[i] &gt; freqMax) {</span>
+<span class="fc" id="L287">                freqMax = r.freq[i];</span>
+            }
+        }
+        
+        // find maxima of values in freqMap
+<span class="fc" id="L292">        r.sigma = 2.5f;</span>
+<span class="fc" id="L293">        MinMaxPeakFinder mmpf = new MinMaxPeakFinder();</span>
+<span class="fc" id="L294">        r.meanLow = mmpf.calculateMeanOfSmallest(r.freq, 0.03f);</span>
+<span class="fc" id="L295">        r.indexes = mmpf.findPeaks(r.freq, r.meanLow, 2.5f);</span>
+<span class="fc" id="L296">        System.out.println(&quot;thresh=&quot; + r.meanLow * r.sigma);</span>
+        //System.out.println(&quot;freq=&quot; + Arrays.toString(freq));
+        //System.out.println(&quot;indexes=&quot; + Arrays.toString(indexes));
+<span class="fc bfc" id="L299" title="All 2 branches covered.">        for (int idx : r.indexes) {</span>
+<span class="fc" id="L300">            System.out.println(&quot;  peak=&quot; + r.freq[idx] + &quot; &quot; </span>
+<span class="fc" id="L301">                + r.unique.get(idx));</span>
+        }
+            
+<span class="fc" id="L304">    }</span>
+
+    @Override
+    protected DensityHolder constructDH() {
+<span class="fc" id="L308">        return new KDEDensityHolder();</span>
+    }
+    
+    /*    
+    private void populate0(W0 r, float[] values) {
+                
+        r.freqMap = new TFloatIntHashMap();
+        r.unique = new TFloatArrayList();
+
+        for (int i = 0; i &lt; values.length; ++i) {
+            
+            float v = values[i];
+            
+            int c = r.freqMap.get(v);
+            // NOTE: trove map default returns 0 when key is not in map.
+            if (c == 0) {
+                r.unique.add(v);
+            }
+            c++;
+            r.freqMap.put(v, c);
+        }
+        
+        r.unique.sort();
+        
+        r.freq = new float[r.unique.size()];
+        for (int i = 0; i &lt; r.unique.size(); ++i) {
+            float v = r.unique.get(i);
+            r.freq[i] = r.freqMap.get(v);
+        }
+    }
+
+     public DensityHolder calculatePDF(float[] values) {
+        
+        W0 rr = new W0();
+        populate0(rr, values);
+        
+        ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
+        
+        List&lt;OneDFloatArray&gt; outputTransformed = 
+            new ArrayList&lt;OneDFloatArray&gt;();
+        List&lt;OneDFloatArray&gt; outputCoeff = 
+            new ArrayList&lt;OneDFloatArray&gt;();
+
+        wave.calculateWithB3SplineScalingFunction(rr.freq, outputTransformed,
+            outputCoeff);
+
+        String ts = Long.toString(System.currentTimeMillis());
+        if (debug) {
+            plotCurves(rr, outputTransformed, outputCoeff, 
+                0, outputCoeff.size() - 1, ts);
+        }
+        
+    }
+   
+    private void plotCurves(W0 rr, List&lt;OneDFloatArray&gt; transformed,
+        List&lt;OneDFloatArray&gt; coeff, int i0, int i1, String ts) {
+
+        TFloatList surfDens = rr.unique;
+        
+        int n = surfDens.size();
+        
+        try {
+            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
+            float[] x = surfDens.toArray(new float[n]);
+            float xMin = 0;
+            float xMax = 1.1f;
+
+            for (int i = i0; i &lt;= i1; ++i) {
+                float[] y = transformed.get(i).a;
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    0.f, 1.2f * yMax,
+                    x, y, x, y,
+                    &quot;transformed&quot;);
+            }
+            
+            for (int i = i0; i &lt;= i1; ++i) {
+                float[] y = coeff.get(i).a;
+                float yMin = MiscMath0.findMin(y);
+                float yMax = MiscMath0.findMax(y);
+                
+                plotter.addPlot(xMin, xMax,
+                    yMin, 1.2f * yMax,
+                    x, y, x, y,
+                    &quot;coeff&quot;);
+            }
+
+            System.out.println(plotter.writeFile(&quot;transformed_&quot; + ts));
+
+        } catch (IOException e) {
+            log.severe(e.getMessage());
+        }
+    }
+    
+    private static class W0 {
+        public TFloatIntMap freqMap = null;
+        public TFloatList unique = null;
+        public float[] freq = null;
+    }
+    */
+   
+    private void plotCurves(W rr, List&lt;OneDFloatArray&gt; transformed,
+        List&lt;OneDFloatArray&gt; coeff, int i0, int i1, String ts) {
+
+<span class="fc" id="L414">        TFloatList surfDens = rr.unique;</span>
+        
+<span class="fc" id="L416">        int n = surfDens.size();</span>
+        
+        try {
+<span class="fc" id="L419">            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();</span>
+            
+<span class="fc" id="L421">            float[] x = surfDens.toArray(new float[n]);</span>
+<span class="fc" id="L422">            float xMin = 0;</span>
+<span class="fc" id="L423">            float xMax = 1.1f;</span>
+
+<span class="fc bfc" id="L425" title="All 2 branches covered.">            for (int i = i0; i &lt;= i1; ++i) {</span>
+<span class="fc" id="L426">                float[] y = transformed.get(i).a;</span>
+<span class="fc" id="L427">                float yMax = MiscMath0.findMax(y);</span>
+                
+<span class="fc" id="L429">                plotter.addPlot(xMin, xMax,</span>
+                    0.f, 1.2f * yMax,
+                    x, y, x, y,
+                    &quot;transformed&quot;);
+            }
+            
+<span class="fc bfc" id="L435" title="All 2 branches covered.">            for (int i = i0; i &lt;= i1; ++i) {</span>
+<span class="fc" id="L436">                float[] y = coeff.get(i).a;</span>
+<span class="fc" id="L437">                float yMin = MiscMath0.findMin(y);</span>
+<span class="fc" id="L438">                float yMax = MiscMath0.findMax(y);</span>
+                
+<span class="fc" id="L440">                plotter.addPlot(xMin, xMax,</span>
+                    yMin, 1.2f * yMax,
+                    x, y, x, y,
+                    &quot;coeff&quot;);
+            }
+
+<span class="fc" id="L446">            System.out.println(plotter.writeFile(&quot;transformed_&quot; + ts));</span>
+
+<span class="nc" id="L448">        } catch (IOException e) {</span>
+<span class="nc" id="L449">            log.severe(e.getMessage());</span>
+<span class="fc" id="L450">        }</span>
+<span class="fc" id="L451">    }</span>
+    
+    private void plotSurfaceDensities(float[] values, String ts) {
+
+<span class="fc" id="L455">        int n = values.length;</span>
+        
+        try {
+            
+<span class="fc" id="L459">            float[] x = new float[values.length];</span>
+<span class="fc bfc" id="L460" title="All 2 branches covered.">            for (int i = 0; i &lt; x.length; ++i) {</span>
+<span class="fc" id="L461">                x[i] = i;</span>
+            }
+                
+<span class="fc" id="L464">            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();</span>
+            
+<span class="fc" id="L466">            plotter.addPlot(0.f, x.length,</span>
+<span class="fc" id="L467">                0.f, 1.2f * MiscMath0.findMax(values),</span>
+                x, values, x, values,
+                &quot;input&quot;);
+
+<span class="fc" id="L471">            System.out.println(plotter.writeFile(&quot;sd_data_&quot; + ts));</span>
+
+<span class="nc" id="L473">        } catch (IOException e) {</span>
+<span class="nc" id="L474">            log.severe(e.getMessage());</span>
+<span class="fc" id="L475">        }            </span>
+<span class="fc" id="L476">    }</span>
+    
+    private void calcAndStorePDFPoints(W r, KDEDensityHolder dh) {
+        
+<span class="fc" id="L480">        int firstNZIdx = 0;</span>
+<span class="pc bpc" id="L481" title="1 of 2 branches missed.">        for (int i = 0; i &lt; r.unique.size(); ++i) {</span>
+<span class="fc" id="L482">            float dens = r.unique.get(i);</span>
+<span class="fc bfc" id="L483" title="All 2 branches covered.">            if (dens &gt;= dh.critDens) {</span>
+<span class="fc" id="L484">                break;</span>
+            }
+<span class="fc" id="L486">            firstNZIdx = i;</span>
+<span class="pc bpc" id="L487" title="1 of 2 branches missed.">            if (dens &gt;= r.meanLow) {</span>
+<span class="nc" id="L488">                break;</span>
+            }
+        }
+<span class="fc" id="L491">        int critSurfDensIdx = 0;</span>
+<span class="pc bpc" id="L492" title="1 of 2 branches missed.">        for (int i = 0; i &lt; r.unique.size(); ++i) {</span>
+<span class="fc" id="L493">            float dens = r.unique.get(i);</span>
+<span class="fc bfc" id="L494" title="All 2 branches covered.">            if (dens == dh.critDens) {</span>
+<span class="fc" id="L495">                critSurfDensIdx = i;</span>
+<span class="fc" id="L496">                break;</span>
+<span class="fc bfc" id="L497" title="All 2 branches covered.">            } else if (dens &gt; dh.critDens) {</span>
+<span class="fc" id="L498">                break;</span>
+            }
+<span class="fc" id="L500">            critSurfDensIdx = i;</span>
+        }
+        
+<span class="fc" id="L503">        int lastIdx = r.unique.size() - 1;</span>
+        
+<span class="pc bpc" id="L505" title="3 of 4 branches missed.">        assert(Math.abs(r.unique.get(lastIdx) - 1.0) &lt; 0.001);</span>
+       
+<span class="fc" id="L507">        dh.threeSDs = new float[]{</span>
+<span class="fc" id="L508">            r.unique.get(firstNZIdx),</span>
+<span class="fc" id="L509">            r.unique.get(critSurfDensIdx),</span>
+<span class="fc" id="L510">            r.unique.get(lastIdx)</span>
+        };
+        
+<span class="fc" id="L513">        float[] threeSDCounts = new float[]{</span>
+            r.freq[firstNZIdx],
+            r.freq[critSurfDensIdx],
+            r.freq[lastIdx]
+        };
+<span class="fc" id="L518">        dh.setAndNormalizeCounts(threeSDCounts);</span>
+        
+        // calculate the errors for the 3 points
+<span class="fc" id="L521">        float[] errors = new float[] {</span>
+<span class="fc" id="L522">            calcError(r, firstNZIdx, dh.threeSDCounts[0], dh.approxH),</span>
+<span class="fc" id="L523">            calcError(r, critSurfDensIdx, dh.threeSDCounts[1], dh.approxH),</span>
+<span class="fc" id="L524">            calcError(r, lastIdx, dh.threeSDCounts[2], dh.approxH)</span>
+        };
+<span class="fc" id="L526">        dh.setTheThreeErrors(errors);</span>
+<span class="fc" id="L527">    }</span>
+    
+    private float calcError(W r, int idx, float prob, float approxH) {
+
+        //TODO: need to revisit this and compare to other methods of determining
+        //    point-wise error
+        
+        //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
+        
+<span class="fc" id="L536">        float xerrsq = r.surfDensDiff[idx];</span>
+<span class="fc" id="L537">        xerrsq *= xerrsq;</span>
+
+<span class="fc" id="L539">        float count = prob;</span>
+<span class="fc" id="L540">        float surfDens = r.unique.get(idx);</span>
+
+<span class="fc" id="L542">        float t1 = xerrsq * (prob * prob);</span>
+<span class="fc" id="L543">        float t2 = count * surfDens * surfDens;</span>
+<span class="fc" id="L544">        t2 /= (approxH * approxH);</span>
+
+<span class="fc" id="L546">        float pErr = (float)Math.sqrt(t1 + t2);</span>
+
+        /*
+        consider MISE:
+            integral of E((p_smothed(x) - p(x)^2)dx
+        
+            E[a] = integral_-inf_to_inf of (a * f(a) * a)
+                where f is the PDF
+        */
+        
+        /*
+        System.out.println(
+            &quot; sd=&quot; + surfDens
+            + &quot; p=&quot; + prob 
+            + &quot; pErr=&quot; + pErr 
+            + &quot; count=&quot; + count
+            + &quot; h=&quot; + approxH
+            + &quot; sqrt(t1)=&quot; + Math.sqrt(t1) +
+            &quot; sqrt(t2_=&quot; + Math.sqrt(t2));
+        */
+<span class="fc" id="L566">        return pErr;</span>
+    }
+
+    private static class W {
+        public float[] smoothed = null;
+        public TFloatIntMap freqMap = null;
+        public TFloatList unique = null;
+        public float[] freq = null;
+        public float[] surfDensDiff = null;
+        public int[] indexes = null;
+        public float sigma = 2.5f;
+        public float meanLow;
+    }
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AbstractCriticalSurfDens.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">AbstractCriticalSurfDens.java</span></div><h1>AbstractCriticalSurfDens.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import gnu.trove.list.TFloatList;
+import java.util.Arrays;
+
+/**
+ *
+ * @author nichole
+ */
+public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
+    
+<span class="fc" id="L12">    protected boolean debug = false;</span>
+<span class="fc" id="L13">    protected boolean isSparse = true;</span>
+
+<span class="fc" id="L15">    public AbstractCriticalSurfDens() {</span>
+<span class="fc" id="L16">    }</span>
+
+    /**
+     *
+     */
+    public void setToDebug() {
+<span class="fc" id="L22">        debug = true;</span>
+<span class="fc" id="L23">    }</span>
+
+    public boolean isSparse() {
+<span class="fc" id="L26">        return isSparse;</span>
+    }
+    
+    /**
+     * creates an instance of DensityHolder, copies arguments into it, and
+     * calculates the normalized count also.
+     * @param criticalDensity
+     * @param density
+     * @param count
+     * @return 
+     */
+    public DensityHolder createDensityHolder(float criticalDensity, 
+        float[] density, float[] count) {
+        
+<span class="fc" id="L40">        DensityHolder dh = constructDH();</span>
+<span class="fc" id="L41">        dh.critDens = criticalDensity;</span>
+<span class="fc" id="L42">        dh.dens = Arrays.copyOf(density, density.length);</span>
+<span class="fc" id="L43">        dh.count = Arrays.copyOf(count, count.length);</span>
+        
+<span class="fc" id="L45">        float tot = 0;</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        for (int i = 0; i &lt; count.length; ++i) {</span>
+<span class="fc" id="L47">            tot += count[i];</span>
+        }
+        
+<span class="fc" id="L50">        return dh;</span>
+    }
+    
+    protected abstract DensityHolder constructDH();
+    
+    /**
+     * creates an instance of DensityHolder, copies arguments into it, and
+     * calculates the normalized count also.
+     * @param criticalDensity
+     * @param density
+     * @param count
+     * @return 
+     */
+    public DensityHolder createDensityHolder(float criticalDensity, 
+        TFloatList density, float[] count) {
+       
+<span class="fc" id="L66">        return createDensityHolder(criticalDensity, </span>
+<span class="fc" id="L67">            density.toArray(new float[density.size()]), count);</span>
+    }
+   
+    protected void doSparseEstimate(float[] a) {
+        // 0 : 0.25
+        // 0 : 0.5
+        // 0 : 0.75
+        // 0 : 1
+        // 0.25 : 0.5
+        
+<span class="fc" id="L77">        int n = a.length;</span>
+<span class="fc" id="L78">        float[] sums = new float[5];    </span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (int i = 0; i &lt; n; ++i) {</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (i &lt; ((float)n/4.f)) {</span>
+<span class="fc" id="L81">                sums[0] += a[i];</span>
+            }
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (i &lt; ((float)n/2.f)) {</span>
+<span class="fc" id="L84">                sums[1] += a[i];</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">                if (i &gt;= ((float)n/4.f)) {</span>
+<span class="fc" id="L86">                    sums[4] += a[i];</span>
+                }
+            } 
+<span class="fc bfc" id="L89" title="All 2 branches covered.">            if (i &lt; ((float)n*3.f/4.f)) {</span>
+<span class="fc" id="L90">                sums[2] += a[i];</span>
+            }
+<span class="fc" id="L92">            sums[3] += a[i];</span>
+        }
+        
+        // convert to fractions
+<span class="fc" id="L96">        float norm = sums[3];</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        for (int i = 0; i &lt; sums.length; ++i) {</span>
+<span class="fc" id="L98">            sums[i] /= norm;</span>
+        }
+        
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L102">            System.out.println(&quot;qs=&quot; + Arrays.toString(sums));</span>
+        }
+        
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (sums[2] &lt; 0.3) {</span>
+<span class="fc" id="L106">            isSparse = false;</span>
+        } else {
+<span class="fc" id="L108">            isSparse = true;</span>
+        }
+<span class="fc" id="L110">    }</span>
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
