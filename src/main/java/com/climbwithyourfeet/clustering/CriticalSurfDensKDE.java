@@ -52,6 +52,42 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             throw new IllegalArgumentException("values length must be 10 or more");
         }
         
+        
+        // the discrete unique values in rr.unique are not necessarily evenly
+        // spaced, though they are ordered by surface density.
+        // rr.unique, rr.freq are the density curve version of a histogram
+        // and the points are discrete.
+        // The true density function, however, is continous from the
+        // critical surface density (not yet found) up to the surface density of 1.0.
+        // 
+        // To smooth the curve (rr.unique, rr.freq), one could either
+        //    apply a kernel on adjacent points in the arrays
+        //    (which is a nearest neighbor approach)
+        //    or one could resample (rr.unique, rr.freq) into a finer
+        //    evenly spaced by surface densities and apply the atrous wavelet on 
+        //    the evenly sampled rr.freq array to smooth it.
+        //    The first approach, that of applying the kernel over adjacent array
+        //    points is better for the task of finding the first peak
+        //    as the critical density, so that is what is used here.
+        //    
+        // After the critical surface density is found, 
+        // the smoothed curve (rr.unique, rr.freq) is a discrete sampling of
+        // of a yet uncharacterized continuous PDF for this specific 
+        // problem of pair-wise clustering.
+        // To create the continous PDF, knowing that the critical surface density
+        // represents a limit between 2 states, clustered and not clustered,
+        // one could either create a PDF as a uniform distribution from the
+        // critical point to the last point, 1.0, or
+        // one could create a PDF as a positively sloped ramp between the
+        // critical surface density point
+        // and the point at surface density 1.0 and the same decreasing ramp
+        // from critical point to 0.
+        // The appeal of the later is that the surface densities below the
+        // critical value have small non-negligible clustering probabilities,
+        // and that is partially because the critical density has errors in
+        // its determination for the background.
+        
+        // REVISING EVERYTHING BELOW -----
         Arrays.sort(values);
         
         ATrousWaveletTransform1D wave = new ATrousWaveletTransform1D();
