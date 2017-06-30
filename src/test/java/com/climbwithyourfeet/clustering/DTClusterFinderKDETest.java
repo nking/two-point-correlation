@@ -37,11 +37,15 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
     
     private Logger log = Logger.getLogger(this.getClass().getName());
 
+    boolean plotContours = true;
+    boolean plotClusters = true;
+    boolean setDebug = false;
+    
     /**
      *
      * @throws Exception
      */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -144,8 +148,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 DTClusterFinder clusterFinder = 
                     new DTClusterFinder(pixIdxs, width, height);
                 
-                clusterFinder.setToDebug();
-                
+                if (setDebug) {
+                    clusterFinder.setToDebug();
+                }
                 //clusterFinder.setThreshholdFactor(threshFactor);
 
                 clusterFinder.setCriticalDensityMethod(
@@ -180,6 +185,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     groupList.add(set);
                 }
                 
+                if (plotClusters) {
                 plotter.addPlotWithoutHull(
                     (int)Math.floor(minMaxXY[0] - 1), 
                     (int)Math.ceil(minMaxXY[1] + 1), 
@@ -187,17 +193,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     (int)Math.ceil(minMaxXY[3] + 1), 
                     points, groupList, clusterFinder.getCriticalDensity(), 
                     "ran" + ii + "_" + i);
-                   
-                /*
-                BufferedImage img = createImage(points, width, height);
-
-                addAlternatingColorPointSets(img, groupList, 1);
-
-                writeImage(img, "dt_ran_" + ii + "_" + i + ".png");
-                */
                 
                 plotter.writeFile("random_kde_");
-                
+                }
                 
                 KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
 
@@ -208,6 +206,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 kdsh.calculateProbabilities(
                     dh, allClusters, width, height, probMap, probEMap);
 
+                /*
                 float[] allProbs = new float[width * height];
                 TIntFloatIterator iter2 = probMap.iterator();
                 for (int i2 = 0; i2 < probMap.size(); ++i2) {
@@ -220,11 +219,14 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     System.out.println(Arrays.toString(xy) + " p=" + p
                         + " err=" + probEMap.get(pixIdx));
                 }
+                */
 
+                if (plotContours) {
                 ContourPlotter plotter2 = new ContourPlotter();
                 plotter2.writeFile(probMap, width, height,
                     "other_contour_" + i);
-
+                }
+                
                 count++;
             }
         }
@@ -299,7 +301,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
+        //    if (setDebug) {
             clusterFinder.setToDebug();
+        //    }
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -331,6 +335,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 groupList.add(set);
             }
             
+            if (plotClusters) {
             plotter.addPlotWithoutHull(
                 (int)Math.floor(minMaxXY[0] - 1), 
                 (int)Math.ceil(minMaxXY[1] + 1), 
@@ -338,14 +343,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, clusterFinder.getCriticalDensity(), 
                 "other_" + i);
-            
-            /*
-            BufferedImage img = createImage(points, width, height);
-
-            addAlternatingColorPointSets(img, groupList, 0);
-
-            writeImage(img, "dt_other_" + i + ".png");
-            */
+            }
             
             KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
 
@@ -356,6 +354,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             kdsh.calculateProbabilities(
                 dh, allClusters, width, height, probMap, probEMap);
             
+            /*
             float[] allProbs = new float[width*height];
             TIntFloatIterator iter2 = probMap.iterator();
             for (int ii = 0; ii < probMap.size(); ++ii) {
@@ -367,12 +366,13 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 ph.toPixelCoords(pixIdx, width, xy);
                 System.out.println(Arrays.toString(xy) + " p=" + p + 
                     " err=" + probEMap.get(pixIdx));
-            }
+            }*/
             
+            if (plotContours) {
             ContourPlotter plotter2 = new ContourPlotter();
             plotter2.writeFile(probMap, width, height, 
                 "other_contour_" + i);
-                
+            }
         }
         
         plotter.writeFile("other_kde_");
@@ -383,7 +383,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estKDEOtherData() throws Exception {
+    public void testKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -502,7 +502,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estNoClusters() throws Exception {
+    public void testNoClusters() throws Exception {
         
         /* Goal of this test is to examine the substructure created by increasing numbers of randomly 
            placed points.
@@ -621,7 +621,9 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
-            //clusterFinder.setToDebug();
+            if (setDebug) {
+                clusterFinder.setToDebug();
+            }
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
@@ -655,13 +657,15 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 groupList.add(set);
             }
             
+            if (plotClusters) {
             plotter.addPlotWithoutHull(
                 (int)Math.floor(minMaxXY[0] - 1), 
                 (int)Math.ceil(minMaxXY[1] + 1), 
                 (int)Math.floor(minMaxXY[2] - 1), 
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, critDensity, "no_clusters_" + ii);
-                        
+            }
+            
             float frac = ((float)nGroups/(float)points.size());
             log.info("nPoints=" + points.size() + " nGroups=" + nGroups
                 + " frac=" + frac);

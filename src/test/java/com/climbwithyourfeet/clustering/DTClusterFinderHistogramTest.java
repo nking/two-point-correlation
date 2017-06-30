@@ -27,7 +27,7 @@ import javax.imageio.ImageIO;
  *
  * @author nichole
  */
-public class DTClusterFinderTest extends BaseTwoPointTest {
+public class DTClusterFinderHistogramTest extends BaseTwoPointTest {
     
     private Logger log = Logger.getLogger(this.getClass().getName());
 
@@ -136,6 +136,9 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     new DTClusterFinder(pixIdxs, width, height);
                 
                 clusterFinder.setToDebug();
+                
+                clusterFinder.setCriticalDensityMethod(
+                    DTClusterFinder.CRIT_DENS_METHOD.HISTOGRAM);
 
                 clusterFinder.calculateCriticalDensity();
                 //clusterFinder.setCriticalDensity(0.139f);
@@ -270,6 +273,9 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
+            clusterFinder.setCriticalDensityMethod(
+                DTClusterFinder.CRIT_DENS_METHOD.HISTOGRAM);
+            
             clusterFinder.setToDebug();
             clusterFinder.calculateCriticalDensity();
             clusterFinder.findClusters();
@@ -434,6 +440,9 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
+            clusterFinder.setCriticalDensityMethod(
+                DTClusterFinder.CRIT_DENS_METHOD.HISTOGRAM);
+            
             clusterFinder.calculateCriticalDensity();
             clusterFinder.findClusters();
             //clusterFinder.setCriticalDensity(dens);
