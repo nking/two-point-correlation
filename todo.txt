@@ -1,21 +1,26 @@
 -- need to revisit the portion of KDE critical density calculation
    that continues to add to weighted average for certain close spacing.
-   -- consider inefficiently stored data that has large 
-      x,y space between points within clusters and lower density
-      than that in the regions outside of clusters.
-      the current fixed values for some of the logic need revision.
+   
+   need to canonicalize the data so that simple rules for
+     finding the critical peak can be applied
+
+   -- first step is that re=gridding of the data may be necessary
+      if the peak of frequency of distance transform is not for
+      distance of 1.
+      this happens when the data have spacings larger than 1.
+
+      Note, that the analysis may apply the same factor to the 
+      x and y axis, but never a different factor to each.
+      it's assumed that the user has already prepared the relative
+      scalings and offsets as needed.
+      (might provide a utility class to wrap frequencies of x spacings
+      and y spacings for the user to help them re-scale their data.)
+
+   -- the second correction needed is to learn the surface
+      density resolution which is currently fixed at 0.05.
+      THIS is in progress.
 
 -- rewrite the one dbscan image unit test if missing since refactoring
-
--- add the Knearest neighbors to the shared library
-   and 1D wavelets
-
-   -- implement the knn density curve using
-      the knn imported into the shared library
-   -- (bishop 2006 pg 147 and before has examples showing
-       representation of histogram, kde, knn for a dataset.
-       need to explore determining k, V, and bin size for
-       large range of data
 
 -- this project needs 2 different builds and the explanation
    added to both added to README.txt and a note considering 
