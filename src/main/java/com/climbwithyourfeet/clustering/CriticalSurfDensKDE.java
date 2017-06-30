@@ -546,6 +546,14 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         float pErr = (float)Math.sqrt(t1 + t2);
 
         /*
+        consider MISE:
+            integral of E((p_smothed(x) - p(x)^2)dx
+        
+            E[a] = integral_-inf_to_inf of (a * f(a) * a)
+                where f is the PDF
+        */
+        
+        /*
         System.out.println(
             " sd=" + surfDens
             + " p=" + prob 
