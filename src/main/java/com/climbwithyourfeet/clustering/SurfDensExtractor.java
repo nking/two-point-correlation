@@ -50,7 +50,8 @@ public class SurfDensExtractor {
      * set should not be smaller than a dozen
      * @param width data width with expectation that range starts at 0.
      * @param height data height with expectation that range starts at 0.
-     * @return 
+     * @return array of pairwise surface densities, that is, an array
+     * that holds the inverse of pairwise separations.
      */
     public SurfaceDensityScaled extractSufaceDensity(TIntSet pixelIdxs,
         int width, int height) {
@@ -62,8 +63,8 @@ public class SurfDensExtractor {
         DistanceTransform dtr = new DistanceTransform();
         int[][] distTrans = dtr.applyMeijsterEtAl(pixelIdxs, width, height);
 
-        // calculate frequency of non-zero distances to see if need to re-sample
-        // data
+        // calculate frequency of non-zero square distances 
+        // to see if need to re-sample data
         
         Frequency f = new Frequency();
         TIntList vF = new TIntArrayList();
@@ -105,10 +106,16 @@ public class SurfDensExtractor {
                     int width2, height2;
                     
                     yMaxIdx = peakIdxs[peakIdx];
-                        
+                      
+                    // the distance transform carries square distances, excepting
+                    // values 0,1,2
+                    double dist = vF.get(yMaxIdx);
+                    if (dist > 2) {
+                        dist = Math.sqrt(dist);
+                    }
                     // factor to divide x or by:
                     // no sqrt(2) because using chessboard distances
-                    sds.xyScaleFactor = (int) Math.round(vF.get(yMaxIdx));
+                    sds.xyScaleFactor = (int) Math.round(dist);
 
                     pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
                     width2 = width / sds.xyScaleFactor;
@@ -177,22 +184,26 @@ public class SurfDensExtractor {
         int w = distTrans.length;
         int h = distTrans[0].length;
         
+        // using a linear surface density, that is, the
+        // distance between 2 points.
         sds.values = new float[w * h];
         int count2 = 0;
         for (int i0 = 0; i0 < w; ++i0) {
             for (int j0 = 0; j0 < h; ++j0) {
                 int v = distTrans[i0][j0];
                 if (v > 0) {
-                    sds.values[count2] = 1.f /(float)(v * v);
+                    float dist = v;
+                    if (dist > 2) {
+                        dist = (float)Math.sqrt(dist);
+                    }
+                    sds.values[count2] = 1.f/dist;
                     count2++;
                 }
             }
         }
         
         sds.values = Arrays.copyOf(sds.values, count2);
-    
-        //TODO: determine a canonical surface density resolution
-        
+            
         return sds;
     }
 

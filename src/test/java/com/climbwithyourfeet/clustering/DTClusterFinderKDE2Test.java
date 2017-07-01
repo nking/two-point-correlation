@@ -195,8 +195,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
-                        Math.round(4.f*indexer.getX()[k]),
-                        Math.round(4.f*indexer.getY()[k]));
+                        Math.round(1.f*indexer.getX()[k]),
+                        Math.round(1.f*indexer.getY()[k]));
                     points.add(p);
                     if (p.getX() < minMaxXY[0]) {
                         minMaxXY[0] = p.getX();

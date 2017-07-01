@@ -118,10 +118,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         frequency if the spacing is small (< 0.05)
         */
         float res = 0.05f;
-        if (sds.xyScaleFactor > 1) {
+        // TODO: when the surface densities are truly canonicalized
+        //can adjust this
+        //if (sds.xyScaleFactor > 1) {
             // no 1/sqrt(2) factor because using chessboard
-            res /= sds.xyScaleFactor;
-        }
+        //    res /= sds.xyScaleFactor;
+        //}
         
         Arrays.sort(values);
         
@@ -264,7 +266,8 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         //   due to numerical resolution.
         //   still working on canonicalizing the
         //   surface densities without losing
-        //   structural details
+        //   structural details.
+        //   also considering a pyramidal transform
         
         assert(values.length == values0.length);
         
@@ -621,10 +624,6 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         dh.dens;
         dh.threeSDs;
         dh.threeSDErrors;
-        
-            test input x,y scaled by factor 4:
-            dsq = 1*1 + 1*1 => d= sqrt(2)
-            dsq4= 4*4 + 4*4 => d= sqrt(2)*4
         
         distances get multiplied by xyScaleFactor
         
