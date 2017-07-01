@@ -3,6 +3,7 @@ package com.climbwithyourfeet.clustering;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.MiscMath0;
 import algorithms.signalProcessing.ATrousWaveletTransform1D;
+import algorithms.signalProcessing.MedianTransform1D;
 import algorithms.util.OneDFloatArray;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.list.TFloatList;
@@ -46,7 +47,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
       @param sds scaled surface densities 
       @return 
      */
-    public KDEDensityHolder findCriticalDensity(
+    public KDEDensityHolder findCriticalDensity_Atrous(
         SurfDensExtractor.SurfaceDensityScaled sds) {
         
         float[] values = sds.values;
@@ -260,6 +261,235 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         return dh;
     }
     
+    public KDEDensityHolder findCriticalDensity(
+        SurfDensExtractor.SurfaceDensityScaled sds) {
+        
+        float[] values = sds.values;
+        if (values == null || values.length < 10) {
+            throw new IllegalArgumentException("values length must be 10 or more");
+        }
+        
+        //TODO:
+        //  paused here.  haven't finished scale changes for sds
+        
+        // the discrete unique values in rr.unique are not necessarily evenly
+        // spaced, though they are ordered by surface density.
+        // rr.unique, rr.freq are the density curve version of a histogram
+        // and the points are discrete.
+        // The true density function, however, is continous from the
+        // critical surface density (not yet found) up to the surface density of 1.0.
+        // 
+        // To smooth the curve (rr.unique, rr.freq), one could either
+        //    apply a kernel on adjacent points in the arrays
+        //    (which is a nearest neighbor approach)
+        //    or one could resample (rr.unique, rr.freq) into a finer
+        //    evenly spaced by surface densities and apply the atrous wavelet on 
+        //    the evenly sampled rr.freq array to smooth it.
+        //    The first approach, that of applying the kernel over adjacent array
+        //    points is better for the task of finding the first peak
+        //    as the critical density, so that is what is used here.
+        //    
+        // After the critical surface density is found, 
+        // the smoothed curve (rr.unique, rr.freq) is a discrete sampling of
+        // of a yet uncharacterized continuous PDF for this specific 
+        // problem of pair-wise clustering.
+        // To create the continous PDF, knowing that the critical surface density
+        // represents a limit between 2 states, clustered and not clustered,
+        // one could either create a PDF as a uniform distribution from the
+        // critical point to the last point, 1.0, or
+        // one could create a PDF as a positively sloped ramp between the
+        // critical surface density point
+        // and the point at surface density 1.0 and a decreasing ramp
+        // from critical point to 0.
+        // The appeal of the later is that the surface densities below the
+        // critical value have small non-negligible clustering probabilities,
+        // and that is partially because the critical density has errors in
+        // its determination for the background.
+        
+        /*
+        TODO: revisit this for extreme case such as:
+            consider inefficiently stored data that has large
+            x,y space between points within clusters and lower density
+            than that in the regions outside of clusters.
+            the current fixed values for some of the logic need revision.
+        
+        looking at which transform has the best representation of the first peak
+        as the critical density.
+        
+        starting from highest index transformations to smallest:
+            if there's more than one peak and its
+                frequency is not 1.0
+                then
+                   if 1st peak sigma > 5 o5 10 ish
+                       return that
+                   else
+                      calc a peak weighted average of the first
+                         peaks until a peak has sigma > 5 or so
+            else if there's one peak and it's freq is 1.0
+            then retreat up the list until that is not true,
+            and at that point take idx/2 as the next index
+        
+        also, when calculating weighted average, the sum continues to next
+        frequency if the spacing is small (< 0.05)
+        */
+        float res = 0.05f;
+        // TODO: when the surface densities are truly canonicalized
+        //can adjust this
+        //if (sds.xyScaleFactor > 1) {
+            // no 1/sqrt(2) factor because using chessboard
+        //    res /= sds.xyScaleFactor;
+        //}
+        
+        Arrays.sort(values);
+        
+        MedianTransform1D wave = new MedianTransform1D();
+        
+        List<OneDFloatArray> outputTransformed = 
+            new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outputCoeff = 
+            new ArrayList<OneDFloatArray>();
+
+        wave.multiscalePyramidalMedianTransform2(values, outputTransformed,
+            outputCoeff);
+        
+        outputTransformed.remove(outputTransformed.size() - 1);
+        
+        assert(outputTransformed.size() == outputCoeff.size());
+
+        W r = new W();
+        
+        String ts = Long.toString(System.currentTimeMillis());
+        if (debug) {
+            //plotSurfaceDensities(values, ts);
+            plotCurves(outputTransformed, outputCoeff, 
+                0, outputCoeff.size() - 1, ts);
+        }
+        
+        int lastIdx = -1;
+        
+        // w/ median transform, the last is usually over-smoothed.
+        // so starting about 1/3 from highest index
+        int end = Math.round(0.667f*outputCoeff.size());
+        if (end < 5) {
+            end = outputCoeff.size() - 2;
+            if (end < 1) {
+                end = outputCoeff.size() - 1;
+            }
+        }
+                
+        for (int i0 = end; i0 > -1; --i0) {
+                        
+            System.out.println("I0=" + lastIdx);
+            
+            // returns false is no maxima were found
+            boolean acc = populate2(r, outputTransformed.get(i0).a, 
+                outputCoeff.get(i0).a);
+            
+            if (!acc) {
+                continue;
+            }
+            
+            lastIdx = i0;
+            
+            if (debug) {
+                plotCurve(r, "_" + ts + "_" + i0);
+            }
+                  
+            if (r.indexes.length == 1 && 
+                (r.indexes[r.indexes.length - 1] == r.unique.size())) {
+                // set a flag and continue
+                continue;
+            }
+            
+       //TODO: sl may need adjustments:
+            float sl = r.sigma;//9;
+            float sigma1 = r.freq[r.indexes[0]]/r.meanLow;
+            
+            if (sigma1 <= sl) {
+                
+                // weighted mean of peaks from 0 until a peak has s/n > sl 
+                int idx = 0;
+                float tot = 0;
+                for (int ii = 0; ii < r.indexes.length; ++ii) {
+                    int peakIdx = r.indexes[ii];
+                    idx = ii;
+                    tot += r.freq[peakIdx];
+                    if ((r.freq[peakIdx]/r.meanLow) > sl) {
+                        break;
+                    }
+                }
+       
+                // keep adding frequencies if the spacing to the next is close:
+                if (idx > 0 && r.indexes.length > (idx + 1)) {
+                    float diff = r.unique.get(r.indexes[idx + 1]) - 
+                        r.unique.get(r.indexes[idx]);
+                    if (diff < res) {
+                        for (int ii = idx+1; ii < r.indexes.length; ++ii) {
+                            if ((r.unique.get(r.indexes[ii]) 
+                                - r.unique.get(r.indexes[ii - 1])) 
+                                >= res) {
+                                break;
+                            }
+                            idx = ii;
+                            tot += r.freq[r.indexes[ii]];
+                        }
+                    }
+                }
+                
+                float weightedMean = 0;
+                for (int ii = 0; ii <= idx; ++ii) {
+                    int peakIdx = r.indexes[ii];
+                    float weight = r.freq[peakIdx]/tot;
+                    weightedMean += weight * r.unique.get(peakIdx);
+                }
+                System.out.println("nPeaks=" + r.indexes.length);
+                System.out.println("weighted critDens=" + weightedMean);
+                doSparseEstimate(r.freq);
+                
+                KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
+                    weightedMean, r.unique, r.freq);
+                dh.approxH = (lastIdx > -1)
+                    ? (outputTransformed.get(0).a.length
+                    / outputTransformed.get(lastIdx).a.length) : 1;
+                calcAndStorePDFPoints(r, dh);
+                correctForScale(dh, sds); 
+                System.out.println("chose index=" + lastIdx + 
+                    " adjusted critDens=" + dh.critDens + " scl=" + sds.xyScaleFactor);
+                return dh;
+            }
+            System.out.println("nPeaks=" + r.indexes.length);
+            doSparseEstimate(r.freq);
+            System.out.println("critDens=" + r.unique.get(r.indexes[0]));
+            KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
+                r.unique.get(r.indexes[0]), r.unique, r.freq);
+            dh.approxH = (lastIdx > -1)
+                ? (outputTransformed.get(0).a.length
+                / outputTransformed.get(lastIdx).a.length) : 1;
+            calcAndStorePDFPoints(r, dh);
+            correctForScale(dh, sds);
+            System.out.println("chose index=" + lastIdx + 
+                " adjusted critDens=" + dh.critDens + " scl=" + sds.xyScaleFactor);
+            return dh;
+        }
+        
+        // for histogram, crit dens = 1.1 * density of first peak
+        float peak = r.unique.get(r.indexes[0]);
+        
+        System.out.println("* critDens=" + peak);
+        doSparseEstimate(r.freq);
+        
+        KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
+            peak, r.unique, r.freq);
+        dh.approxH = (lastIdx > -1)
+            ? (outputTransformed.get(0).a.length
+            / outputTransformed.get(lastIdx).a.length) : 1;
+        calcAndStorePDFPoints(r, dh);
+        correctForScale(dh, sds);
+        System.out.println("chose index=" + lastIdx + 
+            " adjusted critDens=" + dh.critDens + " scl=" + sds.xyScaleFactor);
+        return dh;
+    }
+    
     private void populate(W r, float[] values, float[] values0) {
         
         //TODO: this is not entirely correct yet
@@ -323,6 +553,76 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             
     }
 
+    private boolean populate2(W r, float[] values, float[] valuesDiff) {
+        
+        assert(values.length == valuesDiff.length);
+        
+        TFloatIntMap freqMap = new TFloatIntHashMap();
+        TFloatList unique = new TFloatArrayList();
+        
+        // key = freq, value = added wavelet coefficients
+        TFloatFloatMap densCoeffMap = new TFloatFloatHashMap();
+        
+        for (int i = 0; i < values.length; ++i) {
+            
+            float v = values[i];
+            float coeff = valuesDiff[i];
+            coeff = Math.abs(coeff);
+            
+            int c = freqMap.get(v);
+            // NOTE: trove map default returns 0 when key is not in map.
+            if (c == 0) {
+                unique.add(v);
+            }
+            c++;
+            freqMap.put(v, c);
+            
+            //NOTE: trove default returns 0 when key is not in map
+            float coeffSum = densCoeffMap.get(v) + coeff;
+            densCoeffMap.put(v, coeffSum);
+        }
+
+        float freqMax = Float.NEGATIVE_INFINITY;
+        float[] freq = new float[unique.size()];
+        float[] surfDensDiff = new float[unique.size()];
+        for (int i = 0; i < unique.size(); ++i) {
+            freq[i] = freqMap.get(unique.get(i));
+            surfDensDiff[i] = densCoeffMap.get(unique.get(i));
+            if (freq[i] > freqMax) {
+                freqMax = freq[i];
+            }
+        }
+        
+        // find maxima of values in freqMap
+        float sigma = 2.5f;
+        MinMaxPeakFinder mmpf = new MinMaxPeakFinder();
+        float meanLow = mmpf.calculateMeanOfSmallest(freq, 0.03f);
+        int[] indexes = mmpf.findPeaks(freq, meanLow, 2.5f);
+        System.out.println("thresh=" + meanLow * sigma);
+        //System.out.println("freq=" + Arrays.toString(freq));
+        System.out.println("indexes=" + Arrays.toString(indexes));
+        if (indexes == null || indexes.length == 0) {
+            return false;
+        }
+        if (Math.abs(unique.get(unique.size() - 1) - 1.0) >= 0.001) {
+            return false;
+        }
+        for (int idx : indexes) {
+            System.out.println("  peak=" + freq[idx] + " " + unique.get(idx));
+        }
+        
+        r.smoothed = values;
+        r.freqMap = freqMap;
+        r.unique = unique;
+        r.freq = freq;
+        r.surfDensDiff = surfDensDiff;
+        r.sigma = sigma;
+        r.meanLow = meanLow;
+        r.indexes = indexes;
+        
+        return true;
+    }
+    
     @Override
     protected DensityHolder constructDH() {
         return new KDEDensityHolder();
@@ -432,40 +732,41 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         List<OneDFloatArray> coeff, int i0, int i1, String ts) {
                 
         try {
-            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
             
-            int n = transformed.get(0).a.length;
-            float[] x = new float[n];
-            for (int i = 0; i < x.length; ++i) {
-                x[i] = i;
-            }
-            float xMin = 0;
-            float xMax = x.length;
-
             for (int i = i0; i <= i1; ++i) {
+                
+                int n = transformed.get(i).a.length;
+                int n2 = coeff.get(i).a.length;
+                assert(n == n2);
+                float[] x = new float[n];
+                for (int ii = 0; ii < x.length; ++ii) {
+                    x[ii] = ii;
+                }
+                float xMin = 0;
+                float xMax = x.length;
+                
                 float[] y = transformed.get(i).a;
                 float yMax = MiscMath0.findMax(y);
-                
+            
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
                 plotter.addPlot(xMin, xMax,
                     0.f, 1.2f * yMax,
                     x, y, x, y,
                     "transformed");
-            }
-            
-            for (int i = i0; i <= i1; ++i) {
-                float[] y = coeff.get(i).a;
+                
+                y = coeff.get(i).a;
                 float yMin = MiscMath0.findMin(y);
-                float yMax = MiscMath0.findMax(y);
+                yMax = 1.2f*MiscMath0.findMax(y);
                 
                 plotter.addPlot(xMin, xMax,
-                    yMin, 1.2f * yMax,
+                    yMin, yMax,
                     x, y, x, y,
                     "coeff");
-                
-                System.out.println(plotter.writeFile("transformed_" + ts));
+            
+                System.out.println(
+                    plotter.writeFile("transformed_" + ts + "_" + i));
             }
-
-            System.out.println(plotter.writeFile("transformed_" + ts));
 
         } catch (IOException e) {
             log.severe(e.getMessage());

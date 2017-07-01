@@ -113,7 +113,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindRanGenClusters() throws Exception {
+    public void estFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -195,8 +195,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
-                        Math.round(1.f*indexer.getX()[k]),
-                        Math.round(1.f*indexer.getY()[k]));
+                        Math.round(4.f*indexer.getX()[k]),
+                        Math.round(4.f*indexer.getY()[k]));
                     points.add(p);
                     if (p.getX() < minMaxXY[0]) {
                         minMaxXY[0] = p.getX();
@@ -313,7 +313,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -332,8 +332,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
         
         ClusterPlotter plotter = new ClusterPlotter();
         
-        //for (int i = 0; i < fileNames.length; i++) {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 2; i < 3; i++) {
 
             String fileName = fileNames[i];
             
@@ -417,6 +417,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, clusterFinder.getCriticalDensity(), 
                 "other_" + i);
+            plotter.writeFile("other_kde_");
             }
             
             KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();

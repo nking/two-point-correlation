@@ -240,7 +240,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -383,7 +383,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estKDEOtherData() throws Exception {
+    public void testKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 

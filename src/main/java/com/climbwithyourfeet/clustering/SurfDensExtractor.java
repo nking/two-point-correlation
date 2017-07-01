@@ -35,6 +35,22 @@ public class SurfDensExtractor {
     public void setToDebug() {
         debug = true;
     }
+
+    private float calcSNRelTAdj(TIntList a, int idx, float minAvg) {
+    
+        float v = (float)a.get(idx);
+        float adj0 = -1;
+        float adj1 = -1;
+        if (idx > 0) {
+            adj0 = v/(float)a.get(idx - 1);
+        }
+        if ((idx + 1) < a.size()) {
+            adj1 = v/(float)a.get(idx + 1);
+        }
+        float adj = Math.max(adj0, adj1);
+        
+        return adj;
+    }
     
     public static class SurfaceDensityScaled {
         public float[] values = null;
@@ -91,63 +107,75 @@ public class SurfDensExtractor {
             for (int ii = 0; ii <= yMaxIdx; ++ii) {
                 cFF[ii] = cF.get(ii);
             }
+            
             float minAvg = mmpf.calculateMeanOfSmallest(cFF, 0.03f);
             int[] peakIdxs = mmpf.findPeaks(cFF, minAvg, 2.5f);
-                        
-            if (peakIdxs != null && peakIdxs.length > 0) {
-               
-                int peakIdx = 0;
-                if (peakIdxs[0] == 0 && peakIdxs.length == 1) {
-                    //this is the significant peak
-                    yMaxIdx = 0;
-                } else {
             
-                    TIntSet pixelIdxs2 = null;
-                    int width2, height2;
-                    
-                    yMaxIdx = peakIdxs[peakIdx];
-                      
-                    // the distance transform carries square distances, excepting
-                    // values 0,1,2
-                    double dist = vF.get(yMaxIdx);
-                    if (dist > 2) {
-                        dist = Math.sqrt(dist);
-                    }
-                    // factor to divide x or by:
-                    // no sqrt(2) because using chessboard distances
-                    sds.xyScaleFactor = (int) Math.round(dist);
+            if (peakIdxs == null || peakIdxs.length == 0) {
+                // yMaxIdx is the index to use for scaling
+                
+            } else if (peakIdxs != null && peakIdxs.length > 0) {
+               
+                //float vp0 = vF.get(peakIdxs[0]);
+                //float vpYm = vF.get(yMaxIdx);
+                
+                //float sn0 = vp0/minAvg;
+                //float snYM = vpYm/minAvg;
+                
+                float sn0Adj = calcSNRelTAdj(vF, peakIdxs[0], minAvg);
+                float snYMAdj = calcSNRelTAdj(vF, yMaxIdx, minAvg);
+                
+                if (sn0Adj > snYMAdj) {
+                    yMaxIdx = peakIdxs[0];
+                }                
+            }
+            
+            TIntSet pixelIdxs2 = null;
+            int width2, height2;                    
 
-                    pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
-                    width2 = width / sds.xyScaleFactor;
-                    height2 = height / sds.xyScaleFactor;
+            // the distance transform carries square distances, excepting
+            // values 0,1,2
+            double dist = vF.get(yMaxIdx);
+            if (dist > 2) {
+                dist = Math.sqrt(dist);
+                if (Math.ceil(dist) > dist) {
+                    dist = Math.ceil(dist);
+                } else {
+                    dist = Math.floor(dist);
+                }
+            }
+            // factor to divide x or by:
+            // no sqrt(2) because using chessboard distances
+            sds.xyScaleFactor = (int) dist;
 
-                    PixelHelper ph = new PixelHelper();
-                    int[] xy = new int[2];
-                    TIntIterator iter = pixelIdxs.iterator();
-                    while (iter.hasNext()) {
-                        int pixIdx = iter.next();
-                        ph.toPixelCoords(pixIdx, width, xy);
-                        int pixIdx2 = ph.toPixelIndex(
-                            xy[0] / sds.xyScaleFactor, 
-                            xy[1] / sds.xyScaleFactor, width2);
-                        pixelIdxs2.add(pixIdx2);
-                    }
-                                                
-                    if (pixelIdxs2.size() < 12) {
-                        if (peakIdx > 0) {
-                            peakIdx--;
-                            yMaxIdx = peakIdxs[peakIdx];
-                        } // else //should not happen unless pixIdxs is small
-                    } else {
-                        
-                        distTrans = dtr.applyMeijsterEtAl(pixelIdxs2, width2, height2);            
-                        vF = new TIntArrayList();
-                        cF = new TIntArrayList();
-                        f.calcFrequency(distTrans, vF, cF, true);
+            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
+            width2 = width / sds.xyScaleFactor;
+            height2 = height / sds.xyScaleFactor;
 
-                        yMaxIdx = MiscMath0.findYMaxIndex(cF);
-                    }
-                }   
+            PixelHelper ph = new PixelHelper();
+            int[] xy = new int[2];
+            TIntIterator iter = pixelIdxs.iterator();
+            while (iter.hasNext()) {
+                int pixIdx = iter.next();
+                ph.toPixelCoords(pixIdx, width, xy);
+                int pixIdx2 = ph.toPixelIndex(
+                    xy[0] / sds.xyScaleFactor, 
+                    xy[1] / sds.xyScaleFactor, width2);
+                pixelIdxs2.add(pixIdx2);
+            }
+                       
+            if (pixelIdxs2.size() < 12) {
+                
+                yMaxIdx = 0;
+                
+            } else {
+
+                distTrans = dtr.applyMeijsterEtAl(pixelIdxs2, width2, height2);            
+                vF = new TIntArrayList();
+                cF = new TIntArrayList();
+                f.calcFrequency(distTrans, vF, cF, true);
+
+                yMaxIdx = MiscMath0.findYMaxIndex(cF);
             }
         }
         
