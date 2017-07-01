@@ -117,6 +117,11 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         also, when calculating weighted average, the sum continues to next
         frequency if the spacing is small (< 0.05)
         */
+        float res = 0.05f;
+        if (sds.xyScaleFactor > 1) {
+            // no 1/sqrt(2) factor because using chessboard
+            res /= sds.xyScaleFactor;
+        }
         
         Arrays.sort(values);
         
@@ -131,17 +136,18 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             outputCoeff);
 
         W r = new W();
-        
+
         populate(r, outputTransformed.get(outputTransformed.size() - 1).a,
             outputTransformed.get(0).a);
 
         String ts = Long.toString(System.currentTimeMillis());
         if (debug) {
-            plotSurfaceDensities(values, ts);
-            plotCurves(r, outputTransformed, outputCoeff, 
-                0, outputCoeff.size() - 1, ts);
+            //plotSurfaceDensities(values, ts);
+            //plotCurves(outputTransformed, outputCoeff, 
+            //    0, outputCoeff.size() - 1, ts);
+            plotCurve(r, ts);
         }
-       
+        
         // 1 = found single peak at freq=1, 2=jumped to half index
         int idxH = 0;
         
@@ -200,11 +206,11 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 if (idx > 0 && r.indexes.length > (idx + 1)) {
                     float diff = r.unique.get(r.indexes[idx + 1]) - 
                         r.unique.get(r.indexes[idx]);
-                    if (diff < 0.05f) {
+                    if (diff < res) {
                         for (int ii = idx+1; ii < r.indexes.length; ++ii) {
                             if ((r.unique.get(r.indexes[ii]) 
                                 - r.unique.get(r.indexes[ii - 1])) 
-                                >= 0.05f) {
+                                >= res) {
                                 break;
                             }
                             idx = ii;
@@ -227,7 +233,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                     r.unique, r.freq);
                 dh.approxH = (1 + lastIdx)*2;
                 calcAndStorePDFPoints(r, dh);
-                               
+                correctForScale(dh, sds);           
                 return dh;
             }
             System.out.println("nPeaks=" + r.indexes.length);
@@ -236,7 +242,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 r.unique.get(r.indexes[0]), r.unique, r.freq);
             dh.approxH = (1 + lastIdx)*2;
             calcAndStorePDFPoints(r, dh);
-            
+            correctForScale(dh, sds);
             return dh;
         }
         
@@ -248,11 +254,17 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(peak, r.unique, r.freq);
         dh.approxH = (1 + lastIdx)*2;
         calcAndStorePDFPoints(r, dh);
-        
+        correctForScale(dh, sds);
         return dh;
     }
     
     private void populate(W r, float[] values, float[] values0) {
+        
+        //TODO: this is not entirely correct yet
+        //   due to numerical resolution.
+        //   still working on canonicalizing the
+        //   surface densities without losing
+        //   structural details
         
         assert(values.length == values0.length);
         
@@ -300,7 +312,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         r.indexes = mmpf.findPeaks(r.freq, r.meanLow, 2.5f);
         System.out.println("thresh=" + r.meanLow * r.sigma);
         //System.out.println("freq=" + Arrays.toString(freq));
-        //System.out.println("indexes=" + Arrays.toString(indexes));
+        System.out.println("indexes=" + Arrays.toString(r.indexes));
         for (int idx : r.indexes) {
             System.out.println("  peak=" + r.freq[idx] + " " 
                 + r.unique.get(idx));
@@ -413,19 +425,19 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
     }
     */
    
-    private void plotCurves(W rr, List<OneDFloatArray> transformed,
+    private void plotCurves(List<OneDFloatArray> transformed,
         List<OneDFloatArray> coeff, int i0, int i1, String ts) {
-
-        TFloatList surfDens = rr.unique;
-        
-        int n = surfDens.size();
-        
+                
         try {
             PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
             
-            float[] x = surfDens.toArray(new float[n]);
+            int n = transformed.get(0).a.length;
+            float[] x = new float[n];
+            for (int i = 0; i < x.length; ++i) {
+                x[i] = i;
+            }
             float xMin = 0;
-            float xMax = 1.1f;
+            float xMax = x.length;
 
             for (int i = i0; i <= i1; ++i) {
                 float[] y = transformed.get(i).a;
@@ -446,9 +458,36 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                     yMin, 1.2f * yMax,
                     x, y, x, y,
                     "coeff");
+                
+                System.out.println(plotter.writeFile("transformed_" + ts));
             }
 
             System.out.println(plotter.writeFile("transformed_" + ts));
+
+        } catch (IOException e) {
+            log.severe(e.getMessage());
+        }
+    }
+    
+    private void plotCurve(W r, String ts) {
+                
+        try {
+            PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+            
+            int n = r.unique.size();
+            float[] x = r.unique.toArray(new float[n]);
+            float xMin = 0;
+            float xMax = 1.2f*MiscMath0.findMax(x);
+
+            float[] y = r.freq;
+            float yMax = MiscMath0.findMax(y);
+
+            plotter.addPlot(xMin, xMax,
+                0.f, 1.2f * yMax,
+                x, y, x, y,
+                "density curve");
+
+            System.out.println(plotter.writeFile("dens_curve_" + ts));
 
         } catch (IOException e) {
             log.severe(e.getMessage());
@@ -481,7 +520,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
     }
     
     private void calcAndStorePDFPoints(W r, KDEDensityHolder dh) {
-        
+//TODO: fix, cannot assume last freq is 1?      
         int firstNZIdx = 0;
         for (int i = 0; i < r.unique.size(); ++i) {
             float dens = r.unique.get(i);
@@ -569,6 +608,43 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             " sqrt(t2_=" + Math.sqrt(t2));
         */
         return pErr;
+    }
+
+    private void correctForScale(KDEDensityHolder dh, 
+        SurfDensExtractor.SurfaceDensityScaled sds) {
+
+       float f = sds.xyScaleFactor;
+        
+        /*
+        dh.approxH;
+        dh.critDens;
+        dh.dens;
+        dh.threeSDs;
+        dh.threeSDErrors;
+        
+            test input x,y scaled by factor 4:
+            dsq = 1*1 + 1*1 => d= sqrt(2)
+            dsq4= 4*4 + 4*4 => d= sqrt(2)*4
+        
+        distances get multiplied by xyScaleFactor
+        
+        sds get multiplied by 1/(xyScaleFactor)
+        
+        x,y get multiplied by xyScaleFactor
+        */
+        dh.approxH *= f;
+        dh.critDens /= f;
+        for (int i = 0; i < dh.dens.length; ++i) {
+            dh.dens[i] /= f;
+        }
+        dh.threeSDs[0] /= f;
+        dh.threeSDs[1] /= f;
+        
+        // TODO: this could be improved:  
+        //   the 2nd component of error is larger and is a multiple of
+        //   the surface density, so making a factor change here
+        dh.threeSDErrors[0] /= f;
+        dh.threeSDErrors[1] /= f;
     }
 
     private static class W {
