@@ -92,7 +92,7 @@ public class SurfDensExtractor {
                 cFF[ii] = cF.get(ii);
             }
             float minAvg = mmpf.calculateMeanOfSmallest(cFF, 0.03f);
-            int[] peakIdxs = mmpf.findPeaks(cFF, minAvg, 2.0f);
+            int[] peakIdxs = mmpf.findPeaks(cFF, minAvg, 2.5f);
                         
             if (peakIdxs != null && peakIdxs.length > 0) {
                
