@@ -46,26 +46,24 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             throw new IllegalArgumentException("values length must be 10 or more");
         }
         
-        //TODO:
-        //  paused here.  haven't finished scale changes for sds
-        
         // the discrete unique values in rr.unique are not necessarily evenly
         // spaced, though they are ordered by surface density.
         // rr.unique, rr.freq are the density curve version of a histogram
         // and the points are discrete.
         // The true density function, however, is continous from the
-        // critical surface density (not yet found) up to the surface density of 1.0.
+        // critical surface density (not yet found) up to the surface density 
+        // of 1.0 (which corresponds to the closest x,y spacing of 1).
         // 
         // To smooth the curve (rr.unique, rr.freq), one could either
         //    apply a kernel on adjacent points in the arrays
         //    (which is a nearest neighbor approach)
         //    or one could resample (rr.unique, rr.freq) into a finer
-        //    evenly spaced by surface densities and apply the atrous wavelet on 
-        //    the evenly sampled rr.freq array to smooth it.
-        //    The first approach, that of applying the kernel over adjacent array
-        //    points is better for the task of finding the first peak
+        //    evenly spaced array of surface densities and apply the wavelet  
+        //    transform on the evenly sampled rr.freq array to smooth it.
+        //    The first approach, that of applying the kernel over adjacent
+        //    array points is better for the task of finding the first peak
         //    as the critical density, so that is what is used here.
-        //    
+        //
         // After the critical surface density is found, 
         // the smoothed curve (rr.unique, rr.freq) is a discrete sampling of
         // of a yet uncharacterized continuous PDF for this specific 
@@ -75,56 +73,23 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         // one could either create a PDF as a uniform distribution from the
         // critical point to the last point, 1.0, or
         // one could create a PDF as a positively sloped ramp between the
-        // critical surface density point
-        // and the point at surface density 1.0 and a decreasing ramp
-        // from critical point to 0.
+        // critical surface density point and the point at surface density 1.0 
+        // and a decreasing ramp from yhe critical point to 0 freq.
         // The appeal of the later is that the surface densities below the
         // critical value have small non-negligible clustering probabilities,
         // and that is partially because the critical density has errors in
         // its determination for the background.
         
-        /*
-        TODO: revisit this for extreme case such as:
-            consider inefficiently stored data that has large
-            x,y space between points within clusters and lower density
-            than that in the regions outside of clusters.
-            the current fixed values for some of the logic need revision.
-        
-        looking at which transform has the best representation of the first peak
-        as the critical density.
-        
-        starting from highest index transformations to smallest:
-            if there's more than one peak and its
-                frequency is not 1.0
-                then
-                   if 1st peak sigma > 5 o5 10 ish
-                       return that
-                   else
-                      calc a peak weighted average of the first
-                         peaks until a peak has sigma > 5 or so
-            else if there's one peak and it's freq is 1.0
-            then retreat up the list until that is not true,
-            and at that point take idx/2 as the next index
-        
-        also, when calculating weighted average, the sum continues to next
-        frequency if the spacing is small (< 0.05)
-        */
-        float res = 0.05f;
-        // TODO: when the surface densities are truly canonicalized
-        //can adjust this
-        //if (sds.xyScaleFactor > 1) {
-            // no 1/sqrt(2) factor because using chessboard
-        //    res /= sds.xyScaleFactor;
-        //}
+        float res = sds.surfDensRes;
         
         Arrays.sort(values);
         
+        System.out.println("min surf dens=" + values[0]);
+        
         MedianTransform1D wave = new MedianTransform1D();
         
-        List<OneDFloatArray> outputTransformed = 
-            new ArrayList<OneDFloatArray>();
-        List<OneDFloatArray> outputCoeff = 
-            new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outputTransformed = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outputCoeff = new ArrayList<OneDFloatArray>();
 
         wave.multiscalePyramidalMedianTransform2(values, outputTransformed,
             outputCoeff);
@@ -179,9 +144,18 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 continue;
             }
             
-       //TODO: sl may need adjustments:
+            //NOTE: revisit this.  when there is only 1 peak,
+            //   the curve is over-smoothed
+            if (r.indexes.length == 1) {
+                continue;
+            }
+            
             float sl = r.sigma;//9;
             float sigma1 = r.freq[r.indexes[0]]/r.meanLow;
+            
+            //TODO: if previous transformation (=i0+1) had one peak or so
+            //   and this has peaks closely following the first,
+            //   need to calculate a weighted average
             
             if (sigma1 <= sl) {
                 
@@ -201,7 +175,8 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                 if (idx > 0 && r.indexes.length > (idx + 1)) {
                     float diff = r.unique.get(r.indexes[idx + 1]) - 
                         r.unique.get(r.indexes[idx]);
-                    if (diff < res) {
+                    System.out.println("diff=" + diff + " res=" + res);
+                    /*if (diff < res) {
                         for (int ii = idx+1; ii < r.indexes.length; ++ii) {
                             if ((r.unique.get(r.indexes[ii]) 
                                 - r.unique.get(r.indexes[ii - 1])) 
@@ -211,7 +186,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                             idx = ii;
                             tot += r.freq[r.indexes[ii]];
                         }
-                    }
+                    }*/
                 }
                 
                 float weightedMean = 0;
@@ -686,9 +661,20 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         sds get multiplied by 1/(xyScaleFactor)
         
         x,y get multiplied by xyScaleFactor
-        */
+        
+       NOTE that for critical density larger than 1/2.4999 
+           will consider rounding the pixelto smaller integer
+       */
         dh.approxH *= f;
+        
+        /*if (dh.critDens > 0.4) {
+            if (dh.critDens < 0.667) {
+                // 2 pixel separation
+                dh.critDens = 0.5f;
+            }
+        }*/
         dh.critDens /= f;
+        
         for (int i = 0; i < dh.dens.length; ++i) {
             dh.dens[i] /= f;
         }
