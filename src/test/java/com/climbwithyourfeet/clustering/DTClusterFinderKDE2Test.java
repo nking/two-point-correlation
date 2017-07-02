@@ -113,7 +113,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -195,8 +195,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
-                        Math.round(4.f*indexer.getX()[k]),
-                        Math.round(4.f*indexer.getY()[k]));
+                       4*Math.round(indexer.getX()[k]),
+                       4*Math.round(indexer.getY()[k]));
                     points.add(p);
                     if (p.getX() < minMaxXY[0]) {
                         minMaxXY[0] = p.getX();
