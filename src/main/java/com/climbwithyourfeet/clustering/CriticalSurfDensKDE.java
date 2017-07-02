@@ -369,10 +369,12 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         
         // w/ median transform, the last is usually over-smoothed.
         // so starting about 1/3 from highest index
-        int end = Math.round(0.667f*outputCoeff.size());
-        if (end < 5) {
-            end = outputCoeff.size() - 2;
-            if (end < 1) {
+        //int end = Math.round(0.667f*outputCoeff.size());
+        int end = Math.round(0.5f*outputCoeff.size());
+        if (end < 1) {
+            if (outputCoeff.size() > 1) {
+                end = outputCoeff.size() - 2;
+            } else {
                 end = outputCoeff.size() - 1;
             }
         }
@@ -397,7 +399,6 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
                   
             if (r.indexes.length == 1 && 
                 (r.indexes[r.indexes.length - 1] == r.unique.size())) {
-                // set a flag and continue
                 continue;
             }
             
