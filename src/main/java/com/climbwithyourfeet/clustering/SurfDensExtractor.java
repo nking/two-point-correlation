@@ -41,10 +41,10 @@ public class SurfDensExtractor {
         float v = (float)a.get(idx);
         float adj0 = -1;
         float adj1 = -1;
-        if (idx > 0) {
+        if ((idx > 0) && a.get(idx - 1) > minAvg) {
             adj0 = v/(float)a.get(idx - 1);
         }
-        if ((idx + 1) < a.size()) {
+        if (((idx + 1) < a.size()) && a.get(idx + 1) > minAvg) {
             adj1 = v/(float)a.get(idx + 1);
         }
         float adj = Math.max(adj0, adj1);
@@ -83,7 +83,9 @@ public class SurfDensExtractor {
         // to see if need to re-sample data
         
         Frequency f = new Frequency();
+        //vF are the unique square distances from distTrans
         TIntList vF = new TIntArrayList();
+        //vC are the number of occurrences of each unique square distance 
         TIntList cF = new TIntArrayList();
         f.calcFrequency(distTrans, vF, cF, true);
 
@@ -109,7 +111,7 @@ public class SurfDensExtractor {
             }
             
             float minAvg = mmpf.calculateMeanOfSmallest(cFF, 0.03f);
-            int[] peakIdxs = mmpf.findPeaks(cFF, minAvg, 2.5f);
+            int[] peakIdxs = mmpf.findPeaks(cFF, minAvg, 2.0f);
             
             if (peakIdxs == null || peakIdxs.length == 0) {
                 // yMaxIdx is the index to use for scaling
@@ -122,10 +124,10 @@ public class SurfDensExtractor {
                 //float sn0 = vp0/minAvg;
                 //float snYM = vpYm/minAvg;
                 
-                float sn0Adj = calcSNRelTAdj(vF, peakIdxs[0], minAvg);
-                float snYMAdj = calcSNRelTAdj(vF, yMaxIdx, minAvg);
+                float sn0Adj = calcSNRelTAdj(cF, peakIdxs[0], minAvg);
+                float snYMAdj = calcSNRelTAdj(cF, yMaxIdx, minAvg);
                 
-                if (sn0Adj > snYMAdj) {
+                if (sn0Adj > 0.9*snYMAdj) {
                     yMaxIdx = peakIdxs[0];
                 }                
             }
@@ -134,7 +136,7 @@ public class SurfDensExtractor {
             int width2, height2;                    
 
             // the distance transform carries square distances, excepting
-            // values 0,1,2
+            // values 0, 1, 2
             double dist = vF.get(yMaxIdx);
             if (dist > 2) {
                 dist = Math.sqrt(dist);
@@ -144,7 +146,7 @@ public class SurfDensExtractor {
                     dist = Math.floor(dist);
                 }
             }
-            // factor to divide x or by:
+            // factor to divide x, y or by:
             // no sqrt(2) because using chessboard distances
             sds.xyScaleFactor = (int) dist;
 
@@ -215,6 +217,7 @@ public class SurfDensExtractor {
         // using a linear surface density, that is, the
         // distance between 2 points.
         sds.values = new float[w * h];
+        int maxDist = Integer.MIN_VALUE;
         int count2 = 0;
         for (int i0 = 0; i0 < w; ++i0) {
             for (int j0 = 0; j0 < h; ++j0) {
@@ -226,11 +229,20 @@ public class SurfDensExtractor {
                     }
                     sds.values[count2] = 1.f/dist;
                     count2++;
+                    if (dist > maxDist) {
+                        maxDist = (int)dist;
+                    }
                 }
             }
         }
         
         sds.values = Arrays.copyOf(sds.values, count2);
+        
+        if (maxDist == 1) {
+            sds.surfDensRes = (1.f/(float)maxDist);
+        } else {
+            sds.surfDensRes = (1.f/(float)(maxDist - 1.f)) - (1.f/(float)maxDist);
+        }
         
         if (debug) {
             System.out.println("scaling factor=" + sds.xyScaleFactor);
