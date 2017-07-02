@@ -1,24 +1,7 @@
--- need to revisit the portion of KDE critical density calculation
-   that continues to add to weighted average for certain close spacing.
-   
-   need to canonicalize the data so that simple rules for
-     finding the critical peak can be applied
-
-   -- first step is that re=gridding of the data may be necessary
-      if the peak of frequency of distance transform is not for
-      a distance of 1.
-      this happens when the data have spacings larger than 1.
-
-      Note, that the analysis and resampling may apply the same factor to the 
-      x and y axis, but never a different factor to each.
-      it's assumed that the user has already prepared the relative
-      scalings and offsets as needed.
-      (might provide a utility class to provide frequencies of x spacings
-      and y spacings for the user to help them re-scale their data.)
-
-   -- the second correction needed is to learn the surface
-      density resolution which is currently fixed at 0.05.
-      THIS is in progress.
+-- improve the canonicalization of the surface densities.
+   there is a block of code that uses a fixed resolution to
+   blend peaks n the critical density finder 
+   that needs to be revisited.
 
 -- rewrite the one dbscan image unit test if missing since refactoring
 
