@@ -231,7 +231,11 @@ public class SurfDensExtractor {
         }
         
         sds.values = Arrays.copyOf(sds.values, count2);
-            
+        
+        if (debug) {
+            System.out.println("scaling factor=" + sds.xyScaleFactor);
+        }
+        
         return sds;
     }
 
