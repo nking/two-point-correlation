@@ -76,9 +76,11 @@ public class SurfDensExtractor {
             throw new IllegalArgumentException("pixelIdxs.size must be 12 or more");
         }
                 
-        DistanceTransform dtr = new DistanceTransform();
-        int[][] distTrans = dtr.applyMeijsterEtAl(pixelIdxs, width, height);
-
+        //DistanceTransform dtr = new DistanceTransform();
+        //int[][] distTrans = dtr.applyMeijsterEtAl(pixelIdxs, width, height);
+        int[][] distTrans = DistanceTransformUtil.transform(pixelIdxs, width, 
+            height);
+        
         // calculate frequency of non-zero square distances 
         // to see if need to re-sample data
         
@@ -172,7 +174,10 @@ public class SurfDensExtractor {
                 
             } else {
 
-                distTrans = dtr.applyMeijsterEtAl(pixelIdxs2, width2, height2);            
+                //distTrans = dtr.applyMeijsterEtAl(pixelIdxs2, width2, height2);            
+                distTrans = DistanceTransformUtil.transform(pixelIdxs, width, 
+                    height);
+                
                 vF = new TIntArrayList();
                 cF = new TIntArrayList();
                 f.calcFrequency(distTrans, vF, cF, true);

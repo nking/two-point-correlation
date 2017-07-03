@@ -79,9 +79,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         // critical value have small non-negligible clustering probabilities,
         // and that is partially because the critical density has errors in
         // its determination for the background.
-        
-        float res = sds.surfDensRes;
-        
+                
         Arrays.sort(values);
         
         System.out.println("min surf dens=" + values[0]);
@@ -112,7 +110,9 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
         // w/ median transform, the last is usually over-smoothed.
         // so starting about 1/3 from highest index
         //int end = Math.round(0.667f*outputCoeff.size());
-        int end = Math.round(0.5f*outputCoeff.size());
+        //int end = Math.round(0.5f*outputCoeff.size());
+        //int end = Math.round(0.3333f*outputCoeff.size());
+        int end = Math.round(0.25f*outputCoeff.size());
         if (end < 1) {
             if (outputCoeff.size() > 1) {
                 end = outputCoeff.size() - 2;
@@ -153,40 +153,73 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             float sl = r.sigma;//9;
             float sigma1 = r.freq[r.indexes[0]]/r.meanLow;
             
-            //TODO: if previous transformation (=i0+1) had one peak or so
-            //   and this has peaks closely following the first,
-            //   need to calculate a weighted average
+            /* If previous transformation (=i0+1) had one peak or so and this 
+                 has peaks closely following the first, need to calculate a 
+                 weighted average
+                 (possibly, when the previous transformation has more than 
+                 a single peak too).
             
-            if (sigma1 <= sl) {
+               The current peak is due to a separation that when converted to
+               and integer, can be used to approximate a resolution as the
+               surface density arising from a separation-1.
+            
+               There is special treatment for separation <= 2 in the extraction
+               of densities so that is considered here.
+            
+               linear surf dens 0.2  is 1/5 so 5 pixel separation
+               1/4 is a linear surf dens of 0.25,
+               so the resolution 0.05 is the upper limit to use to blend
+                  adjacent subsequent peaks close to 0.2.
+            */
+            float d = 1.f/r.unique.get(r.indexes[0]);
+            float res;
+            if (Math.round(d) > 2) {
+                float d0 = Math.round(d);
+                float d1 = d0 - 1;
+                res = (1.f/d1) - (1.f/d0);
+            } else {
+                //TODO: revisit this...placeholder for now that results in no change
+                res = 1e-9f;
+            }
+            System.out.println("sigma1=" + sigma1 + " sd=" + r.unique.get(r.indexes[0]));
+            //if (sigma1 <= sl) {
+            if (false && r.indexes.length > 1) {
                 
                 // weighted mean of peaks from 0 until a peak has s/n > sl 
                 int idx = 0;
-                float tot = 0;
-                for (int ii = 0; ii < r.indexes.length; ++ii) {
-                    int peakIdx = r.indexes[ii];
-                    idx = ii;
-                    tot += r.freq[peakIdx];
-                    if ((r.freq[peakIdx]/r.meanLow) > sl) {
-                        break;
-                    }
-                }
-       
+                float tot = r.freq[r.indexes[idx]];
                 // keep adding frequencies if the spacing to the next is close:
-                if (idx > 0 && r.indexes.length > (idx + 1)) {
-                    float diff = r.unique.get(r.indexes[idx + 1]) - 
-                        r.unique.get(r.indexes[idx]);
-                    System.out.println("diff=" + diff + " res=" + res);
-                    /*if (diff < res) {
-                        for (int ii = idx+1; ii < r.indexes.length; ++ii) {
-                            if ((r.unique.get(r.indexes[ii]) 
-                                - r.unique.get(r.indexes[ii - 1])) 
-                                >= res) {
-                                break;
-                            }
-                            idx = ii;
-                            tot += r.freq[r.indexes[ii]];
+                float diff = r.unique.get(r.indexes[idx + 1]) - 
+                    r.unique.get(r.indexes[idx]);
+                float s = r.freq[r.indexes[idx + 1]]/r.meanLow;
+                System.out.println("" + d + " diff=" + diff + " res=" + res);
+                if (diff < res && (s >= sl)) {
+                    for (int ii = idx+1; ii < r.indexes.length; ++ii) {
+                        
+                        diff = r.unique.get(r.indexes[ii]) - 
+                            r.unique.get(r.indexes[ii - 1]);
+                        s = r.freq[r.indexes[ii]]/r.meanLow;
+                        
+         System.out.println("   sd=" + r.unique.get(r.indexes[ii]) 
+             + " diff=" + diff + " s=" + s + " res=" + res);
+         
+                        if (diff > res || (s < sl)) {
+                            break;
                         }
-                    }*/
+                       
+                        float d2 = 1.f/r.unique.get(r.indexes[ii]);
+                        if (Math.round(d2) > 2) {
+                            float d0 = Math.round(d2);
+                            float d1 = d0 - 1;
+                            res = (1.f / d1) - (1.f / d0);
+                        } else {
+                            //TODO: revisit this...placeholder for now that results in no change
+                            res = 1e-9f;
+                        }
+                        
+                        idx = ii;
+                        tot += r.freq[r.indexes[ii]];
+                    }
                 }
                 
                 float weightedMean = 0;
@@ -213,6 +246,7 @@ public class CriticalSurfDensKDE extends AbstractCriticalSurfDens {
             System.out.println("nPeaks=" + r.indexes.length);
             doSparseEstimate(r.freq);
             System.out.println("critDens=" + r.unique.get(r.indexes[0]));
+            
             KDEDensityHolder dh = (KDEDensityHolder) createDensityHolder(
                 r.unique.get(r.indexes[0]), r.unique, r.freq);
             dh.approxH = (lastIdx > -1)

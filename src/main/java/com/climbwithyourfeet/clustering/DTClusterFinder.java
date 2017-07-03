@@ -202,6 +202,10 @@ public class DTClusterFinder {
         } else if (state.compareTo(STATE.HAVE_GROUPS) >= 0) {
             return;
         }
+    
+        System.out.println("findGroups: " + 
+            " critDens=" + densityHolder.critDens + 
+            " thresholdFactor=" + threshholdFactor);
         
         DTGroupFinder groupFinder = new DTGroupFinder(width, height);
         

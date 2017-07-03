@@ -102,7 +102,13 @@ public abstract class AbstractCriticalSurfDens implements ICriticalSurfDens {
             System.out.println("qs=" + Arrays.toString(sums));
         }
         
-        if (sums[2] < 0.3) {
+        /*
+        roughly, dense:
+            sums[1] < 0.1 and
+            sums[2] < 0.3
+        */
+        
+        if ((sums[1] < 0.1) && (sums[2] < 0.3)) {
             isSparse = false;
         } else {
             isSparse = true;

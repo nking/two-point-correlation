@@ -39,7 +39,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
     boolean plotContours = true;
     boolean plotClusters = true;
-    boolean setDebug = false;
+    boolean setDebug = true;
     
     /**
      *
@@ -67,7 +67,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
 
         int nSwitches = 4;
 
-        int nIterPerBackground = 3;
+        int nIterPerBackground = 1;
 
         AxisIndexer indexer = null;
 
@@ -240,7 +240,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindClustersOtherData() throws Exception {
+    public void estFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -275,7 +275,8 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             minMaxXY[3] = Integer.MIN_VALUE;
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
-                PairInt p = new PairInt(Math.round(indexer.getX()[k]),
+                PairInt p = new PairInt(
+                    Math.round(indexer.getX()[k]),
                     Math.round(indexer.getY()[k]));
                 points.add(p);
                 if (p.getX() < minMaxXY[0]) {
@@ -291,6 +292,15 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                     minMaxXY[3] = p.getY();
                 }
             }
+            
+            // 0:  0.3 to 0.7
+            // 1:  0.3 ish
+            // 2:  0.15 to 0.42
+            // 3:  0.3 to 0.55
+            // 4:  0.3 to 0.75
+            // 5:  approx 0.35 to 0.75
+            // 6:  0.285 to 0.35
+            // 7:  0.1 to 0.3
 
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
@@ -301,17 +311,17 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
 
-        //    if (setDebug) {
-            clusterFinder.setToDebug();
-        //    }
+            if (setDebug) {
+                clusterFinder.setToDebug();
+            }
             
             clusterFinder.setCriticalDensityMethod(
                 DTClusterFinder.CRIT_DENS_METHOD.KDE);
             
             clusterFinder.calculateCriticalDensity();
+            //clusterFinder.setCriticalDensity(0.4f);
             clusterFinder.findClusters();
-            //clusterFinder.setCriticalDensity(dens);
-
+            
             int nGroups = clusterFinder.getNumberOfClusters();
 
             List<TIntSet> groupListPix = clusterFinder.getGroups();
@@ -345,7 +355,12 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
                 "other_" + i);
             }
             
-            KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
+            DensityHolder dh0 = clusterFinder.getDensities();
+            
+            if (!(dh0 instanceof KDEDensityHolder)) {
+                continue;
+            }
+            KDEDensityHolder dh = (KDEDensityHolder)dh0;
 
             KDEStatsHelper kdsh = new KDEStatsHelper();
             TIntFloatMap probMap = new TIntFloatHashMap();
@@ -383,7 +398,7 @@ public class DTClusterFinderKDETest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testKDEOtherData() throws Exception {
+    public void estKDEOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 

@@ -4,11 +4,14 @@ import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBa
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
+import algorithms.misc.Frequency;
 import algorithms.util.ContourPlotter;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.set.TIntSet;
@@ -37,7 +40,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
 
     boolean plotContours = false;
     boolean plotClusters = true;
-    boolean setDebug = true;
+    boolean setDebug = false;
     
     /*
     looking at 2 datasets to consider regriding the points so that the most
@@ -218,6 +221,42 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 PixelHelper ph = new PixelHelper();
                 TIntSet pixIdxs = ph.convert(points, width);
                 
+                if (true) {
+                    
+                    TIntSet pixIdxsInternal = new TIntHashSet();
+                    for (int j = 0; j < (width*height); ++j) {
+                        if (!pixIdxs.contains(j)) {
+                            pixIdxsInternal.add(j);
+                        }
+                    }
+                    
+                    int[][] distTrans = DistanceTransformUtil.transform(
+                        pixIdxs, width, height);
+                    for (int w = 0; w < width; ++w) {
+                        for (int h = 0; h < height; ++h) {
+                            int v = distTrans[w][h];
+                            if (v > 2) {
+                                distTrans[w][h] = (int)Math.sqrt(v);
+                            }
+                        }
+                    }
+
+                    // calculate frequency of non-zero square distances 
+                    // to see if need to re-sample data
+                    Frequency f = new Frequency();
+                    //vF are the unique square distances from distTrans
+                    TIntList vF = new TIntArrayList();
+                    //vC are the number of occurrences of each unique square distance 
+                    TIntList cF = new TIntArrayList();
+                    f.calcFrequency(distTrans, vF, cF, true);
+
+                    // since the sort results in O(N*lg2(N)), might
+                    //   as well use an FFT to find the smallest peaked 
+                    //   spacing separately in x and y.
+                    
+                    continue;
+                }
+                
                 DTClusterFinder clusterFinder = 
                     new DTClusterFinder(pixIdxs, width, height);
                 
@@ -267,7 +306,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                     points, groupList, clusterFinder.getCriticalDensity(), 
                     "ran" + ii + "_" + i);
                 
-                plotter.writeFile("random_kde_");
+                plotter.writeFile("random_kde2_");
                 }
                 
                 KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
@@ -297,14 +336,14 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 if (plotContours) {
                 ContourPlotter plotter2 = new ContourPlotter();
                 plotter2.writeFile(probMap, width, height,
-                    "other_contour_" + i);
+                    "other_contour2_" + i);
                 }
                 
                 count++;
             }
         }
         
-        plotter.writeFile("random_kde_");
+        plotter.writeFile("random_kde2_");
 
         log.info("SEED=" + seed);
     }
@@ -417,7 +456,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, clusterFinder.getCriticalDensity(), 
                 "other_" + i);
-            plotter.writeFile("other_kde_");
+            plotter.writeFile("other_kde2_");
             }
             
             KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
@@ -446,11 +485,11 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
             if (plotContours) {
             ContourPlotter plotter2 = new ContourPlotter();
             plotter2.writeFile(probMap, width, height, 
-                "other_contour_" + i);
+                "other_contour2_" + i);
             }
         }
         
-        plotter.writeFile("other_kde_");
+        plotter.writeFile("other_kde2_");
         
     }
     
