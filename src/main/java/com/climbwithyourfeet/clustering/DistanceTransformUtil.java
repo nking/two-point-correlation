@@ -61,7 +61,9 @@ public class DistanceTransformUtil {
         for (int i = 0; i < width; ++i) {
             for (int j = 0; j < height; ++j) {
                 v = Math.min(dtX[i][j], dtY[i][j]);
-                v *= v;
+                if (v > 2) {
+                    v *= v;
+                }
                 dt[i][j] = Math.min(dt[i][j], v);
             }
         }
