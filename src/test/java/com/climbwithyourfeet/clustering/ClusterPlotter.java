@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -70,11 +71,13 @@ public class ClusterPlotter {
      * @param yMax
      * @param points
      * @param clusterSets
+     * @param bckgndseps
      * @param plotLabel2
      */
     public void addPlotWithoutHull( 
         float xMin, float xMax, float yMin, float yMax,
         Set<PairInt> points, List<Set<PairInt>> clusterSets,
+        float[] bckgndseps,
         String plotLabel2) {
 
         StringBuffer dataSB = new StringBuffer();
@@ -153,7 +156,7 @@ public class ClusterPlotter {
         dataSB.append("];\n");
 
         dataSB.append("\n").append("var plot_label_").append(plotNumber)
-            .append("=").append(";\n");
+            .append("='").append(Arrays.toString(bckgndseps)).append("';\n");
 
         // ======= add RENDER statement ==========
         dataSB.append("\nrenderPlotWithoutHull('plot").append(plotNumber)

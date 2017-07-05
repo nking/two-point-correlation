@@ -40,7 +40,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
 
     boolean plotContours = false;
     boolean plotClusters = true;
-    boolean setDebug = false;
+    boolean setDebug = true;
     
     /*
     looking at 2 datasets to consider regriding the points so that the most
@@ -198,8 +198,8 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
-                       4*Math.round(indexer.getX()[k]),
-                       4*Math.round(indexer.getY()[k]));
+                       1*Math.round(indexer.getX()[k]),
+                       1*Math.round(indexer.getY()[k]));
                     points.add(p);
                     if (p.getX() < minMaxXY[0]) {
                         minMaxXY[0] = p.getX();
@@ -220,46 +220,6 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 
                 PixelHelper ph = new PixelHelper();
                 TIntSet pixIdxs = ph.convert(points, width);
-               
-                if (false) {
-                    
-                    TIntSet pixIdxsInternal = new TIntHashSet();
-                    for (int j = 0; j < (width*height); ++j) {
-                        if (!pixIdxs.contains(j)) {
-                            pixIdxsInternal.add(j);
-                        }
-                    }
-                    
-                    int[][] distTrans = DistanceTransformUtil.transform(
-                        pixIdxsInternal, width, height);
-                                        
-                    for (int w = 0; w < width; ++w) {
-                        for (int h = 0; h < height; ++h) {
-                            int v = distTrans[w][h];
-                            if (v > 2) {
-                                distTrans[w][h] = (int)Math.sqrt(v);
-                            }
-                        }
-                    }
-
-                    //printDT(distTrans);
-                    
-                    
-                    // calculate frequency of non-zero square distances 
-                    // to see if need to re-sample data
-                    Frequency f = new Frequency();
-                    //vF are the unique square distances from distTrans
-                    TIntList vF = new TIntArrayList();
-                    //vC are the number of occurrences of each unique square distance 
-                    TIntList cF = new TIntArrayList();
-                    f.calcFrequency(distTrans, vF, cF, true);
-
-                    // since the sort results in O(N*lg2(N)), might
-                    //   as well use an FFT to find the smallest peaked 
-                    //   spacing separately in x and y.
-                    
-                    continue;
-                }
                 
                 DTClusterFinder clusterFinder = 
                     new DTClusterFinder(pixIdxs, width, height);
@@ -307,6 +267,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                     (int)Math.floor(minMaxXY[2] - 1), 
                     (int)Math.ceil(minMaxXY[3] + 1), 
                     points, groupList, 
+                    clusterFinder.getBackgroundSeparationHolder().bckGndSep,
                     "ran" + ii + "_" + i);
                 
                 plotter.writeFile("random2_");
@@ -477,6 +438,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 (int)Math.floor(minMaxXY[2] - 1), 
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList,
+                clusterFinder.getBackgroundSeparationHolder().bckGndSep,
                 "other" + i);
 
             plotter.writeFile("other2_");

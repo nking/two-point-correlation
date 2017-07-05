@@ -192,6 +192,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                         (int) Math.floor(minMaxXY[2] - 1),
                         (int) Math.ceil(minMaxXY[3] + 1),
                         points, groupList, 
+                        clusterFinder.getBackgroundSeparationHolder().bckGndSep,
                         "ran" + ii + "_" + i);
 
                     plotter.writeFile("random_");
@@ -355,6 +356,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     (int) Math.floor(minMaxXY[2] - 1),
                     (int) Math.ceil(minMaxXY[3] + 1),
                     points, groupList,
+                    clusterFinder.getBackgroundSeparationHolder().bckGndSep,
                     "other_" + i);
 
                 plotter.writeFile("other_");
@@ -677,6 +679,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 (int)Math.floor(minMaxXY[2] - 1), 
                 (int)Math.ceil(minMaxXY[3] + 1), 
                 points, groupList, 
+                clusterFinder.getBackgroundSeparationHolder().bckGndSep,
                 "no_clusters_" + ii);
 
             plotter.writeFile("no_clusters_");
