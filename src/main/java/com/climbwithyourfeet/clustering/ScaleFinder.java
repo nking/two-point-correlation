@@ -132,6 +132,10 @@ public class ScaleFinder {
         // a brute force calculation of minimum separation between the
         // maxima, but wanting to use only the most frequent points
         // to do so.
+
+        //TODO: below here consider if aggregation of values within a tolerance
+        //  of similar values is needed.  the tolerance should depend
+        //  upon the range of separations and on the value to be aggregated
         
         TIntIntMap freqMap = new TIntIntHashMap();
         for (int i = 0; i < maxima.size(); ++i) {
@@ -155,7 +159,7 @@ public class ScaleFinder {
         MiscSorter.sortBy1stArg(vsc, vs);
         
         int maxCount = vsc[vsc.length - 1];
-        int limit = (int)Math.round(0.8f * maxCount);
+        int limit = Math.round(0.8f * maxCount);
         if (limit < 1) {
             limit = 1;
         }
@@ -202,7 +206,7 @@ public class ScaleFinder {
 
         for (int i = 0; i < dt.length; ++i) {
             for (int j = 0; j < dt[0].length; ++j) {
-                int v = (int)Math.round(dt[i][j]);
+                int v = Math.round(dt[i][j]);
                 raster.setSample(i, j, 0, v);
             }
         }

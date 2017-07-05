@@ -2,15 +2,13 @@ package com.climbwithyourfeet.clustering;
 
 import algorithms.VeryLongBitString;
 import algorithms.connected.ConnectedValuesGroupFinder;
-import algorithms.imageProcessing.FFTUtil;
-import algorithms.imageProcessing.Filters;
-import algorithms.misc.Complex;
-import algorithms.misc.Frequency;
-import algorithms.misc.Misc0;
+import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.MiscMath0;
+import algorithms.misc.MiscSorter;
 import algorithms.util.PixelHelper;
+import algorithms.util.PolygonAndPointPlotter;
+import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -49,7 +47,8 @@ public class PairwiseSeparations {
         int yScale;
     }
     
-    public void extract(TIntSet pixelIdxs, int width, int height) {
+    public BackgroundSeparationHolder extract(TIntSet pixelIdxs, int width, 
+        int height) {
         
         if (pixelIdxs.size() < 12) {
             throw new IllegalArgumentException(
@@ -90,7 +89,7 @@ public class PairwiseSeparations {
                described unless there are gaps in points in the cluster.
                if there are gaps,
                   that will be found.
-               else the critical separation will be found to be 1
+               else the background separation will be found to be 1
         
         Note that throughout the refactoring in code:
             -- the factor of 2 is dropped here for 2 points within distance
@@ -98,19 +97,58 @@ public class PairwiseSeparations {
             -- a factor of 1/thresholdFactor should possibly be applied 
                here for the caveat case, for example
         */
-                
-        ConnectedValuesGroupFinder finder = new ConnectedValuesGroupFinder();
-        List<TIntSet> valueGroups = finder.findGroups(dt);
-        
-        // key = index of values Group, value = adjacent indexes of valuesGroup
-        TIntObjectMap<VeryLongBitString> adjMap = createAdjacencyMap(
-            valueGroups, width, height);
-            
-        // search for valueGroups which has value larger than all neighbors
-        TIntSet groupMaximaIdxs = new TIntHashSet();
-        
+       
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
+                
+        ConnectedValuesGroupFinder finder = new ConnectedValuesGroupFinder();
+        finder.setMinimumNumberInCluster(1);
+        List<TIntSet> valueGroups = finder.findGroups(dt);
+     
+        long ts = System.currentTimeMillis();
+        
+        if (debug) {
+            float[] x = new float[valueGroups.size()];
+            float[] y = new float[x.length];
+            for (int i = 0; i < valueGroups.size(); ++i) {
+                TIntSet group = valueGroups.get(i);
+                int tPix = group.iterator().next();
+                ph.toPixelCoords(tPix, width, xy);
+                int v = dt[xy[0]][xy[1]];
+                x[i] = v;
+                y[i] = group.size();
+            }
+            float xMax = MiscMath0.findMax(x);
+            float yMin = MiscMath0.findMin(y);
+            float yMax = MiscMath0.findMax(y);
+            PolygonAndPointPlotter plotter;
+            try {
+                plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
+                "separation");
+                plotter.writeFile("_separation_" + ts);
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            Runtime.getRuntime().gc();
+        }
+        
+        // key = index of values Group, value = adjacent indexes of valuesGroup
+        TIntObjectMap<TIntSet> adjMap = createAdjacencyMap(
+            valueGroups, width, height);
+        
+        //TODO: below here consider if aggregation of values within a tolerance
+        //  of similar values is needed.  the tolerance should depend
+        //  upon the range of separations and on the value to be aggregated
+        
+        // search for valueGroups which has value larger than all neighbors
+        // key = valueGroups index, value = dt value for the group
+        TIntIntMap groupMaximaIdxs = new TIntIntHashMap();
+        
+        // key = value, value = count
+        TIntIntMap valueCounts = new TIntIntHashMap();
+        
+        int minMaxima = Integer.MAX_VALUE;
         
         for (int i = 0; i < valueGroups.size(); ++i) {
             
@@ -126,10 +164,11 @@ public class PairwiseSeparations {
             
             boolean allAreLower = true;
             
-            VeryLongBitString adj = adjMap.get(i);
+            TIntSet adj = adjMap.get(i);
             
-            int[] adjGroupIdxs = adj.getSetBits();
-            for (int aIdx : adjGroupIdxs) {
+            TIntIterator iter2 = adj.iterator();
+            while (iter2.hasNext()) {
+                int aIdx = iter2.next();
                 TIntSet group2 = valueGroups.get(aIdx);
                 int tPix2 = group2.iterator().next();
                 ph.toPixelCoords(tPix2, width, xy);
@@ -142,21 +181,119 @@ public class PairwiseSeparations {
             }
             
             if (allAreLower) {
-                groupMaximaIdxs.add(i);
+                groupMaximaIdxs.put(i, v);
+                int c = valueCounts.get(v);
+                valueCounts.put(v, c + group.size());
+                
+                if (v < minMaxima) {
+                    minMaxima = v;
+                }
             }
         }
         
-        // look at frequency of groupMaximaIdxs values
-        // 
+        adjMap = null;
         
+        // look at frequency of groupMaximaIdxs values
+        int[] maximaValues = new int[valueCounts.size()];
+        int[] maximaCounts = new int[valueCounts.size()];
+        TIntIntIterator iter = valueCounts.iterator();
+        for (int i = 0; i < valueCounts.size(); ++i) {
+            iter.advance();
+            maximaValues[i] = iter.key();
+            maximaCounts[i] = iter.value();
+        }
+        
+        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
+       
+        if (debug) {
+            int[] x = maximaValues;
+            int[] y = maximaCounts;
+            float xMax = MiscMath0.findMax(x);
+            float yMin = MiscMath0.findMin(y);
+            float yMax = MiscMath0.findMax(y);
+            PolygonAndPointPlotter plotter;
+            try {
+                plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
+                    "max sep");
+            plotter.writeFile("_separation_maxima_" + ts);
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        }
         
         /*
-        Frequency f = new Frequency();
-        TIntList values = new TIntArrayList();
-        TIntList count = new TIntArrayList();
-        f.calcFrequency(dt, values, count, true);
+        consider wavelet pyramidal smoothing
+        
+        -- after find crit separation,
+           find the first zero or rather the first point after crit sep
+           that is at avgMin of the maximaCounts.
+           -- note that this implies, can
+              reset the critical separation to the maxima between
+              and including the current crit sep and that first zero.
+        
         */
         
+        MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
+        float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
+        
+        int minMaximaIdx = -1;
+        int firstZeroIdx = -1;
+        for (int i = 0; i < maximaValues.length; ++i) {
+            int d = maximaValues[i];
+            if (minMaximaIdx == -1 && (d == minMaxima)) {
+                minMaximaIdx = i;
+            }
+            if (d > minMaxima) {
+                int c = maximaCounts[i];
+                if (c <= avgMin) {
+                    firstZeroIdx = i;
+                    break;
+                }
+            }
+        }
+        if (firstZeroIdx == -1) {
+            firstZeroIdx = minMaximaIdx + 1;
+            assert(firstZeroIdx < maximaValues.length);
+        }
+        
+        int maxCountIdx0 = -1;
+        int maxCount0 = Integer.MIN_VALUE;
+        for (int i = 0; i < firstZeroIdx; ++i) {
+            if (maximaCounts[i] > maxCount0) {
+                maxCountIdx0 = i;
+                maxCount0 = maximaCounts[i];
+            }
+        }
+        minMaximaIdx = maxCountIdx0;
+        minMaxima = maxCount0;
+        
+        System.out.println("found background separation=" + maximaValues[minMaximaIdx]);
+        
+        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+        
+        h.approxH = 1;
+        
+        int m2 = (int)Math.round(maximaValues[0]/Math.sqrt(2));
+        h.setXYBackgroundSeparations(m2, m2);
+        
+        h.setTheThreeSeparations(new float[]{
+            maximaValues[0], maximaValues[minMaximaIdx], 
+            maximaValues[firstZeroIdx]});
+        
+        h.setAndNormalizeCounts(new float[]{
+            maxCount0, maxCount0, maximaCounts[firstZeroIdx]});
+       
+        // calculate the errors for the 3 points
+        float[] errors = new float[] {
+            h.calcError(h.threeSCounts[0], h.threeS[0], 0, h.approxH),
+            h.calcError(h.threeSCounts[1], h.threeS[1], 0, h.approxH),
+            h.calcError(h.threeSCounts[2], h.threeS[2], 0, h.approxH)
+        };
+        h.setTheThreeErrors(errors);
+        
+        return h;
     }
     
     public ScaledPoints scaleThePoints(TIntSet pixelIdxs, int width, int height) {
@@ -226,7 +363,7 @@ public class PairwiseSeparations {
         return sp;
     }
     
-    private TIntObjectMap<VeryLongBitString> createAdjacencyMap(
+    private TIntObjectMap<TIntSet> createAdjacencyMap(
         List<TIntSet> groupList, int width, int height) {
         
         TIntIntMap pixGroupMap = new TIntIntHashMap();
@@ -248,12 +385,15 @@ public class PairwiseSeparations {
         
         int nBSLen = groupList.size();
         
-        TIntObjectMap<VeryLongBitString> adjMap 
-            = new TIntObjectHashMap<VeryLongBitString>();
+        System.out.println("nBSLen=" + nBSLen);
+        
+        TIntObjectMap<TIntSet> adjMap = new TIntObjectHashMap<TIntSet>();
         
         for (int i = 0; i < groupList.size(); ++i) {
             TIntSet group = groupList.get(i);
             TIntIterator iter = group.iterator();
+            TIntSet adj = adjMap.get(i);
+            
             while (iter.hasNext()) {
                 int pixIdx = iter.next();
                 ph.toPixelCoords(pixIdx, width, xy);
@@ -276,12 +416,11 @@ public class PairwiseSeparations {
                         continue;
                     }
                     
-                    VeryLongBitString adj = adjMap.get(i);
                     if (adj == null) {
-                        adj = new VeryLongBitString(nBSLen);
+                        adj = new TIntHashSet();
                         adjMap.put(i, adj);
                     }
-                    adj.setBit(j);
+                    adj.add(j);
                 }
             }
         }

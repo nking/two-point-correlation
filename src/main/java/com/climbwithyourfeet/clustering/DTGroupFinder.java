@@ -46,11 +46,6 @@ public class DTGroupFinder {
      */
     protected float threshholdFactor = 2.5f;
 
-    /**
-     *
-     */
-    protected float critDensity = 0;
-
     protected Logger log = Logger.getLogger(this.getClass().getName());
 
     public DTGroupFinder(int imageWidth, int imageHeight) {
@@ -93,57 +88,45 @@ public class DTGroupFinder {
     }
 
     /**
-     * given the critical density and having the threshold factor, find the
+     * given the pairwise separation of background points
+     * and having the threshold factor, find the
      * groups of points within a critical distance of one another.
      * runtime complexity is O(N_points * lg2(N_points)).
-     * @param criticalDensity
+     * @param criticalSeparationX
+     * @param criticalSeparationY
      * @param pixIdxs
      * @return the groups found using critical density
      */
-    public List<TIntSet> calculateGroups(float criticalDensity, TIntSet pixIdxs) {
+    public List<TIntSet> calculateGroupsUsingSepartion(
+        float criticalSeparationX, float criticalSeparationY, TIntSet pixIdxs) {
 
         PixelHelper ph = new PixelHelper();
 
         initMap(pixIdxs);
+        
+        float critSepX = criticalSeparationX/threshholdFactor;
+        float critSepY = criticalSeparationY/threshholdFactor;
 
-        this.critDensity = criticalDensity;
-
-        float thrsh = criticalDensity * threshholdFactor;
-
-        if (critDensity == 1) {
-            // fudge to result in critical separation of 1
-            thrsh = 2.f;
-        }
-
-        findGroups(thrsh, pixIdxs);
-
+        findGroups(critSepX, critSepY, pixIdxs);
+        
         prune();
 
         return groupList;
     }
-
+    
     /**
      * find groups within points using the threshold to calculate the critical
      * separation, then groups are connected points closer to one another than
      * the critical separation.
-     * @param thrsh
      * @param points
      */
-    private void findGroups(float thrsh, TIntSet pixIdxs) {
+    private void findGroups(float critSepX, float critSepY, TIntSet pixIdxs) {
 
         if (pixIdxs.isEmpty()) {
             return;
         }
 
-        // association of 2 points for separation <= critSeparation
-        float critSep = 2.f/thrsh;
-
-        if (critSep < 1) {
-            // each point is already a group
-            return;
-        }
-
-        log.info("critSep=" + critSep);
+        log.info("critSepX=" + critSepX + " critSepY=" + critSepY);
 
         /*
         because the critical separation may be > 1, cannot use the simplest
@@ -158,7 +141,7 @@ public class DTGroupFinder {
         boolean useSortedScan = true;
         
         if (useSortedScan) {
-            findGroupsWithSortedScan(pixIdxs, critSep);            
+            findGroupsWithSortedScan(pixIdxs, critSepX, critSepY);            
         } else {
             //TODO: add nearest neighbors method
         }
@@ -240,6 +223,7 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
 
         TIntObjectIterator<TIntSet> iter2 = map.iterator();
         for (int i = 0; i < map.size(); ++i) {
+            
             iter2.advance();
 
             TIntSet idxs = iter2.value();
@@ -274,7 +258,8 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
         }
     }
 
-    private void findGroupsWithSortedScan(TIntSet pixIdxs, float critSep) {
+    private void findGroupsWithSortedScan(TIntSet pixIdxs, float critSepX,
+        float critSepY) {
 
         PixelHelper ph = new PixelHelper();
         PairIntArray sorted = new PairIntArray(pixIdxs.size());
@@ -300,16 +285,14 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
             // association of 2 points for separation <= critSeparation
             
             int uX = sorted.getX(i);
-            float minXAssoc = uX - critSep;
-            float maxXAssoc = uX + critSep;
+            float minXAssoc = uX - critSepX;
+            float maxXAssoc = uX + critSepX;
             int uY = sorted.getY(i);
-            float minYAssoc = uY - critSep;
-            float maxYAssoc = uY + critSep;
+            float minYAssoc = uY - critSepY;
+            float maxYAssoc = uY + critSepY;
             
             int uPoint = ph.toPixelIndex(uX, uY, imgWidth);
-        
-            boolean assocFound = false;
-            
+                    
             /*
             uX = sorted[0].x
                 search backward while x >= minXAssoc
@@ -325,7 +308,7 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
                 int vY = sorted.getY(j);
                 int vPoint = ph.toPixelIndex(vX, vY, imgWidth);
                 
-                if (vX < minXAssoc) {
+                if (vX < minXAssoc || vX > maxXAssoc) {
                     break;
                 }
                 
@@ -335,22 +318,15 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
                     }
                 }
                 // for given x, if y < minYAssoc can skip, but not break
-                if (vY < minYAssoc) {
+                if (vY < minYAssoc || vY > maxYAssoc) {
                     continue;
                 }
                 
-                // check the diagonal distances:
-                double sep = Math.sqrt((vX - uX)*(vX - uX) + 
-                    (vY - uY)*(vY - uY));
-                
-                if (sep > critSep) {
-                    continue;
-                }
+                assert(Math.abs(vX - uX) <= critSepX);
+                assert(Math.abs(vY - uY) <= critSepY);
                 
                 // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);
-                                
-                assocFound = true;
+                processPair(uPoint, vPoint);                                
             }
                 
             // search forward within radius critSep
@@ -360,7 +336,7 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
                 int vY = sorted.getY(j);
                 int vPoint = ph.toPixelIndex(vX, vY, imgWidth);
                 
-                if (vX > maxXAssoc) {
+                if (vX > maxXAssoc || vX < minXAssoc) {
                     break;
                 }
                 
@@ -370,25 +346,17 @@ System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
                     }
                 }
                 // for given x, if y > maxYAssoc can skip, but not break
-                if (vY > maxYAssoc) {
+                if (vY > maxYAssoc || vY < minYAssoc) {
                     //TODO: if knew where next x was in sorted, could increment j to that
                     continue;
                 }
                 
-                // check the diagonal distances:
-                double sep = Math.sqrt((vX - uX)*(vX - uX) + 
-                    (vY - uY)*(vY - uY));
-                  
-                if (sep > critSep) {
-                    continue;
-                }
+                assert(Math.abs(vX - uX) <= critSepX);
+                assert(Math.abs(vY - uY) <= critSepY);
                 
                 // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);
-                                
-                assocFound = true;
+                processPair(uPoint, vPoint);                                
             }
-        }
-        
+        } 
     }
 }

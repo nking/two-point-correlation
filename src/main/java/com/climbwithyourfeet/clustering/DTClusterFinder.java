@@ -1,7 +1,7 @@
 package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.SurfDensExtractor.SurfaceDensityScaled;
 import gnu.trove.set.TIntSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -9,31 +9,16 @@ import java.util.logging.Logger;
  * main class to cluster finder whose logic is based upon distance transform,
  * density threshold, and a signal to noise argument of ~ 2.5 as a factor.
  * 
- * The density threshold can be estimated or provided.
+ * The critical separation can be estimated or provided.
  * 
  * If estimated, the default is to find the leading edge of the first peak 
- * of the surface densities with knowledge that the surface densities 
+ * of the maxima of point separations with knowledge that the surface densities 
  * represent a generalized extreme value curve (due to the nature of the
  * background points being poisson).
  * The found peak has a relationship to the background density.
  * 
- * The methods to estimate density are
- * <pre>
- * (1) kernel density estimator using wavelet transform (KDE, default.
- * 
- * Recently removed the histogram methods as they were not as robust.
- * </pre>
- * 
- * NOTE: if automatic calculation of critical density is used by default,
- * the threshold used when applying the critical density to the points
- * to find clusters is either the default for sparse points or if
- * the density curve appears to be dense, the higher threshold of 5 is used.
- * 
  * The runtime complexity:
- * TODO: add details.  
- * first the dist trans uses O(N_pixels), then the
- * complexity uses the number of density points, 
- * then the number of original data points.
+ * TODO: add details
  * 
  * @author nichole
  */
@@ -46,23 +31,16 @@ public class DTClusterFinder {
     private final int width;
     private final int height;
     
-    private DensityHolder densityHolder = null;
+    private BackgroundSeparationHolder sepHolder = null;
     
     private List<TIntSet> groups = null;
 
     private enum STATE {
-        INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
-    }
-    
-    public static enum CRIT_DENS_METHOD {
-        PROVIDED, KDE
-        //, KNN
+        INIT, HAVE_BACKGROUND_SEPARATION, HAVE_GROUPS
     }
     
     private STATE state = null;
-    
-    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.KDE;
-    
+        
     public static float denseThreshholdFactor = 5f;
     
     public static float defaultThreshholdFactor = 2.5f;
@@ -77,6 +55,8 @@ public class DTClusterFinder {
 
     private Logger log = Logger.getLogger(this.getClass().getName());
     
+    private boolean rescaleAxes = false;
+    
     /**
      *
      * @param thePoints
@@ -90,6 +70,10 @@ public class DTClusterFinder {
         this.height = height;
         
         state = STATE.INIT;
+    }
+    
+    public void setToRescaleAxes() {
+        rescaleAxes = false;
     }
     
     /**
@@ -115,81 +99,83 @@ public class DTClusterFinder {
     public void setMinimumNumberInCluster(int n) {
         this.minimumNumberInCluster = n;
     }
-    
-    /**
-     * set to override the default use of KDE method in estimating the
-     * critical density, to an alternative method of Kernel Density, 
-     * or provided by you.
-     * @param cdm
-     */
-    public void setCriticalDensityMethod(CRIT_DENS_METHOD cdm) {
-        
-        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
-            throw new IllegalStateException("cannot set method after critical "
-                + " density has already been estimated");
-        }
-        
-        if (cdm == null) {
-            throw new IllegalArgumentException("cdm cannot be null");
-        }
-        
-        this.critDensMethod = cdm;
-    }
 
     /**
      *
      */
-    public void calculateCriticalDensity() {
+    public void calculateBackgroundSeparation() {
         
-        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
+        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) > -1) {
             return;
         }
         
-        if (critDensMethod.ordinal() == CRIT_DENS_METHOD.PROVIDED.ordinal()) {
-            throw new IllegalStateException("the critical density has been "
-                + "set so cannot calculate it too.");
-        }
-        
-        assert(critDensMethod.equals(CRIT_DENS_METHOD.KDE));
-        
-        ICriticalSurfDens densSolver = new CriticalSurfDensKDE();
-        
-        SurfDensExtractor densExtr = new SurfDensExtractor();
-                
+        PairwiseSeparations ps = new PairwiseSeparations();
         if (debug) {
-            densExtr.setToDebug();
-            densSolver.setToDebug();
+            ps.setToDebug();
         }
+            
+        if (rescaleAxes) {
+                        
+            PairwiseSeparations.ScaledPoints sp = ps.scaleThePoints(
+                points, width, height);
+            
+            sepHolder = ps.extract(sp.pixelIdxs, sp.width, sp.height);
+            
+            sepHolder.setXYScales(sp.xScale, sp.yScale);
         
-        SurfaceDensityScaled sds = densExtr.extractSufaceDensity(points, width, height);
-        
-        this.densityHolder = densSolver.findCriticalDensity(sds);  
-        
+            correctForScales(sepHolder, sp);
+            
+        } else {
+            sepHolder = ps.extract(points, width, height);
+        }
+            
+        /*
         if (!userSetThreshold) {
             if (!densSolver.isSparse()) {
                 threshholdFactor = denseThreshholdFactor;
             }
         }
+        */
         
-        this.state = STATE.HAVE_CLUSTER_DENSITY;
+        if (sepHolder.bckGndSep == null) {
+            throw new IllegalStateException("Error in algorithm: "
+                + " background separation did not get set");
+        }
+        
+        this.state = STATE.HAVE_BACKGROUND_SEPARATION;
     }
     
     /**
-     *
-     * @param dens
+     * set the pairwise distances for x and y that characterize the background
+     * pairwise distances.  
+     * The critical distance that is the maximum for association in a cluster
+     * is thresholdFactor times these background separations.
      */
-    public void setCriticalDensity(float dens) {
+    public void setBackgroundSeparation(int xSeparation, int ySeparation) {
         
-        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) > -1) {
-            throw new IllegalStateException("cluster density is already set");
+        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) > -1) {
+            throw new IllegalStateException("separation is already set");
         }
+                
+        this.sepHolder = new BackgroundSeparationHolder();
         
-        this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;
+        sepHolder.setXYBackgroundSeparations(xSeparation, ySeparation);
         
-        this.densityHolder = new DensityHolder();
-        this.densityHolder.critDens = dens;
+        int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation 
+            + ySeparation * ySeparation));
         
-        this.state = STATE.HAVE_CLUSTER_DENSITY;
+        sepHolder.setTheThreeSeparations(
+            new float[]{0, separation, separation + 1});
+        sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});
+        
+        float[] errors = new float[] {
+            0.1f*sepHolder.threeSCounts[0],
+            0.1f*sepHolder.threeSCounts[0],
+            0.1f*sepHolder.threeSCounts[0]
+        };
+        sepHolder.setTheThreeErrors(errors);
+        
+        this.state = STATE.HAVE_BACKGROUND_SEPARATION;
     }
     
     /**
@@ -197,14 +183,19 @@ public class DTClusterFinder {
      */
     public void findClusters() {
         
-        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) < 0) {
-            calculateCriticalDensity();
+        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) < 0) {
+            calculateBackgroundSeparation();
         } else if (state.compareTo(STATE.HAVE_GROUPS) >= 0) {
             return;
         }
+        
+        if (sepHolder.bckGndSep == null) {
+            throw new IllegalStateException("background separation must be "
+                + " calculated first");
+        }
     
         System.out.println("findGroups: " + 
-            " critDens=" + densityHolder.critDens + 
+            " bckGndSep=" + Arrays.toString(sepHolder.bckGndSep) + 
             " thresholdFactor=" + threshholdFactor);
         
         DTGroupFinder groupFinder = new DTGroupFinder(width, height);
@@ -213,7 +204,27 @@ public class DTClusterFinder {
         
         groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);
         
-        groups = groupFinder.calculateGroups(densityHolder.critDens, points);        
+        groups = groupFinder.calculateGroupsUsingSepartion(
+            sepHolder.getXBackgroundSeparation(), 
+            sepHolder.getYBackgroundSeparation(), points);        
+    }
+    
+    /**
+     * applies the scale factors in sp to the fields sepHolder.bckGndSep
+     * to put sepHolder.bckGndSep into the original axes reference frame.
+     * 
+     * @param sepHolder
+     * @param sp 
+     */
+    private void correctForScales(BackgroundSeparationHolder sepHolder, 
+        PairwiseSeparations.ScaledPoints sp) {
+        
+        if (sepHolder.bckGndSep == null) {
+            throw new IllegalStateException("sepHolder.bckGndSep cannot be null");
+        }
+        
+        sepHolder.bckGndSep[0] *= sp.xScale;
+        sepHolder.bckGndSep[1] *= sp.yScale;
     }
     
     /**
@@ -256,12 +267,7 @@ public class DTClusterFinder {
      *
      * @return
      */
-    public float getCriticalDensity() {
-        return densityHolder.critDens;
+    public BackgroundSeparationHolder getBackgroundSeparationHolder() {
+        return sepHolder;
     }
-    
-    public DensityHolder getDensities() {
-        return densityHolder;
-    }
-    
 }

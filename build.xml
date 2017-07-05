@@ -155,7 +155,7 @@
     	    destdir="${tests.out.dir}"
     	    source="${compile.target}"
             debug="true"
-            includes="**/*Test.java"
+            includes="**/*.java"
             includeAntRuntime="false"
     	    deprecation="${compile.deprecation}"
     	    optimize="${compile.optimize}" >

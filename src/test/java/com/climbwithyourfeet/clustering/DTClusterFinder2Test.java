@@ -34,7 +34,7 @@ import javax.imageio.ImageIO;
  *
  * @author nichole
  */
-public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
+public class DTClusterFinder2Test extends BaseTwoPointTest {
     
     private Logger log = Logger.getLogger(this.getClass().getName());
 
@@ -220,8 +220,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 
                 PixelHelper ph = new PixelHelper();
                 TIntSet pixIdxs = ph.convert(points, width);
-                
-                if (true) {
+               
+                if (false) {
                     
                     TIntSet pixIdxsInternal = new TIntHashSet();
                     for (int j = 0; j < (width*height); ++j) {
@@ -231,7 +231,8 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                     }
                     
                     int[][] distTrans = DistanceTransformUtil.transform(
-                        pixIdxs, width, height);
+                        pixIdxsInternal, width, height);
+                                        
                     for (int w = 0; w < width; ++w) {
                         for (int h = 0; h < height; ++h) {
                             int v = distTrans[w][h];
@@ -241,6 +242,9 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                         }
                     }
 
+                    //printDT(distTrans);
+                    
+                    
                     // calculate frequency of non-zero square distances 
                     // to see if need to re-sample data
                     Frequency f = new Frequency();
@@ -263,12 +267,11 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 if (setDebug) {
                     clusterFinder.setToDebug();
                 }
-                //clusterFinder.setThreshholdFactor(threshFactor);
-
-                clusterFinder.setCriticalDensityMethod(
-                    DTClusterFinder.CRIT_DENS_METHOD.KDE);
+                clusterFinder.setThreshholdFactor(1.f);
                 
-                clusterFinder.calculateCriticalDensity();
+                clusterFinder.setToRescaleAxes();
+
+                clusterFinder.calculateBackgroundSeparation();
                 
                 clusterFinder.findClusters();
 
@@ -303,20 +306,21 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                     (int)Math.ceil(minMaxXY[1] + 1), 
                     (int)Math.floor(minMaxXY[2] - 1), 
                     (int)Math.ceil(minMaxXY[3] + 1), 
-                    points, groupList, clusterFinder.getCriticalDensity(), 
+                    points, groupList, 
                     "ran" + ii + "_" + i);
                 
-                plotter.writeFile("random_kde2_");
+                plotter.writeFile("random2_");
                 }
                 
-                KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
+                BackgroundSeparationHolder sh = 
+                    clusterFinder.getBackgroundSeparationHolder();
 
-                KDEStatsHelper kdsh = new KDEStatsHelper();
+                StatsHelper kdsh = new StatsHelper();
                 TIntFloatMap probMap = new TIntFloatHashMap();
                 TIntFloatMap probEMap = new TIntFloatHashMap();
 
                 kdsh.calculateProbabilities(
-                    dh, allClusters, width, height, probMap, probEMap);
+                    sh, allClusters, width, height, probMap, probEMap);
 
                 /*
                 float[] allProbs = new float[width * height];
@@ -336,23 +340,39 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 if (plotContours) {
                 ContourPlotter plotter2 = new ContourPlotter();
                 plotter2.writeFile(probMap, width, height,
-                    "other_contour2_" + i);
+                    "random_contour2_" + i);
                 }
                 
                 count++;
             }
         }
         
-        plotter.writeFile("random_kde2_");
+        plotter.writeFile("random2_");
 
         log.info("SEED=" + seed);
+    }
+    
+    private void printDT(int[][] dt) {
+        
+        int w = dt.length;
+        int h = dt[0].length;
+        
+        StringBuilder sb2 = new StringBuilder();
+        for (int j = 0; j < h; ++j) {
+            sb2.append("row ").append(j).append(": ");
+            for (int i = 0; i < w; ++i) {
+                sb2.append(String.format(" %3d", dt[i][j]));
+            }
+            sb2.append("\n");
+        }
+        System.out.println(sb2.toString());
     }
     
     /**
      *
      * @throws Exception
      */
-    public void testFindClustersOtherData() throws Exception {
+    public void estFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -372,7 +392,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
         ClusterPlotter plotter = new ClusterPlotter();
         
         for (int i = 0; i < fileNames.length; i++) {
-        //for (int i = 2; i < 3; i++) {
+        //for (int i = 3; i < 4; i++) {
 
             String fileName = fileNames[i];
             
@@ -410,22 +430,24 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
 
             PixelHelper ph = new PixelHelper();
             TIntSet pixIdxs = ph.convert(points, width);
-            
-            DTClusterFinder clusterFinder
-                = new DTClusterFinder(pixIdxs, width, height);
 
-        //    if (setDebug) {
-            clusterFinder.setToDebug();
-        //    }
-            
-            clusterFinder.setCriticalDensityMethod(
-                DTClusterFinder.CRIT_DENS_METHOD.KDE);
-            
-            clusterFinder.calculateCriticalDensity();
+            DTClusterFinder clusterFinder = 
+                new DTClusterFinder(pixIdxs, width, height);
+
+            if (setDebug) {
+                clusterFinder.setToDebug();
+            }
+            clusterFinder.setThreshholdFactor(1.f);
+
+            clusterFinder.setToRescaleAxes();
+
+            clusterFinder.calculateBackgroundSeparation();
+
             clusterFinder.findClusters();
-            //clusterFinder.setCriticalDensity(dens);
 
             int nGroups = clusterFinder.getNumberOfClusters();
+
+            System.out.println("  nGroups=" + nGroups);
 
             List<TIntSet> groupListPix = clusterFinder.getGroups();
 
@@ -433,7 +455,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
             int[] xy = new int[2];
 
             TIntSet allClusters = new TIntHashSet();
-            
+
             List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
             for (int k = 0; k < groupListPix.size(); ++k) {
                 Set<PairInt> set = new HashSet<PairInt>();
@@ -447,27 +469,29 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
                 }
                 groupList.add(set);
             }
-            
+
             if (plotClusters) {
             plotter.addPlotWithoutHull(
                 (int)Math.floor(minMaxXY[0] - 1), 
                 (int)Math.ceil(minMaxXY[1] + 1), 
                 (int)Math.floor(minMaxXY[2] - 1), 
                 (int)Math.ceil(minMaxXY[3] + 1), 
-                points, groupList, clusterFinder.getCriticalDensity(), 
-                "other_" + i);
-            plotter.writeFile("other_kde2_");
-            }
-            
-            KDEDensityHolder dh = (KDEDensityHolder) clusterFinder.getDensities();
+                points, groupList,
+                "other" + i);
 
-            KDEStatsHelper kdsh = new KDEStatsHelper();
+            plotter.writeFile("other2_");
+            }
+
+            BackgroundSeparationHolder sh = 
+                clusterFinder.getBackgroundSeparationHolder();
+
+            StatsHelper kdsh = new StatsHelper();
             TIntFloatMap probMap = new TIntFloatHashMap();
             TIntFloatMap probEMap = new TIntFloatHashMap();
-            
+
             kdsh.calculateProbabilities(
-                dh, allClusters, width, height, probMap, probEMap);
-            
+                sh, allClusters, width, height, probMap, probEMap);
+
             /*
             float[] allProbs = new float[width*height];
             TIntFloatIterator iter2 = probMap.iterator();
@@ -489,7 +513,7 @@ public class DTClusterFinderKDE2Test extends BaseTwoPointTest {
             }
         }
         
-        plotter.writeFile("other_kde2_");
+        plotter.writeFile("other2_");
         
     }
     

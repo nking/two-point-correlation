@@ -70,12 +70,11 @@ public class ClusterPlotter {
      * @param yMax
      * @param points
      * @param clusterSets
-     * @param clusterDensity
      * @param plotLabel2
      */
     public void addPlotWithoutHull( 
         float xMin, float xMax, float yMin, float yMax,
-        Set<PairInt> points, List<Set<PairInt>> clusterSets, float clusterDensity,
+        Set<PairInt> points, List<Set<PairInt>> clusterSets,
         String plotLabel2) {
 
         StringBuffer dataSB = new StringBuffer();
@@ -153,9 +152,8 @@ public class ClusterPlotter {
         }
         dataSB.append("];\n");
 
-        String sdStr = String.format("'%.6f'", clusterDensity);
         dataSB.append("\n").append("var plot_label_").append(plotNumber)
-            .append("=").append(sdStr).append(";\n");
+            .append("=").append(";\n");
 
         // ======= add RENDER statement ==========
         dataSB.append("\nrenderPlotWithoutHull('plot").append(plotNumber)
