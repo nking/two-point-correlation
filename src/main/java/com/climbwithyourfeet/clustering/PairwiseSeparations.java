@@ -263,13 +263,14 @@ public class PairwiseSeparations {
         minMaximaIdx = maxCountIdx0;
         minMaxima = maxCount0;
         
-        System.out.println("found background separation=" + maximaValues[minMaximaIdx]);
+        System.out.println("found background separation=" 
+            + maximaValues[minMaximaIdx]);
         
         BackgroundSeparationHolder h = new BackgroundSeparationHolder();
         
         h.approxH = 1;
         
-        int m2 = (int)Math.round(maximaValues[0]/Math.sqrt(2));
+        int m2 = (int)Math.round(maximaValues[minMaximaIdx]/Math.sqrt(2));
         h.setXYBackgroundSeparations(m2, m2);
         
         h.setTheThreeSeparations(new float[]{
