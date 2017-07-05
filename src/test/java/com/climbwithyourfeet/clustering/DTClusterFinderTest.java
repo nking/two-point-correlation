@@ -240,7 +240,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
