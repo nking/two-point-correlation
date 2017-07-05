@@ -300,7 +300,7 @@ public class PairwiseSeparations {
                 
         ScaleFinder sf = new ScaleFinder();
         
-        int[] xyScales = sf.find(pixelIdxs, width, height);
+        int[] xyScales = sf.find1D(pixelIdxs, width, height);
         
         TIntSet pixelIdxs2;
         int width2, height2;

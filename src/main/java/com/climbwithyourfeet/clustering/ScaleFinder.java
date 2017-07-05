@@ -5,7 +5,9 @@ import algorithms.imageProcessing.Filters;
 import algorithms.misc.Complex;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscSorter;
+import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
@@ -96,6 +98,128 @@ public class ScaleFinder {
         
         filters.peakLocalMax(ftr2, 0, thresholdRel, outputMaximaX, 
             outputMaximaY);
+
+        // when the points are separated by a larger scale than 1 regularly,
+        // that pattern is apparent at
+        // xScale = width/(spacing of brightest peaks)
+        // and same for the y axis.
+        
+        int xSpacing = determineSpacing(outputMaximaX);
+        
+        int ySpacing = determineSpacing(outputMaximaY);
+        
+        int[] out = new int[2];
+        
+        if (xSpacing > 1) {
+            out[0] = width/xSpacing;
+        } else {
+            out[0] = 1;
+        }
+        
+        if (ySpacing > 1) {
+            out[1] = height/ySpacing;
+        } else {
+            out[1] = 1;
+        }
+        
+        return out;
+    }
+    
+    public int[] find1D(TIntSet pixelIdxs, int width, int height) {
+        
+        if (pixelIdxs.size() < 12) {
+            throw new IllegalArgumentException(
+                "pixelIdxs.size must be 12 or more");
+        }
+
+        double[] xA = new double[width];
+        double[] yA = new double[height];
+
+        PixelHelper ph = new PixelHelper();
+        int[] xy = new int[2];
+        
+        TIntIterator iter = pixelIdxs.iterator();
+        while (iter.hasNext()) {
+            int pixIdx = iter.next();
+            ph.toPixelCoords(pixIdx, width, xy);
+            xA[xy[0]]++;
+            yA[xy[1]]++;
+        }
+                
+        FFTUtil fftUtil = new FFTUtil();
+        
+        // forward, normalize
+        Complex[] fftX = fftUtil.create1DFFT(xA, true);
+        Complex[] fftY = fftUtil.create1DFFT(yA, true);
+    
+        float minVX = Float.POSITIVE_INFINITY;
+        float maxVX = Float.NEGATIVE_INFINITY;
+        float[] fftX2 = new float[width];
+        for (int i = 0; i < width; ++i) {
+            fftX2[i] = (float)fftX[i].abs();
+            if (fftX2[i] < minVX) {
+                minVX = fftX2[i];
+            }
+            if (fftX2[i] > maxVX) {
+                maxVX = fftX2[i];
+            }
+        }
+        
+        float minVY = Float.POSITIVE_INFINITY;
+        float maxVY = Float.NEGATIVE_INFINITY;
+        float[] fftY2 = new float[height];
+        for (int i = 0; i < height; ++i) {
+            fftY2[i] = (float)fftY[i].abs();
+            if (fftY2[i] < minVY) {
+                minVY = fftY2[i];
+            }
+            if (fftY2[i] > maxVY) {
+                maxVY = fftY2[i];
+            }
+        }
+        
+        // scale to range 0:255
+        float rangeX = maxVX - minVX;
+        float rangeFactorX = 255.f/rangeX;
+        for (int i = 0; i < width; ++i) {
+            fftX2[i] -= minVX;
+            fftX2[i] *= rangeFactorX;
+        }
+        
+        float rangeY = maxVY - minVY;
+        float rangeFactorY = 255.f/rangeY;
+        for (int i = 0; i < height; ++i) {
+            fftY2[i] -= minVY;
+            fftY2[i] *= rangeFactorY;
+        }
+        
+        if (debug) {
+            float[][] img = new float[1][];
+            img[0] = fftX2;
+            long ts = System.currentTimeMillis();
+            try {
+                writeDebugImage(img, "fft_X" + ts, 1, img[0].length);
+                img[0] = fftY2;
+                writeDebugImage(img, "fft_Y" + ts, 1, img[0].length);
+            } catch (IOException ex) {
+                Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, 
+                    null, ex);
+            }
+        }
+          
+        Filters filters = new Filters();
+        
+        TIntList outputMaximaX = new TIntArrayList();
+        
+        TIntList outputMaximaY = new TIntArrayList();
+        
+        float thresholdRel = 0.85f;//0.1f;
+       
+        //outputMaximaX are the indexes of fftX2
+        
+        filters.peakLocalMax(fftX2, 0, thresholdRel, outputMaximaX);
+        
+        filters.peakLocalMax(fftY2, 0, thresholdRel, outputMaximaY);
 
         // when the points are separated by a larger scale than 1 regularly,
         // that pattern is apparent at

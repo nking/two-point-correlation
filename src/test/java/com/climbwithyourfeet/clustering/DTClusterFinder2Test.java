@@ -331,7 +331,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -367,8 +367,8 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(
-                    1 * Math.round(indexer.getX()[k]),
-                    1 * Math.round(indexer.getY()[k]));
+                    4 * Math.round(indexer.getX()[k]),
+                    4 * Math.round(indexer.getY()[k]));
                 points.add(p);
                 if (p.getX() < minMaxXY[0]) {
                     minMaxXY[0] = p.getX();

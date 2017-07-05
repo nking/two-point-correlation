@@ -1,7 +1,3 @@
--- for the scale finder,
-   -- calc each axis by itself and
-      thereby reduce the fft to a single array of length width
-      
 -- rewrite the one dbscan image unit test if missing since refactoring
 
 -- this project needs 2 different builds and the explanation
