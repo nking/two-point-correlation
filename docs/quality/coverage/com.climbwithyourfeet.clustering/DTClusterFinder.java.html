@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DTClusterFinder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">DTClusterFinder.java</span></div><h1>DTClusterFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
 
-import com.climbwithyourfeet.clustering.SurfDensExtractor.SurfaceDensityScaled;
 import gnu.trove.set.TIntSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -9,35 +9,20 @@ import java.util.logging.Logger;
  * main class to cluster finder whose logic is based upon distance transform,
  * density threshold, and a signal to noise argument of ~ 2.5 as a factor.
  * 
- * The density threshold can be estimated or provided.
+ * The critical separation can be estimated or provided.
  * 
  * If estimated, the default is to find the leading edge of the first peak 
- * of the surface densities with knowledge that the surface densities 
+ * of the maxima of point separations with knowledge that the surface densities 
  * represent a generalized extreme value curve (due to the nature of the
  * background points being poisson).
  * The found peak has a relationship to the background density.
  * 
- * The methods to estimate density are
- * &lt;pre&gt;
- * (1) kernel density estimator using wavelet transform (KDE, default.
- * 
- * Recently removed the histogram methods as they were not as robust.
- * &lt;/pre&gt;
- * 
- * NOTE: if automatic calculation of critical density is used by default,
- * the threshold used when applying the critical density to the points
- * to find clusters is either the default for sparse points or if
- * the density curve appears to be dense, the higher threshold of 5 is used.
- * 
  * The runtime complexity:
- * TODO: add details.  
- * first the dist trans uses O(N_pixels), then the
- * complexity uses the number of density points, 
- * then the number of original data points.
+ * TODO: add details
  * 
  * @author nichole
  */
-<span class="pc bpc" id="L40" title="1 of 2 branches missed.">public class DTClusterFinder {</span>
+public class DTClusterFinder {
     
     /**
      * pixel indexes
@@ -46,36 +31,31 @@ import java.util.logging.Logger;
     private final int width;
     private final int height;
     
-<span class="fc" id="L49">    private DensityHolder densityHolder = null;</span>
+<span class="fc" id="L34">    private BackgroundSeparationHolder sepHolder = null;</span>
     
-<span class="fc" id="L51">    private List&lt;TIntSet&gt; groups = null;</span>
+<span class="fc" id="L36">    private List&lt;TIntSet&gt; groups = null;</span>
 
     private enum STATE {
-        INIT, HAVE_CLUSTER_DENSITY, HAVE_GROUPS
+        INIT, HAVE_BACKGROUND_SEPARATION, HAVE_GROUPS
     }
     
-    public static enum CRIT_DENS_METHOD {
-        PROVIDED, KDE
-        //, KNN
-    }
+<span class="fc" id="L42">    private STATE state = null;</span>
+        
+<span class="fc" id="L44">    public static float denseThreshholdFactor = 5f;</span>
     
-<span class="fc" id="L62">    private STATE state = null;</span>
+<span class="fc" id="L46">    public static float defaultThreshholdFactor = 2.5f;</span>
     
-<span class="fc" id="L64">    private CRIT_DENS_METHOD critDensMethod = CRIT_DENS_METHOD.KDE;</span>
-    
-<span class="fc" id="L66">    public static float denseThreshholdFactor = 5f;</span>
-    
-<span class="fc" id="L68">    public static float defaultThreshholdFactor = 2.5f;</span>
-    
-<span class="fc" id="L70">    protected boolean userSetThreshold = false;</span>
+<span class="fc" id="L48">    protected boolean userSetThreshold = false;</span>
    
-<span class="fc" id="L72">    private float threshholdFactor = defaultThreshholdFactor;</span>
+<span class="fc" id="L50">    private float threshholdFactor = defaultThreshholdFactor;</span>
     
-<span class="fc" id="L74">    private int minimumNumberInCluster = 3;</span>
+<span class="fc" id="L52">    private int minimumNumberInCluster = 3;</span>
     
-<span class="fc" id="L76">    private boolean debug = false;</span>
+<span class="fc" id="L54">    private boolean debug = false;</span>
 
-<span class="fc" id="L78">    private Logger log = Logger.getLogger(this.getClass().getName());</span>
+<span class="fc" id="L56">    private Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+<span class="fc" id="L58">    private boolean rescaleAxes = true;</span>
     
     /**
      *
@@ -83,134 +63,171 @@ import java.util.logging.Logger;
      * @param width
      * @param height
      */
-<span class="fc" id="L86">    public DTClusterFinder(TIntSet thePoints, int width, int height) {</span>
+<span class="fc" id="L66">    public DTClusterFinder(TIntSet thePoints, int width, int height) {</span>
         
-<span class="fc" id="L88">        this.points = thePoints;</span>
-<span class="fc" id="L89">        this.width = width;</span>
-<span class="fc" id="L90">        this.height = height;</span>
+<span class="fc" id="L68">        this.points = thePoints;</span>
+<span class="fc" id="L69">        this.width = width;</span>
+<span class="fc" id="L70">        this.height = height;</span>
         
-<span class="fc" id="L92">        state = STATE.INIT;</span>
-<span class="fc" id="L93">    }</span>
+<span class="fc" id="L72">        state = STATE.INIT;</span>
+<span class="fc" id="L73">    }</span>
+    
+    public void setToNotRescaleAxes() {
+<span class="nc" id="L76">        rescaleAxes = false;</span>
+<span class="nc" id="L77">    }</span>
     
     /**
      *
      */
     public void setToDebug() {
-<span class="fc" id="L99">        debug = true;</span>
-<span class="fc" id="L100">    }</span>
+<span class="fc" id="L83">        debug = true;</span>
+<span class="fc" id="L84">    }</span>
    
     /**
      *
      * @param factor
      */
     public void setThreshholdFactor(float factor) {
-<span class="nc" id="L107">        this.threshholdFactor = factor;</span>
-<span class="nc" id="L108">        userSetThreshold = true;</span>
-<span class="nc" id="L109">    }</span>
+<span class="fc" id="L91">        this.threshholdFactor = factor;</span>
+<span class="fc" id="L92">        userSetThreshold = true;</span>
+<span class="fc" id="L93">    }</span>
     
     /**
      *
      * @param n
      */
     public void setMinimumNumberInCluster(int n) {
-<span class="nc" id="L116">        this.minimumNumberInCluster = n;</span>
-<span class="nc" id="L117">    }</span>
-    
-    /**
-     * set to override the default use of KDE method in estimating the
-     * critical density, to an alternative method of Kernel Density, 
-     * or provided by you.
-     * @param cdm
-     */
-    public void setCriticalDensityMethod(CRIT_DENS_METHOD cdm) {
-        
-<span class="pc bpc" id="L127" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &gt; -1) {</span>
-<span class="nc" id="L128">            throw new IllegalStateException(&quot;cannot set method after critical &quot;</span>
-                + &quot; density has already been estimated&quot;);
-        }
-        
-<span class="pc bpc" id="L132" title="1 of 2 branches missed.">        if (cdm == null) {</span>
-<span class="nc" id="L133">            throw new IllegalArgumentException(&quot;cdm cannot be null&quot;);</span>
-        }
-        
-<span class="fc" id="L136">        this.critDensMethod = cdm;</span>
-<span class="fc" id="L137">    }</span>
+<span class="nc" id="L100">        this.minimumNumberInCluster = n;</span>
+<span class="nc" id="L101">    }</span>
 
     /**
      *
      */
-    public void calculateCriticalDensity() {
+    public void calculateBackgroundSeparation() {
         
-<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &gt; -1) {</span>
-<span class="nc" id="L145">            return;</span>
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
+<span class="nc" id="L109">            return;</span>
         }
         
-<span class="pc bpc" id="L148" title="1 of 2 branches missed.">        if (critDensMethod.ordinal() == CRIT_DENS_METHOD.PROVIDED.ordinal()) {</span>
-<span class="nc" id="L149">            throw new IllegalStateException(&quot;the critical density has been &quot;</span>
-                + &quot;set so cannot calculate it too.&quot;);
+<span class="fc" id="L112">        PairwiseSeparations ps = new PairwiseSeparations();</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L114">            ps.setToDebug();</span>
         }
+            
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">        if (rescaleAxes) {</span>
+                        
+<span class="fc" id="L119">            PairwiseSeparations.ScaledPoints sp = ps.scaleThePoints(</span>
+                points, width, height);
+            
+<span class="fc" id="L122">            System.out.println(&quot;scales=&quot; + sp.xScale + &quot; , &quot; + sp.yScale);</span>
+            
+<span class="fc" id="L124">            sepHolder = ps.extract(sp.pixelIdxs, sp.width, sp.height);</span>
+            
+<span class="fc" id="L126">            sepHolder.setXYScales(sp.xScale, sp.yScale);</span>
         
-<span class="pc bpc" id="L153" title="3 of 4 branches missed.">        assert(critDensMethod.equals(CRIT_DENS_METHOD.KDE));</span>
-        
-<span class="fc" id="L155">        ICriticalSurfDens densSolver = new CriticalSurfDensKDE();</span>
-        
-<span class="fc" id="L157">        SurfDensExtractor densExtr = new SurfDensExtractor();</span>
-                
-<span class="fc bfc" id="L159" title="All 2 branches covered.">        if (debug) {</span>
-<span class="fc" id="L160">            densExtr.setToDebug();</span>
-<span class="fc" id="L161">            densSolver.setToDebug();</span>
+<span class="fc" id="L128">            correctForScales(sepHolder, sp);</span>
+            
+<span class="fc" id="L130">        } else {</span>
+<span class="nc" id="L131">            sepHolder = ps.extract(points, width, height);</span>
         }
-        
-<span class="fc" id="L164">        SurfaceDensityScaled sds = densExtr.extractSufaceDensity(points, width, height);</span>
-        
-<span class="fc" id="L166">        this.densityHolder = densSolver.findCriticalDensity(sds);  </span>
-        
-<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (!userSetThreshold) {</span>
-<span class="fc bfc" id="L169" title="All 2 branches covered.">            if (!densSolver.isSparse()) {</span>
-<span class="fc" id="L170">                threshholdFactor = denseThreshholdFactor;</span>
+            
+        /*
+        if (!userSetThreshold) {
+            if (!densSolver.isSparse()) {
+                threshholdFactor = denseThreshholdFactor;
             }
         }
+        */
         
-<span class="fc" id="L174">        this.state = STATE.HAVE_CLUSTER_DENSITY;</span>
-<span class="fc" id="L175">    }</span>
-    
-    /**
-     *
-     * @param dens
-     */
-    public void setCriticalDensity(float dens) {
-        
-<span class="nc bnc" id="L183" title="All 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &gt; -1) {</span>
-<span class="nc" id="L184">            throw new IllegalStateException(&quot;cluster density is already set&quot;);</span>
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L143">            throw new IllegalStateException(&quot;Error in algorithm: &quot;</span>
+                + &quot; background separation did not get set&quot;);
         }
         
-<span class="nc" id="L187">        this.critDensMethod = CRIT_DENS_METHOD.PROVIDED;</span>
+<span class="fc" id="L147">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="fc" id="L148">    }</span>
+    
+    /**
+     * set the pairwise distances for x and y that characterize the background
+     * pairwise distances.  
+     * The critical distance that is the maximum for association in a cluster
+     * is thresholdFactor times these background separations.
+     */
+    public void setBackgroundSeparation(int xSeparation, int ySeparation) {
         
-<span class="nc" id="L189">        this.densityHolder = new DensityHolder();</span>
-<span class="nc" id="L190">        this.densityHolder.critDens = dens;</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
+<span class="nc" id="L159">            throw new IllegalStateException(&quot;separation is already set&quot;);</span>
+        }
+                
+<span class="nc" id="L162">        this.sepHolder = new BackgroundSeparationHolder();</span>
         
-<span class="nc" id="L192">        this.state = STATE.HAVE_CLUSTER_DENSITY;</span>
-<span class="nc" id="L193">    }</span>
+<span class="nc" id="L164">        sepHolder.setXYBackgroundSeparations(xSeparation, ySeparation);</span>
+        
+<span class="nc" id="L166">        int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation </span>
+            + ySeparation * ySeparation));
+        
+<span class="nc" id="L169">        sepHolder.setTheThreeSeparations(</span>
+            new float[]{0, separation, separation + 1});
+<span class="nc" id="L171">        sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});</span>
+        
+<span class="nc" id="L173">        float[] errors = new float[] {</span>
+            0.1f*sepHolder.threeSCounts[0],
+            0.1f*sepHolder.threeSCounts[0],
+            0.1f*sepHolder.threeSCounts[0]
+        };
+<span class="nc" id="L178">        sepHolder.setTheThreeErrors(errors);</span>
+        
+<span class="nc" id="L180">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="nc" id="L181">    }</span>
     
     /**
      *
      */
     public void findClusters() {
         
-<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_CLUSTER_DENSITY) &lt; 0) {</span>
-<span class="nc" id="L201">            calculateCriticalDensity();</span>
-<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
-<span class="nc" id="L203">            return;</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &lt; 0) {</span>
+<span class="nc" id="L189">            calculateBackgroundSeparation();</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
+<span class="nc" id="L191">            return;</span>
         }
         
-<span class="fc" id="L206">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L195">            throw new IllegalStateException(&quot;background separation must be &quot;</span>
+                + &quot; calculated first&quot;);
+        }
+    
+<span class="fc" id="L199">        System.out.println(&quot;findGroups: &quot; + </span>
+<span class="fc" id="L200">            &quot; bckGndSep=&quot; + Arrays.toString(sepHolder.bckGndSep) + </span>
+            &quot; thresholdFactor=&quot; + threshholdFactor);
         
-<span class="fc" id="L208">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
+<span class="fc" id="L203">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
         
-<span class="fc" id="L210">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
+<span class="fc" id="L205">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
         
-<span class="fc" id="L212">        groups = groupFinder.calculateGroups(densityHolder.critDens, points);        </span>
-<span class="fc" id="L213">    }</span>
+<span class="fc" id="L207">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
+        
+<span class="fc" id="L209">        groups = groupFinder.calculateGroupsUsingSepartion(</span>
+<span class="fc" id="L210">            sepHolder.getXBackgroundSeparation(), </span>
+<span class="fc" id="L211">            sepHolder.getYBackgroundSeparation(), points);        </span>
+<span class="fc" id="L212">    }</span>
+    
+    /**
+     * applies the scale factors in sp to the fields sepHolder.bckGndSep
+     * to put sepHolder.bckGndSep into the original axes reference frame.
+     * 
+     * @param sepHolder
+     * @param sp 
+     */
+    private void correctForScales(BackgroundSeparationHolder sepHolder, 
+        PairwiseSeparations.ScaledPoints sp) {
+        
+<span class="pc bpc" id="L224" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L225">            throw new IllegalStateException(&quot;sepHolder.bckGndSep cannot be null&quot;);</span>
+        }
+        
+<span class="fc" id="L228">        sepHolder.bckGndSep[0] *= sp.xScale;</span>
+<span class="fc" id="L229">        sepHolder.bckGndSep[1] *= sp.yScale;</span>
+<span class="fc" id="L230">    }</span>
     
     /**
      *
@@ -218,11 +235,11 @@ import java.util.logging.Logger;
      */
     public int getNumberOfClusters() {
         
-<span class="pc bpc" id="L221" title="1 of 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L222">            return 0;</span>
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L239">            return 0;</span>
         }
         
-<span class="fc" id="L225">        return groups.size();</span>
+<span class="fc" id="L242">        return groups.size();</span>
     }
     
     /**
@@ -232,33 +249,28 @@ import java.util.logging.Logger;
      */
     public TIntSet getCluster(int idx) {
         
-<span class="nc bnc" id="L235" title="All 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L236">            throw new IllegalArgumentException(</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L253">            throw new IllegalArgumentException(</span>
                 &quot;findClusters was not successfully invoked&quot;);
         }
         
-<span class="nc bnc" id="L240" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
-<span class="nc" id="L241">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
+<span class="nc bnc" id="L257" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
+<span class="nc" id="L258">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
         }
         
-<span class="nc" id="L244">        return groups.get(idx);</span>
+<span class="nc" id="L261">        return groups.get(idx);</span>
     }
     
     public List&lt;TIntSet&gt; getGroups() {
-<span class="fc" id="L248">        return groups;</span>
+<span class="fc" id="L265">        return groups;</span>
     }
     
     /**
      *
      * @return
      */
-    public float getCriticalDensity() {
-<span class="fc" id="L256">        return densityHolder.critDens;</span>
+    public BackgroundSeparationHolder getBackgroundSeparationHolder() {
+<span class="fc" id="L273">        return sepHolder;</span>
     }
-    
-    public DensityHolder getDensities() {
-<span class="fc" id="L260">        return densityHolder;</span>
-    }
-    
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -46,104 +46,87 @@ import java.util.logging.Logger;
      */
 <span class="fc" id="L47">    protected float threshholdFactor = 2.5f;</span>
 
-    /**
-     *
-     */
-<span class="fc" id="L52">    protected float critDensity = 0;</span>
+<span class="fc" id="L49">    protected Logger log = Logger.getLogger(this.getClass().getName());</span>
 
-<span class="fc" id="L54">    protected Logger log = Logger.getLogger(this.getClass().getName());</span>
+<span class="fc" id="L51">    public DTGroupFinder(int imageWidth, int imageHeight) {</span>
 
-<span class="fc" id="L56">    public DTGroupFinder(int imageWidth, int imageHeight) {</span>
+<span class="fc" id="L53">        imgWidth = imageWidth;</span>
 
-<span class="fc" id="L58">        imgWidth = imageWidth;</span>
-
-<span class="fc" id="L60">        imgHeight = imageHeight;</span>
-<span class="fc" id="L61">    }</span>
+<span class="fc" id="L55">        imgHeight = imageHeight;</span>
+<span class="fc" id="L56">    }</span>
 
     /**
      *
      * @param n
      */
     public void setMinimumNumberInCluster(int n) {
-<span class="fc" id="L68">        this.minimumNumberInCluster = n;</span>
-<span class="fc" id="L69">    }</span>
+<span class="fc" id="L63">        this.minimumNumberInCluster = n;</span>
+<span class="fc" id="L64">    }</span>
 
     /**
      *
      * @param setDebugToTrue
      */
     public void setDebug(boolean setDebugToTrue) {
-<span class="nc" id="L76">        this.debug = setDebugToTrue;</span>
-<span class="nc" id="L77">    }</span>
+<span class="nc" id="L71">        this.debug = setDebugToTrue;</span>
+<span class="nc" id="L72">    }</span>
 
     /**
      *
      * @param factor
      */
     public void setThreshholdFactor(float factor) {
-<span class="fc" id="L84">        this.threshholdFactor = factor;</span>
-<span class="fc" id="L85">    }</span>
+<span class="fc" id="L79">        this.threshholdFactor = factor;</span>
+<span class="fc" id="L80">    }</span>
 
     /**
      *
      * @return threshold factor for critical density
      */
     public float getThreshholdFactor() {
-<span class="fc" id="L92">        return this.threshholdFactor;</span>
+<span class="nc" id="L87">        return this.threshholdFactor;</span>
     }
 
     /**
-     * given the critical density and having the threshold factor, find the
+     * given the pairwise separation of background points
+     * and having the threshold factor, find the
      * groups of points within a critical distance of one another.
      * runtime complexity is O(N_points * lg2(N_points)).
-     * @param criticalDensity
+     * @param criticalSeparationX
+     * @param criticalSeparationY
      * @param pixIdxs
      * @return the groups found using critical density
      */
-    public List&lt;TIntSet&gt; calculateGroups(float criticalDensity, TIntSet pixIdxs) {
+    public List&lt;TIntSet&gt; calculateGroupsUsingSepartion(
+        float criticalSeparationX, float criticalSeparationY, TIntSet pixIdxs) {
 
-<span class="fc" id="L105">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L103">        PixelHelper ph = new PixelHelper();</span>
 
-<span class="fc" id="L107">        initMap(pixIdxs);</span>
+<span class="fc" id="L105">        initMap(pixIdxs);</span>
+        
+<span class="fc" id="L107">        float critSepX = criticalSeparationX/threshholdFactor;</span>
+<span class="fc" id="L108">        float critSepY = criticalSeparationY/threshholdFactor;</span>
 
-<span class="fc" id="L109">        this.critDensity = criticalDensity;</span>
+<span class="fc" id="L110">        findGroups(critSepX, critSepY, pixIdxs);</span>
+        
+<span class="fc" id="L112">        prune();</span>
 
-<span class="fc" id="L111">        float thrsh = criticalDensity * threshholdFactor;</span>
-
-<span class="pc bpc" id="L113" title="1 of 2 branches missed.">        if (critDensity == 1) {</span>
-            // fudge to result in critical separation of 1
-<span class="nc" id="L115">            thrsh = 2.f;</span>
-        }
-
-<span class="fc" id="L118">        findGroups(thrsh, pixIdxs);</span>
-
-<span class="fc" id="L120">        prune();</span>
-
-<span class="fc" id="L122">        return groupList;</span>
+<span class="fc" id="L114">        return groupList;</span>
     }
-
+    
     /**
      * find groups within points using the threshold to calculate the critical
      * separation, then groups are connected points closer to one another than
      * the critical separation.
-     * @param thrsh
      * @param points
      */
-    private void findGroups(float thrsh, TIntSet pixIdxs) {
+    private void findGroups(float critSepX, float critSepY, TIntSet pixIdxs) {
 
-<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (pixIdxs.isEmpty()) {</span>
-<span class="nc" id="L135">            return;</span>
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (pixIdxs.isEmpty()) {</span>
+<span class="nc" id="L126">            return;</span>
         }
 
-        // association of 2 points for separation &lt;= critSeparation
-<span class="fc" id="L139">        float critSep = 2.f/thrsh;</span>
-
-<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (critSep &lt; 1) {</span>
-            // each point is already a group
-<span class="nc" id="L143">            return;</span>
-        }
-
-<span class="fc" id="L146">        log.info(&quot;critSep=&quot; + critSep);</span>
+<span class="fc" id="L129">        log.info(&quot;critSepX=&quot; + critSepX + &quot; critSepY=&quot; + critSepY);</span>
 
         /*
         because the critical separation may be &gt; 1, cannot use the simplest
@@ -155,10 +138,10 @@ import java.util.logging.Logger;
         within critical separation.
         */
         
-<span class="fc" id="L158">        boolean useSortedScan = true;</span>
+<span class="fc" id="L141">        boolean useSortedScan = true;</span>
         
-<span class="pc bpc" id="L160" title="1 of 2 branches missed.">        if (useSortedScan) {</span>
-<span class="fc" id="L161">            findGroupsWithSortedScan(pixIdxs, critSep);            </span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">        if (useSortedScan) {</span>
+<span class="fc" id="L144">            findGroupsWithSortedScan(pixIdxs, critSepX, critSepY);            </span>
         } else {
             //TODO: add nearest neighbors method
         }
@@ -181,117 +164,119 @@ System.out.format(&quot;(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n&quot;,
                 processPair(uIndex, vIndex);
             */
 
-<span class="fc" id="L184">    }</span>
+<span class="fc" id="L167">    }</span>
 
     private void processPair(Integer uPoint, Integer vPoint) {
 
-<span class="fc" id="L188">        DisjointSet2Node&lt;Integer&gt; uNode = pixNodes.get(uPoint);</span>
-<span class="fc" id="L189">        DisjointSet2Node&lt;Integer&gt; uParentNode</span>
-<span class="fc" id="L190">            = disjointSetHelper.findSet(uNode);</span>
-<span class="pc bpc" id="L191" title="3 of 4 branches missed.">        assert(uParentNode != null);</span>
+<span class="fc" id="L171">        DisjointSet2Node&lt;Integer&gt; uNode = pixNodes.get(uPoint);</span>
+<span class="fc" id="L172">        DisjointSet2Node&lt;Integer&gt; uParentNode</span>
+<span class="fc" id="L173">            = disjointSetHelper.findSet(uNode);</span>
+<span class="pc bpc" id="L174" title="3 of 4 branches missed.">        assert(uParentNode != null);</span>
 
-<span class="fc" id="L193">        int uGroupId = uParentNode.getMember().intValue();</span>
+<span class="fc" id="L176">        int uGroupId = uParentNode.getMember().intValue();</span>
 
-<span class="fc" id="L195">        DisjointSet2Node&lt;Integer&gt; vNode = pixNodes.get(vPoint);</span>
-<span class="fc" id="L196">        DisjointSet2Node&lt;Integer&gt; vParentNode</span>
-<span class="fc" id="L197">            = disjointSetHelper.findSet(vNode);</span>
-<span class="pc bpc" id="L198" title="3 of 4 branches missed.">        assert(vParentNode != null);</span>
+<span class="fc" id="L178">        DisjointSet2Node&lt;Integer&gt; vNode = pixNodes.get(vPoint);</span>
+<span class="fc" id="L179">        DisjointSet2Node&lt;Integer&gt; vParentNode</span>
+<span class="fc" id="L180">            = disjointSetHelper.findSet(vNode);</span>
+<span class="pc bpc" id="L181" title="3 of 4 branches missed.">        assert(vParentNode != null);</span>
 
-<span class="fc" id="L200">        int vGroupId = vParentNode.getMember().intValue();</span>
+<span class="fc" id="L183">        int vGroupId = vParentNode.getMember().intValue();</span>
 
-<span class="fc" id="L202">        DisjointSet2Node&lt;Integer&gt; merged =</span>
-<span class="fc" id="L203">            disjointSetHelper.union(uParentNode, vParentNode);</span>
+<span class="fc" id="L185">        DisjointSet2Node&lt;Integer&gt; merged =</span>
+<span class="fc" id="L186">            disjointSetHelper.union(uParentNode, vParentNode);</span>
 
-<span class="fc" id="L205">        pixNodes.put(uGroupId, merged);</span>
+<span class="fc" id="L188">        pixNodes.put(uGroupId, merged);</span>
 
-<span class="fc" id="L207">        pixNodes.put(vGroupId, merged);</span>
-<span class="fc" id="L208">    }</span>
+<span class="fc" id="L190">        pixNodes.put(vGroupId, merged);</span>
+<span class="fc" id="L191">    }</span>
 
     private void prune() {
 
         // key = repr node index, value = set of pixels w/ repr
-<span class="fc" id="L213">        TIntObjectMap&lt;TIntSet&gt; map = new TIntObjectHashMap&lt;TIntSet&gt;();</span>
+<span class="fc" id="L196">        TIntObjectMap&lt;TIntSet&gt; map = new TIntObjectHashMap&lt;TIntSet&gt;();</span>
 
-<span class="fc" id="L215">        TIntObjectIterator&lt;DisjointSet2Node&lt;Integer&gt;&gt; iter =</span>
-<span class="fc" id="L216">            pixNodes.iterator();</span>
-<span class="fc bfc" id="L217" title="All 2 branches covered.">        for (int i = 0; i &lt; pixNodes.size(); ++i) {</span>
+<span class="fc" id="L198">        TIntObjectIterator&lt;DisjointSet2Node&lt;Integer&gt;&gt; iter =</span>
+<span class="fc" id="L199">            pixNodes.iterator();</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        for (int i = 0; i &lt; pixNodes.size(); ++i) {</span>
 
-<span class="fc" id="L219">            iter.advance();</span>
+<span class="fc" id="L202">            iter.advance();</span>
 
-<span class="fc" id="L221">            int pixIdx = iter.key();</span>
-<span class="fc" id="L222">            DisjointSet2Node&lt;Integer&gt; node = iter.value();</span>
+<span class="fc" id="L204">            int pixIdx = iter.key();</span>
+<span class="fc" id="L205">            DisjointSet2Node&lt;Integer&gt; node = iter.value();</span>
 
-<span class="fc" id="L224">            DisjointSet2Node&lt;Integer&gt; repr = disjointSetHelper.findSet(node);</span>
+<span class="fc" id="L207">            DisjointSet2Node&lt;Integer&gt; repr = disjointSetHelper.findSet(node);</span>
 
-<span class="fc" id="L226">            int reprIdx = repr.getMember().intValue();</span>
+<span class="fc" id="L209">            int reprIdx = repr.getMember().intValue();</span>
 
-<span class="fc" id="L228">            TIntSet set = map.get(reprIdx);</span>
-<span class="fc bfc" id="L229" title="All 2 branches covered.">            if (set == null) {</span>
-<span class="fc" id="L230">                set = new TIntHashSet();</span>
-<span class="fc" id="L231">                map.put(reprIdx, set);</span>
+<span class="fc" id="L211">            TIntSet set = map.get(reprIdx);</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">            if (set == null) {</span>
+<span class="fc" id="L213">                set = new TIntHashSet();</span>
+<span class="fc" id="L214">                map.put(reprIdx, set);</span>
             }
-<span class="fc" id="L233">            set.add(pixIdx);</span>
+<span class="fc" id="L216">            set.add(pixIdx);</span>
         }
 
-<span class="fc" id="L236">        log.finest(&quot;number of groups before prune=&quot; + map.size());</span>
+<span class="fc" id="L219">        log.finest(&quot;number of groups before prune=&quot; + map.size());</span>
 
         // rewrite the above into a list
-<span class="fc" id="L239">        List&lt;TIntSet&gt; groups = new ArrayList&lt;TIntSet&gt;();</span>
+<span class="fc" id="L222">        List&lt;TIntSet&gt; groups = new ArrayList&lt;TIntSet&gt;();</span>
 
-<span class="fc" id="L241">        TIntObjectIterator&lt;TIntSet&gt; iter2 = map.iterator();</span>
-<span class="fc bfc" id="L242" title="All 2 branches covered.">        for (int i = 0; i &lt; map.size(); ++i) {</span>
-<span class="fc" id="L243">            iter2.advance();</span>
+<span class="fc" id="L224">        TIntObjectIterator&lt;TIntSet&gt; iter2 = map.iterator();</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        for (int i = 0; i &lt; map.size(); ++i) {</span>
+            
+<span class="fc" id="L227">            iter2.advance();</span>
 
-<span class="fc" id="L245">            TIntSet idxs = iter2.value();</span>
+<span class="fc" id="L229">            TIntSet idxs = iter2.value();</span>
 
-<span class="fc bfc" id="L247" title="All 2 branches covered.">            if (idxs.size() &gt;= minimumNumberInCluster) {</span>
-<span class="fc" id="L248">                groups.add(idxs);</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">            if (idxs.size() &gt;= minimumNumberInCluster) {</span>
+<span class="fc" id="L232">                groups.add(idxs);</span>
             }
         }
 
-<span class="fc" id="L252">        this.groupList = groups;</span>
+<span class="fc" id="L236">        this.groupList = groups;</span>
 
-<span class="fc" id="L254">        log.finest(&quot;number of groups after prune=&quot; + groups.size());</span>
-<span class="fc" id="L255">    }</span>
+<span class="fc" id="L238">        log.finest(&quot;number of groups after prune=&quot; + groups.size());</span>
+<span class="fc" id="L239">    }</span>
 
     private void initMap(TIntSet pixIdxs) {
 
-<span class="fc" id="L259">        pixNodes = new TIntObjectHashMap&lt;DisjointSet2Node&lt;Integer&gt;&gt;();</span>
+<span class="fc" id="L243">        pixNodes = new TIntObjectHashMap&lt;DisjointSet2Node&lt;Integer&gt;&gt;();</span>
 
-<span class="fc" id="L261">        disjointSetHelper = new DisjointSet2Helper();</span>
+<span class="fc" id="L245">        disjointSetHelper = new DisjointSet2Helper();</span>
 
-<span class="fc" id="L263">        TIntIterator iter = pixIdxs.iterator();</span>
+<span class="fc" id="L247">        TIntIterator iter = pixIdxs.iterator();</span>
 
-<span class="fc bfc" id="L265" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
 
-<span class="fc" id="L267">            int pixIdx = iter.next();</span>
+<span class="fc" id="L251">            int pixIdx = iter.next();</span>
 
-<span class="fc" id="L269">            DisjointSet2Node&lt;Integer&gt; pNode =</span>
-<span class="fc" id="L270">                disjointSetHelper.makeSet(</span>
-<span class="fc" id="L271">                    new DisjointSet2Node&lt;Integer&gt;(Integer.valueOf(pixIdx)));</span>
+<span class="fc" id="L253">            DisjointSet2Node&lt;Integer&gt; pNode =</span>
+<span class="fc" id="L254">                disjointSetHelper.makeSet(</span>
+<span class="fc" id="L255">                    new DisjointSet2Node&lt;Integer&gt;(Integer.valueOf(pixIdx)));</span>
 
-<span class="fc" id="L273">            pixNodes.put(pixIdx, pNode);</span>
-<span class="fc" id="L274">        }</span>
-<span class="fc" id="L275">    }</span>
+<span class="fc" id="L257">            pixNodes.put(pixIdx, pNode);</span>
+<span class="fc" id="L258">        }</span>
+<span class="fc" id="L259">    }</span>
 
-    private void findGroupsWithSortedScan(TIntSet pixIdxs, float critSep) {
+    private void findGroupsWithSortedScan(TIntSet pixIdxs, float critSepX,
+        float critSepY) {
 
-<span class="fc" id="L279">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L280">        PairIntArray sorted = new PairIntArray(pixIdxs.size());</span>
-<span class="fc" id="L281">        TIntIterator iter = pixIdxs.iterator();</span>
-<span class="fc" id="L282">        int[] xy = new int[2];</span>
-<span class="fc bfc" id="L283" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
-<span class="fc" id="L284">            int pixIdx = iter.next();</span>
-<span class="fc" id="L285">            ph.toPixelCoords(pixIdx, imgWidth, xy);</span>
-<span class="fc" id="L286">            sorted.add(xy[0], xy[1]);</span>
-<span class="fc" id="L287">        }</span>
-<span class="pc bpc" id="L288" title="3 of 4 branches missed.">        assert(sorted.getN() == pixIdxs.size());</span>
+<span class="fc" id="L264">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L265">        PairIntArray sorted = new PairIntArray(pixIdxs.size());</span>
+<span class="fc" id="L266">        TIntIterator iter = pixIdxs.iterator();</span>
+<span class="fc" id="L267">        int[] xy = new int[2];</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L269">            int pixIdx = iter.next();</span>
+<span class="fc" id="L270">            ph.toPixelCoords(pixIdx, imgWidth, xy);</span>
+<span class="fc" id="L271">            sorted.add(xy[0], xy[1]);</span>
+<span class="fc" id="L272">        }</span>
+<span class="pc bpc" id="L273" title="3 of 4 branches missed.">        assert(sorted.getN() == pixIdxs.size());</span>
         
-<span class="fc" id="L290">        sorted.sortByXAsc();</span>
+<span class="fc" id="L275">        sorted.sortByXAsc();</span>
         
-<span class="fc" id="L292">        int n = sorted.getN();</span>
+<span class="fc" id="L277">        int n = sorted.getN();</span>
      
-<span class="fc bfc" id="L294" title="All 2 branches covered.">        for (int i = 0; i &lt; n; ++i) {</span>
+<span class="fc bfc" id="L279" title="All 2 branches covered.">        for (int i = 0; i &lt; n; ++i) {</span>
             
             // process the pair when their point density is higher than thrsh:
             //  
@@ -299,17 +284,15 @@ System.out.format(&quot;(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n&quot;,
             
             // association of 2 points for separation &lt;= critSeparation
             
-<span class="fc" id="L302">            int uX = sorted.getX(i);</span>
-<span class="fc" id="L303">            float minXAssoc = uX - critSep;</span>
-<span class="fc" id="L304">            float maxXAssoc = uX + critSep;</span>
-<span class="fc" id="L305">            int uY = sorted.getY(i);</span>
-<span class="fc" id="L306">            float minYAssoc = uY - critSep;</span>
-<span class="fc" id="L307">            float maxYAssoc = uY + critSep;</span>
+<span class="fc" id="L287">            int uX = sorted.getX(i);</span>
+<span class="fc" id="L288">            float minXAssoc = uX - critSepX;</span>
+<span class="fc" id="L289">            float maxXAssoc = uX + critSepX;</span>
+<span class="fc" id="L290">            int uY = sorted.getY(i);</span>
+<span class="fc" id="L291">            float minYAssoc = uY - critSepY;</span>
+<span class="fc" id="L292">            float maxYAssoc = uY + critSepY;</span>
             
-<span class="fc" id="L309">            int uPoint = ph.toPixelIndex(uX, uY, imgWidth);</span>
-        
-<span class="fc" id="L311">            boolean assocFound = false;</span>
-            
+<span class="fc" id="L294">            int uPoint = ph.toPixelIndex(uX, uY, imgWidth);</span>
+                    
             /*
             uX = sorted[0].x
                 search backward while x &gt;= minXAssoc
@@ -319,77 +302,62 @@ System.out.format(&quot;(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n&quot;,
             */
             
             // search backward within radius critSep
-<span class="fc bfc" id="L322" title="All 2 branches covered.">            for (int j = (i - 1); j &gt; -1; --j) {</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">            for (int j = (i - 1); j &gt; -1; --j) {</span>
                 
-<span class="fc" id="L324">                int vX = sorted.getX(j);</span>
-<span class="fc" id="L325">                int vY = sorted.getY(j);</span>
-<span class="fc" id="L326">                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);</span>
+<span class="fc" id="L307">                int vX = sorted.getX(j);</span>
+<span class="fc" id="L308">                int vY = sorted.getY(j);</span>
+<span class="fc" id="L309">                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);</span>
                 
-<span class="fc bfc" id="L328" title="All 2 branches covered.">                if (vX &lt; minXAssoc) {</span>
-<span class="fc" id="L329">                    break;</span>
+<span class="pc bpc" id="L311" title="1 of 4 branches missed.">                if (vX &lt; minXAssoc || vX &gt; maxXAssoc) {</span>
+<span class="nc" id="L312">                    break;</span>
                 }
                 
-<span class="fc bfc" id="L332" title="All 2 branches covered.">                if (vX == minXAssoc) {</span>
-<span class="fc bfc" id="L333" title="All 2 branches covered.">                    if (vY &lt; minYAssoc) {</span>
-<span class="fc" id="L334">                        break;</span>
+<span class="fc bfc" id="L315" title="All 2 branches covered.">                if (vX == minXAssoc) {</span>
+<span class="fc bfc" id="L316" title="All 2 branches covered.">                    if (vY &lt; minYAssoc) {</span>
+<span class="fc" id="L317">                        break;</span>
                     }
                 }
                 // for given x, if y &lt; minYAssoc can skip, but not break
-<span class="fc bfc" id="L338" title="All 2 branches covered.">                if (vY &lt; minYAssoc) {</span>
-<span class="fc" id="L339">                    continue;</span>
+<span class="fc bfc" id="L321" title="All 4 branches covered.">                if (vY &lt; minYAssoc || vY &gt; maxYAssoc) {</span>
+<span class="fc" id="L322">                    continue;</span>
                 }
                 
-                // check the diagonal distances:
-<span class="fc" id="L343">                double sep = Math.sqrt((vX - uX)*(vX - uX) + </span>
-                    (vY - uY)*(vY - uY));
-                
-<span class="fc bfc" id="L346" title="All 2 branches covered.">                if (sep &gt; critSep) {</span>
-<span class="fc" id="L347">                    continue;</span>
-                }
+<span class="pc bpc" id="L325" title="3 of 4 branches missed.">                assert(Math.abs(vX - uX) &lt;= critSepX);</span>
+<span class="pc bpc" id="L326" title="3 of 4 branches missed.">                assert(Math.abs(vY - uY) &lt;= critSepY);</span>
                 
                 // if arrive here, vX is within an assoc radius and so is vY
-<span class="fc" id="L351">                processPair(uPoint, vPoint);</span>
-                                
-<span class="fc" id="L353">                assocFound = true;</span>
+<span class="fc" id="L329">                processPair(uPoint, vPoint);                                </span>
             }
                 
             // search forward within radius critSep
-<span class="fc bfc" id="L357" title="All 2 branches covered.">            for (int j = (i + 1); j &lt; n; ++j) {</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">            for (int j = (i + 1); j &lt; n; ++j) {</span>
             
-<span class="fc" id="L359">                int vX = sorted.getX(j);</span>
-<span class="fc" id="L360">                int vY = sorted.getY(j);</span>
-<span class="fc" id="L361">                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);</span>
+<span class="fc" id="L335">                int vX = sorted.getX(j);</span>
+<span class="fc" id="L336">                int vY = sorted.getY(j);</span>
+<span class="fc" id="L337">                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);</span>
                 
-<span class="fc bfc" id="L363" title="All 2 branches covered.">                if (vX &gt; maxXAssoc) {</span>
-<span class="fc" id="L364">                    break;</span>
+<span class="pc bpc" id="L339" title="1 of 4 branches missed.">                if (vX &gt; maxXAssoc || vX &lt; minXAssoc) {</span>
+<span class="nc" id="L340">                    break;</span>
                 }
                 
-<span class="fc bfc" id="L367" title="All 2 branches covered.">                if (vX == maxXAssoc) {</span>
-<span class="fc bfc" id="L368" title="All 2 branches covered.">                    if (vY &gt; maxYAssoc) {</span>
-<span class="fc" id="L369">                        break;</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">                if (vX == maxXAssoc) {</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">                    if (vY &gt; maxYAssoc) {</span>
+<span class="fc" id="L345">                        break;</span>
                     }
                 }
                 // for given x, if y &gt; maxYAssoc can skip, but not break
-<span class="fc bfc" id="L373" title="All 2 branches covered.">                if (vY &gt; maxYAssoc) {</span>
+<span class="fc bfc" id="L349" title="All 4 branches covered.">                if (vY &gt; maxYAssoc || vY &lt; minYAssoc) {</span>
                     //TODO: if knew where next x was in sorted, could increment j to that
-<span class="fc" id="L375">                    continue;</span>
+<span class="fc" id="L351">                    continue;</span>
                 }
                 
-                // check the diagonal distances:
-<span class="fc" id="L379">                double sep = Math.sqrt((vX - uX)*(vX - uX) + </span>
-                    (vY - uY)*(vY - uY));
-                  
-<span class="fc bfc" id="L382" title="All 2 branches covered.">                if (sep &gt; critSep) {</span>
-<span class="fc" id="L383">                    continue;</span>
-                }
+<span class="pc bpc" id="L354" title="3 of 4 branches missed.">                assert(Math.abs(vX - uX) &lt;= critSepX);</span>
+<span class="pc bpc" id="L355" title="3 of 4 branches missed.">                assert(Math.abs(vY - uY) &lt;= critSepY);</span>
                 
                 // if arrive here, vX is within an assoc radius and so is vY
-<span class="fc" id="L387">                processPair(uPoint, vPoint);</span>
-                                
-<span class="fc" id="L389">                assocFound = true;</span>
+<span class="fc" id="L358">                processPair(uPoint, vPoint);                                </span>
             }
-        }
-        
-<span class="fc" id="L393">    }</span>
+        } 
+<span class="fc" id="L361">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

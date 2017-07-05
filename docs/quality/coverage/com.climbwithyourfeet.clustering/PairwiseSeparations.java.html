@@ -1,0 +1,469 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>PairwiseSeparations.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">PairwiseSeparations.java</span></div><h1>PairwiseSeparations.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import algorithms.VeryLongBitString;
+import algorithms.connected.ConnectedValuesGroupFinder;
+import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.MiscMath0;
+import algorithms.misc.MiscSorter;
+import algorithms.util.PixelHelper;
+import algorithms.util.PolygonAndPointPlotter;
+import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+
+/**
+ *
+ * @author nichole
+ */
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">public class PairwiseSeparations {</span>
+    
+<span class="fc" id="L35">    private boolean debug = false;</span>
+    
+<span class="fc" id="L37">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+    public void setToDebug() {
+<span class="fc" id="L40">        debug = true;</span>
+<span class="fc" id="L41">    }</span>
+
+    public static class ScaledPoints {
+        public TIntSet pixelIdxs;
+        int width;
+        int height;
+        int xScale;
+        int yScale;
+    }
+    
+    public BackgroundSeparationHolder extract(TIntSet pixelIdxs, int width, 
+        int height) {
+        
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L55">            throw new IllegalArgumentException(</span>
+                &quot;pixelIdxs.size must be 12 or more&quot;);
+        }
+        
+        // these are the non-point distances to the points        
+<span class="fc" id="L60">        int[][] dt = DistanceTransformUtil.transform(pixelIdxs, width, height);</span>
+        
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">            for (int j = 0; j &lt; dt[i].length; ++j) {</span>
+<span class="fc" id="L64">                int d = dt[i][j];</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">                if (d &gt; 0) {</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">                    if (d &gt; 2) {</span>
+<span class="fc" id="L67">                        dt[i][j] = (int)Math.round(Math.sqrt(d));</span>
+                    }
+                }
+            }
+        }
+        
+        /*
+        within dt 
+           want to find the local maxima in which the surrounding points are
+           all smaller in value.
+        
+           need to use a connected value group finder to gather the adjacent
+              pixels w/ same values &gt; 0
+        
+           need to make an adjacency map of those groups.
+        
+           then will find which groups, that is values, are the maxima.
+        
+           the critical separation is the smallest of the maxima, but will
+               want to look at the counts of that where possible.
+        
+        caveats:
+           single group of points in center will have no maxima found as 
+               described unless there are gaps in points in the cluster.
+               if there are gaps,
+                  that will be found.
+               else the background separation will be found to be 1
+        
+        Note that throughout the refactoring in code:
+            -- the factor of 2 is dropped here for 2 points within distance
+            -- the factor of 2 should be dropped in the group finder
+            -- a factor of 1/thresholdFactor should possibly be applied 
+               here for the caveat case, for example
+        */
+       
+<span class="fc" id="L102">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L103">        int[] xy = new int[2];</span>
+                
+<span class="fc" id="L105">        ConnectedValuesGroupFinder finder = new ConnectedValuesGroupFinder();</span>
+<span class="fc" id="L106">        finder.setMinimumNumberInCluster(1);</span>
+<span class="fc" id="L107">        List&lt;TIntSet&gt; valueGroups = finder.findGroups(dt);</span>
+     
+<span class="fc" id="L109">        long ts = System.currentTimeMillis();</span>
+        
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L112">            float[] x = new float[valueGroups.size()];</span>
+<span class="fc" id="L113">            float[] y = new float[x.length];</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            for (int i = 0; i &lt; valueGroups.size(); ++i) {</span>
+<span class="fc" id="L115">                TIntSet group = valueGroups.get(i);</span>
+<span class="fc" id="L116">                int tPix = group.iterator().next();</span>
+<span class="fc" id="L117">                ph.toPixelCoords(tPix, width, xy);</span>
+<span class="fc" id="L118">                int v = dt[xy[0]][xy[1]];</span>
+<span class="fc" id="L119">                x[i] = v;</span>
+<span class="fc" id="L120">                y[i] = group.size();</span>
+            }
+<span class="fc" id="L122">            float xMax = MiscMath0.findMax(x);</span>
+<span class="fc" id="L123">            float yMin = MiscMath0.findMin(y);</span>
+<span class="fc" id="L124">            float yMax = MiscMath0.findMax(y);</span>
+            PolygonAndPointPlotter plotter;
+            try {
+<span class="fc" id="L127">                plotter = new PolygonAndPointPlotter();</span>
+<span class="fc" id="L128">                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,</span>
+                &quot;separation&quot;);
+<span class="fc" id="L130">                plotter.writeFile(&quot;_separation_&quot; + ts);</span>
+<span class="nc" id="L131">            } catch (IOException ex) {</span>
+<span class="nc" id="L132">                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);</span>
+<span class="fc" id="L133">            }</span>
+<span class="fc" id="L134">            Runtime.getRuntime().gc();</span>
+        }
+        
+        // key = index of values Group, value = adjacent indexes of valuesGroup
+<span class="fc" id="L138">        TIntObjectMap&lt;TIntSet&gt; adjMap = createAdjacencyMap(</span>
+            valueGroups, width, height);
+        
+        //TODO: below here consider if aggregation of values within a tolerance
+        //  of similar values is needed.  the tolerance should depend
+        //  upon the range of separations and on the value to be aggregated
+        
+        // search for valueGroups which has value larger than all neighbors
+        // key = valueGroups index, value = dt value for the group
+<span class="fc" id="L147">        TIntIntMap groupMaximaIdxs = new TIntIntHashMap();</span>
+        
+        // key = value, value = count
+<span class="fc" id="L150">        TIntIntMap valueCounts = new TIntIntHashMap();</span>
+        
+<span class="fc" id="L152">        int minMaxima = Integer.MAX_VALUE;</span>
+        
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        for (int i = 0; i &lt; valueGroups.size(); ++i) {</span>
+            
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">            if (!adjMap.containsKey(i)) {</span>
+<span class="nc" id="L157">                continue;</span>
+            }
+            
+<span class="fc" id="L160">            TIntSet group = valueGroups.get(i);</span>
+            
+<span class="fc" id="L162">            int tPix = group.iterator().next();</span>
+<span class="fc" id="L163">            ph.toPixelCoords(tPix, width, xy);</span>
+<span class="fc" id="L164">            int v = dt[xy[0]][xy[1]];</span>
+            
+<span class="fc" id="L166">            boolean allAreLower = true;</span>
+            
+<span class="fc" id="L168">            TIntSet adj = adjMap.get(i);</span>
+            
+<span class="fc" id="L170">            TIntIterator iter2 = adj.iterator();</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            while (iter2.hasNext()) {</span>
+<span class="fc" id="L172">                int aIdx = iter2.next();</span>
+<span class="fc" id="L173">                TIntSet group2 = valueGroups.get(aIdx);</span>
+<span class="fc" id="L174">                int tPix2 = group2.iterator().next();</span>
+<span class="fc" id="L175">                ph.toPixelCoords(tPix2, width, xy);</span>
+<span class="fc" id="L176">                int v2 = dt[xy[0]][xy[1]];</span>
+            
+<span class="fc bfc" id="L178" title="All 2 branches covered.">                if (v2 &gt; v) {</span>
+<span class="fc" id="L179">                    allAreLower = false;</span>
+<span class="fc" id="L180">                    break;</span>
+                }
+<span class="fc" id="L182">            }</span>
+            
+<span class="fc bfc" id="L184" title="All 2 branches covered.">            if (allAreLower) {</span>
+<span class="fc" id="L185">                groupMaximaIdxs.put(i, v);</span>
+<span class="fc" id="L186">                int c = valueCounts.get(v);</span>
+<span class="fc" id="L187">                valueCounts.put(v, c + group.size());</span>
+                
+<span class="fc bfc" id="L189" title="All 2 branches covered.">                if (v &lt; minMaxima) {</span>
+<span class="fc" id="L190">                    minMaxima = v;</span>
+                }
+            }
+        }
+        
+<span class="fc" id="L195">        adjMap = null;</span>
+        
+        // look at frequency of groupMaximaIdxs values
+<span class="fc" id="L198">        int[] maximaValues = new int[valueCounts.size()];</span>
+<span class="fc" id="L199">        int[] maximaCounts = new int[valueCounts.size()];</span>
+<span class="fc" id="L200">        TIntIntIterator iter = valueCounts.iterator();</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        for (int i = 0; i &lt; valueCounts.size(); ++i) {</span>
+<span class="fc" id="L202">            iter.advance();</span>
+<span class="fc" id="L203">            maximaValues[i] = iter.key();</span>
+<span class="fc" id="L204">            maximaCounts[i] = iter.value();</span>
+        }
+        
+<span class="fc" id="L207">        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);</span>
+       
+<span class="fc bfc" id="L209" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L210">            int[] x = maximaValues;</span>
+<span class="fc" id="L211">            int[] y = maximaCounts;</span>
+<span class="fc" id="L212">            float xMax = MiscMath0.findMax(x);</span>
+<span class="fc" id="L213">            float yMin = MiscMath0.findMin(y);</span>
+<span class="fc" id="L214">            float yMax = MiscMath0.findMax(y);</span>
+            PolygonAndPointPlotter plotter;
+            try {
+<span class="fc" id="L217">                plotter = new PolygonAndPointPlotter();</span>
+<span class="fc" id="L218">                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,</span>
+                    &quot;max sep&quot;);
+<span class="fc" id="L220">            plotter.writeFile(&quot;_separation_maxima_&quot; + ts);</span>
+<span class="nc" id="L221">            } catch (IOException ex) {</span>
+<span class="nc" id="L222">                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);</span>
+<span class="fc" id="L223">            }</span>
+            
+        }
+     
+<span class="fc" id="L227">        float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);</span>
+<span class="fc" id="L228">        System.out.println(&quot;qs=&quot; + Arrays.toString(qs));</span>
+           
+        //consider wavelet pyramidal smoothing
+        
+<span class="fc" id="L232">        MinMaxPeakFinder finder2 = new MinMaxPeakFinder();</span>
+<span class="fc" id="L233">        float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);</span>
+        
+<span class="fc" id="L235">        int minMaximaIdx = -1;</span>
+<span class="fc" id="L236">        int firstZeroIdx = -1;</span>
+<span class="pc bpc" id="L237" title="1 of 2 branches missed.">        for (int i = 0; i &lt; maximaValues.length; ++i) {</span>
+<span class="fc" id="L238">            int d = maximaValues[i];</span>
+<span class="pc bpc" id="L239" title="1 of 4 branches missed.">            if (minMaximaIdx == -1 &amp;&amp; (d == minMaxima)) {</span>
+<span class="fc" id="L240">                minMaximaIdx = i;</span>
+            }
+<span class="fc bfc" id="L242" title="All 2 branches covered.">            if (d &gt; minMaxima) {</span>
+<span class="fc" id="L243">                int c = maximaCounts[i];</span>
+<span class="fc bfc" id="L244" title="All 2 branches covered.">                if (c &lt;= avgMin) {</span>
+<span class="fc" id="L245">                    firstZeroIdx = i;</span>
+<span class="fc" id="L246">                    break;</span>
+                }
+            }
+        }
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">        if (firstZeroIdx == -1) {</span>
+<span class="nc" id="L251">            firstZeroIdx = minMaximaIdx + 1;</span>
+<span class="nc bnc" id="L252" title="All 4 branches missed.">            assert(firstZeroIdx &lt; maximaValues.length);</span>
+        }
+        
+<span class="fc" id="L255">        int maxCountIdx0 = -1;</span>
+<span class="fc" id="L256">        int maxCount0 = Integer.MIN_VALUE;</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        for (int i = 0; i &lt; firstZeroIdx; ++i) {</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">            if (maximaCounts[i] &gt; maxCount0) {</span>
+<span class="fc" id="L259">                maxCountIdx0 = i;</span>
+<span class="fc" id="L260">                maxCount0 = maximaCounts[i];</span>
+            }
+        }
+<span class="fc" id="L263">        minMaximaIdx = maxCountIdx0;</span>
+<span class="fc" id="L264">        minMaxima = maxCount0;</span>
+        
+<span class="fc" id="L266">        System.out.println(&quot;found background separation=&quot; </span>
+            + maximaValues[minMaximaIdx]);
+        
+<span class="fc" id="L269">        BackgroundSeparationHolder h = new BackgroundSeparationHolder();</span>
+        
+<span class="fc" id="L271">        h.approxH = 1;</span>
+        
+<span class="fc" id="L273">        int m2 = (int)Math.round(maximaValues[minMaximaIdx]/Math.sqrt(2));</span>
+<span class="fc" id="L274">        h.setXYBackgroundSeparations(m2, m2);</span>
+        
+<span class="fc" id="L276">        h.setTheThreeSeparations(new float[]{</span>
+            maximaValues[0], maximaValues[minMaximaIdx], 
+            maximaValues[firstZeroIdx]});
+        
+<span class="fc" id="L280">        h.setAndNormalizeCounts(new float[]{</span>
+            maxCount0, maxCount0, maximaCounts[firstZeroIdx]});
+       
+        // calculate the errors for the 3 points
+<span class="fc" id="L284">        float[] errors = new float[] {</span>
+<span class="fc" id="L285">            h.calcError(h.threeSCounts[0], h.threeS[0], 0, h.approxH),</span>
+<span class="fc" id="L286">            h.calcError(h.threeSCounts[1], h.threeS[1], 0, h.approxH),</span>
+<span class="fc" id="L287">            h.calcError(h.threeSCounts[2], h.threeS[2], 0, h.approxH)</span>
+        };
+<span class="fc" id="L289">        h.setTheThreeErrors(errors);</span>
+        
+<span class="fc" id="L291">        return h;</span>
+    }
+    
+    public ScaledPoints scaleThePoints(TIntSet pixelIdxs, int width, int height) {
+        
+<span class="pc bpc" id="L296" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L297">            throw new IllegalArgumentException(</span>
+                &quot;pixelIdxs.size must be 12 or more&quot;);
+        }
+                
+<span class="fc" id="L301">        ScaleFinder sf = new ScaleFinder();</span>
+        
+<span class="fc" id="L303">        int[] xyScales = sf.find1D(pixelIdxs, width, height);</span>
+        
+        TIntSet pixelIdxs2;
+        int width2, height2;
+<span class="pc bpc" id="L307" title="1 of 4 branches missed.">        if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
+<span class="fc" id="L308">            pixelIdxs2 = new TIntHashSet(pixelIdxs);</span>
+<span class="fc" id="L309">            width2 = width;</span>
+<span class="fc" id="L310">            height2 = height;</span>
+<span class="pc bpc" id="L311" title="3 of 4 branches missed.">        } else if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &gt; 1) {</span>
+<span class="nc" id="L312">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
+<span class="nc" id="L313">            width2 = width;</span>
+<span class="nc" id="L314">            height2 = height/xyScales[1];            </span>
+<span class="pc bpc" id="L315" title="2 of 4 branches missed.">        } else if (xyScales[0] &gt; 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
+<span class="nc" id="L316">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
+<span class="nc" id="L317">            width2 = width/xyScales[0];</span>
+<span class="nc" id="L318">            height2 = height;</span>
+        } else {
+            // scale both axes
+<span class="fc" id="L321">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
+<span class="fc" id="L322">            width2 = width/xyScales[0];</span>
+<span class="fc" id="L323">            height2 = height/xyScales[1];</span>
+        }
+        
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        if (pixelIdxs2.isEmpty()) {</span>
+            
+<span class="fc" id="L328">            PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L329">            int[] xy = new int[2];</span>
+            
+<span class="fc" id="L331">            TIntIterator iter = pixelIdxs.iterator();</span>
+<span class="fc bfc" id="L332" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
+                
+<span class="fc" id="L334">                int pixIsx = iter.next();</span>
+                
+<span class="fc" id="L336">                ph.toPixelCoords(pixIsx, width, xy);</span>
+                
+<span class="pc bpc" id="L338" title="1 of 2 branches missed.">                if (xyScales[0] &gt; 1) {</span>
+<span class="fc" id="L339">                    xy[0] /= xyScales[0];</span>
+                }
+<span class="pc bpc" id="L341" title="1 of 2 branches missed.">                if (xyScales[1] &gt; 1) {</span>
+<span class="fc" id="L342">                    xy[1] /= xyScales[1];</span>
+                }
+                
+<span class="fc" id="L345">                int pixIdx2 = ph.toPixelIndex(xy[0], xy[1], width2);</span>
+                
+<span class="fc" id="L347">                pixelIdxs2.add(pixIdx2);</span>
+<span class="fc" id="L348">            }</span>
+        }
+        
+<span class="fc" id="L351">        ScaledPoints sp = new ScaledPoints();</span>
+<span class="fc" id="L352">        sp.pixelIdxs = pixelIdxs2;</span>
+<span class="fc" id="L353">        sp.width = width2;</span>
+<span class="fc" id="L354">        sp.height = height;</span>
+<span class="fc" id="L355">        sp.xScale = xyScales[0];</span>
+<span class="fc" id="L356">        sp.yScale = xyScales[1];</span>
+    
+<span class="fc" id="L358">        return sp;</span>
+    }
+    
+    private TIntObjectMap&lt;TIntSet&gt; createAdjacencyMap(
+        List&lt;TIntSet&gt; groupList, int width, int height) {
+        
+<span class="fc" id="L364">        TIntIntMap pixGroupMap = new TIntIntHashMap();</span>
+<span class="fc bfc" id="L365" title="All 2 branches covered.">        for (int i = 0; i &lt; groupList.size(); ++i) {</span>
+<span class="fc" id="L366">            TIntSet group = groupList.get(i);</span>
+<span class="fc" id="L367">            TIntIterator iter = group.iterator();</span>
+<span class="fc bfc" id="L368" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
+<span class="fc" id="L369">                int pixIdx = iter.next();</span>
+<span class="pc bpc" id="L370" title="3 of 4 branches missed.">                assert(!pixGroupMap.containsKey(pixIdx));</span>
+<span class="fc" id="L371">                pixGroupMap.put(pixIdx, i);</span>
+<span class="fc" id="L372">            }</span>
+        }
+        
+<span class="fc" id="L375">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L376">        int[] dx8 = new int[]{-1, -1,  0,  1, 1, 1, 0, -1};</span>
+<span class="fc" id="L377">        int[] dy8 = new int[]{ 0, -1, -1, -1, 0, 1, 1,  1};</span>
+        
+<span class="fc" id="L379">        int[] xy = new int[2];</span>
+        
+<span class="fc" id="L381">        int nBSLen = groupList.size();</span>
+        
+<span class="fc" id="L383">        System.out.println(&quot;nBSLen=&quot; + nBSLen);</span>
+        
+<span class="fc" id="L385">        TIntObjectMap&lt;TIntSet&gt; adjMap = new TIntObjectHashMap&lt;TIntSet&gt;();</span>
+        
+<span class="fc bfc" id="L387" title="All 2 branches covered.">        for (int i = 0; i &lt; groupList.size(); ++i) {</span>
+<span class="fc" id="L388">            TIntSet group = groupList.get(i);</span>
+<span class="fc" id="L389">            TIntIterator iter = group.iterator();</span>
+<span class="fc" id="L390">            TIntSet adj = adjMap.get(i);</span>
+            
+<span class="fc bfc" id="L392" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
+<span class="fc" id="L393">                int pixIdx = iter.next();</span>
+<span class="fc" id="L394">                ph.toPixelCoords(pixIdx, width, xy);</span>
+                
+<span class="fc bfc" id="L396" title="All 2 branches covered.">                for (int k = 0; k &lt; dx8.length; ++k) {</span>
+<span class="fc" id="L397">                    int vX = xy[0] + dx8[k];</span>
+<span class="fc" id="L398">                    int vY = xy[1] + dy8[k];</span>
+<span class="fc bfc" id="L399" title="All 8 branches covered.">                    if (vX &lt; 0 || vY &lt; 0 || vX &gt;= width || vY &gt;= height) {</span>
+<span class="fc" id="L400">                        continue;</span>
+                    }
+<span class="fc" id="L402">                    int pixIdx2 = ph.toPixelIndex(vX, vY, width);</span>
+                    
+<span class="pc bpc" id="L404" title="1 of 2 branches missed.">                    if (!pixGroupMap.containsKey(pixIdx2)) {</span>
+<span class="nc" id="L405">                        continue;</span>
+                    }
+                    
+<span class="fc" id="L408">                    int j = pixGroupMap.get(pixIdx2);</span>
+                    
+<span class="fc bfc" id="L410" title="All 2 branches covered.">                    if (i == j) {</span>
+<span class="fc" id="L411">                        continue;</span>
+                    }
+                    
+<span class="fc bfc" id="L414" title="All 2 branches covered.">                    if (adj == null) {</span>
+<span class="fc" id="L415">                        adj = new TIntHashSet();</span>
+<span class="fc" id="L416">                        adjMap.put(i, adj);</span>
+                    }
+<span class="fc" id="L418">                    adj.add(j);</span>
+                }
+<span class="fc" id="L420">            }</span>
+        }
+        
+<span class="fc" id="L423">        return adjMap;</span>
+    }
+    
+     private void writeDebugImage(double[][] dt, String fileSuffix, int width, 
+        int height) throws IOException {
+
+<span class="nc" id="L429">        BufferedImage outputImage = new BufferedImage(width, height,</span>
+            BufferedImage.TYPE_BYTE_GRAY);
+
+<span class="nc" id="L432">        WritableRaster raster = outputImage.getRaster();</span>
+
+<span class="nc bnc" id="L434" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
+<span class="nc" id="L436">                int v = (int)Math.round(dt[i][j]);</span>
+<span class="nc" id="L437">                raster.setSample(i, j, 0, v);</span>
+            }
+        }
+
+        // write to an output directory.  we have user.dir from system properties
+        // but no other knowledge of users's directory structure
+<span class="nc" id="L443">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
+<span class="nc" id="L444">        String baseDir = null;</span>
+<span class="nc bnc" id="L445" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
+<span class="nc" id="L446">            baseDir = baseDirURL.getPath();</span>
+        } else {
+<span class="nc" id="L448">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
+        }
+<span class="nc bnc" id="L450" title="All 2 branches missed.">        if (baseDir == null) {</span>
+<span class="nc" id="L451">            return;</span>
+        }
+<span class="nc" id="L453">        File t = new File(baseDir + &quot;/bin&quot;);</span>
+<span class="nc bnc" id="L454" title="All 2 branches missed.">        if (t.exists()) {</span>
+<span class="nc" id="L455">            baseDir = t.getPath();</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
+<span class="nc" id="L457">            baseDir = baseDir + &quot;/target&quot;;</span>
+        }
+
+        // no longer need to use file.separator
+<span class="nc" id="L461">        String outFilePath = baseDir + &quot;/&quot; + fileSuffix + &quot;.png&quot;;</span>
+
+<span class="nc" id="L463">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
+
+<span class="nc" id="L465">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
+<span class="nc" id="L466">    }</span>
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

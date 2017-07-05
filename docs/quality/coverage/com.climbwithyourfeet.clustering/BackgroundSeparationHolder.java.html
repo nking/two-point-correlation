@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BackgroundSeparationHolder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">BackgroundSeparationHolder.java</span></div><h1>BackgroundSeparationHolder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import java.util.Arrays;
+
+/**
+ *
+ * @author nichole
+ */
+<span class="fc" id="L9">public class BackgroundSeparationHolder {</span>
+ 
+    /*
+    There are two states of data present here.
+    
+    (1) the PDF is in the scaled axes reference frame
+        if no scaling is performed the scaled is the original data.
+    
+        those variables are:
+    
+        float[] threeS;
+        float[] threeSCounts;
+        float[] threeSErrors;
+        int approxH = 1;
+    
+    (2) the original axes data are:
+        
+        int xScale is the amount to divide the x axis by to get the scaled axis.
+        int yScale is similar, but for y axis.
+    
+        float[] bckGndSep is the x separation and y separation in the
+           original reference frame that are used to define the
+           critical separation for association of 2 points
+    */
+    
+    
+    /*
+    
+    TODO: need to reconsider this with the thresholdFactor
+       and the use of slopes to approx a PDF...
+       It's a placeholder for now.
+    
+    &lt;pre&gt;
+    creating a PDF with x axis being point pairwise separation and
+    the function being 3 non-uniform regions:
+       (1) x being 0 to thr * cs
+       (2) cs to to end of increasig x with counts above zero
+       (3) increasing x beyond (2) has density 0.
+    
+            |                   
+     counts *                   |
+            |  \                |
+            |      *            |
+            |      | \          |
+            -------|--*---------|-
+                   c.s.        
+              pairwise separations
+    
+    &lt;/pre&gt;
+    */
+    
+    /**
+     * in the case that the background density was found using scaled axes,
+     * these scale factors will later be needed to apply the background
+     * separation as a limit to each axis.
+     * They are each &quot;1&quot; by default.
+     * The first dimension is for the x axis and the 2nd is for the y axis.
+     */
+<span class="fc" id="L67">    protected int[] scales = new int[]{1, 1};</span>
+    
+    /**
+      is the x separation and y separation in the
+      original reference frame that are used to define the
+      critical separation for association of 2 points
+     
+     &lt;pre&gt;
+     it's relationship to this.threeS[1] is:
+         xd = (bckGndSep[0]/scales[0])
+         xd *= xd;
+         yd = (bckGndSep[1]/scales[1])
+         yd *= yd;
+         
+         this.threeS[1] should == sqrt(xd + yd)
+     &lt;/pre&gt;
+     */
+<span class="fc" id="L84">    protected float[] bckGndSep = null;</span>
+   
+    /**
+     * the separations of 3 points in the discrete point separation density
+     * curve:
+     * threeS[0] is 0;
+     * threeS[1] is the critical separation point. The threshold factor
+     * should be multiplied by it upon use.
+     * threeS[2] is a separation value larger than threeS[1] and is the
+     * last with a count or density above 0.  The threshold factor
+     * should be multiplied by it upon use.
+     */
+    protected float[] threeS;
+    
+    /**
+     * the counts for the separations in array threeSs.
+     * These can be normalized using the setter.
+     */
+    protected float[] threeSCounts;
+    
+    /**
+     * the errors for the points in threeSs
+     */
+    protected float[] threeSErrors;
+    
+    /**
+     * the effective bandwidth a point
+     */
+<span class="fc" id="L112">    public int approxH = 1;</span>
+    
+    public void setTheThreeSeparations(float[] s) {
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (s.length != 3) {</span>
+<span class="nc" id="L116">            throw new IllegalArgumentException(</span>
+                &quot; the length should be 3.  see variable documentation&quot;);
+        }
+<span class="fc" id="L119">        threeS = Arrays.copyOf(s, s.length);</span>
+<span class="fc" id="L120">    }</span>
+    
+    public void setTheThreeErrors(float[] errs) {
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (errs.length != 3) {</span>
+<span class="nc" id="L124">            throw new IllegalArgumentException(</span>
+                &quot; the length should be 3.  see variable documentation&quot;);
+        }
+<span class="fc" id="L127">        threeSErrors = Arrays.copyOf(errs, errs.length);</span>
+<span class="fc" id="L128">    }</span>
+    
+    public void setXYScales(int xScale, int yScale) {
+<span class="fc" id="L131">        this.scales[0] = xScale;</span>
+<span class="fc" id="L132">        this.scales[1] = yScale;</span>
+<span class="fc" id="L133">    }</span>
+    
+    public void setXYBackgroundSeparations(int xSep, int ySep) {
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (bckGndSep == null) {</span>
+<span class="fc" id="L137">            bckGndSep = new float[2];</span>
+        }
+<span class="fc" id="L139">        bckGndSep[0] = xSep;</span>
+<span class="fc" id="L140">        bckGndSep[1] = ySep;</span>
+<span class="fc" id="L141">    }</span>
+        
+    /**
+     * this is in the original x axis reference frame and represents a 
+     * pairwise distance representative of background, that is non-clustered,
+     * point spacing.
+     * 
+     * &lt;pre&gt;
+     * it's relationship to this.threeS[1] is:
+         xd = (xBackgroundSeparation/scales[0])
+         xd *= xd;
+         yd = (ybckGndSep[1]/scales[1])
+         yd *= yd;
+         
+         this.threeS[1] should == sqrt(xd + yd)
+     * &lt;/pre&gt;
+     * 
+     * @return 
+     */
+    public float getXBackgroundSeparation() {
+<span class="fc" id="L161">        return bckGndSep[0];</span>
+    }
+    
+    /**
+     * this is in the original y axis reference frame and represents a 
+     * pairwise distance representative of background, that is non-clustered,
+     * point spacing.
+     * 
+     * &lt;pre&gt;
+     * it's relationship to this.threeS[1] is:
+         xd = (xBackgroundSeparation/scales[0])
+         xd *= xd;
+         yd = (ybckGndSep[1]/scales[1])
+         yd *= yd;
+         
+         this.threeS[1] should == sqrt(xd + yd)
+     * &lt;/pre&gt;
+     * 
+     * @return 
+     */
+    public float getYBackgroundSeparation() {
+<span class="fc" id="L182">        return bckGndSep[1];</span>
+    }
+    
+    public void setAndNormalizeCounts(float[] counts) {
+    
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        if (counts.length != 3) {</span>
+<span class="nc" id="L188">            throw new IllegalArgumentException(</span>
+                &quot; the length of counts should be 3.  see variable documentation&quot;);
+        }
+        
+        //using area normalization
+<span class="fc" id="L193">        double area  = 0;</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">        for (int i = 0; i &lt; counts.length - 1; i++) {</span>
+<span class="fc" id="L195">            float yTerm = counts[i + 1] + counts[i];</span>
+<span class="fc" id="L196">            float xLen = threeS[i + 1] - threeS[i];</span>
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">            if (xLen &lt; 0) {</span>
+<span class="nc" id="L198">                xLen *= -1;</span>
+            }
+<span class="fc" id="L200">            area += (yTerm * xLen);</span>
+        }
+<span class="fc" id="L202">        area *= 0.5;</span>
+<span class="fc" id="L203">        double area1 = 0.5 * ((threeS[2] - threeS[1]) * counts[1]);</span>
+<span class="fc" id="L204">        double area0 = area - area1;</span>
+        
+<span class="fc" id="L206">        double area0Norm = area0/area;</span>
+<span class="fc" id="L207">        double area1Norm = area1/area;</span>
+        
+        /*
+        cn0
+               cn1
+                   cn2
+        0      v1  v2
+        
+        v1*cn1 + (cn0-cn1)*v1*0.5 = area0Norm
+        
+        (v2-v1)*cn1*0.5 = area1Norm
+        cn1 = area1Norm / ((v2-v1)*0.5)
+        
+        v1*cn1 + (cn0-cn1)*v1*0.5 = area0Norm
+        (cn0-cn1) = (area0Norm - v1*cn1)/(v1*0.5)
+        cn0 = cn1 + (area0Norm - v1*cn1)/(v1*0.5)
+        */
+        
+<span class="fc" id="L225">        threeSCounts = new float[3];</span>
+<span class="fc" id="L226">        threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));</span>
+<span class="fc" id="L227">        threeSCounts[0] = (float)((area0Norm - threeS[1]*threeSCounts[1])/</span>
+            (threeS[1] * 0.5));
+        
+<span class="fc" id="L230">    }</span>
+    
+    /**
+     * given x and y separations of a pixel (presumably from its nearest 
+     * neighbor), use xScale and yScale to transform those separations into
+     * the reference frame of the PDF which was constructed from 
+     * scaled axes (where scaling by default was &quot;1&quot; unless calculation was
+     * requested and a different scale found).
+     * 
+     * @param xSeparation
+     * @param ySeparation
+     * @return 
+     */
+    public float calcProbability(int xSeparation, int ySeparation) {
+        
+<span class="nc" id="L245">        int xSep0 = xSeparation/scales[0];</span>
+<span class="nc" id="L246">        int ySep0 = ySeparation/scales[1];</span>
+        
+        // chessboard distance
+<span class="nc" id="L249">        int sep0 = xSep0 + ySep0;</span>
+        
+<span class="nc" id="L251">        return calcProbability(sep0);</span>
+    }
+    
+    protected void calcProbabilityAndError(int xSeparation, int ySeparation,
+        float[] output) {
+        
+<span class="nc" id="L257">        int xSep0 = xSeparation/scales[0];</span>
+<span class="nc" id="L258">        int ySep0 = ySeparation/scales[1];</span>
+        
+        // chessboard distance
+<span class="nc" id="L261">        int sep0 = xSep0 + ySep0;</span>
+        
+<span class="nc" id="L263">        calcProbabilityAndError(sep0, output);</span>
+<span class="nc" id="L264">    }</span>
+    
+    private float calcProbability(int separation) {
+        
+<span class="nc" id="L268">        float dist = separation;// * thresholdFactor;</span>
+        
+        int idx0, idx1;
+<span class="nc bnc" id="L271" title="All 2 branches missed.">        if (separation &lt; threeSCounts[0]) {</span>
+<span class="nc" id="L272">            return 0;</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        } else if (separation &lt; threeSCounts[1]) {</span>
+<span class="nc" id="L274">            idx0 = 0;</span>
+<span class="nc" id="L275">            idx1 = 1;</span>
+        } else {
+<span class="nc" id="L277">            idx0 = 1;</span>
+<span class="nc" id="L278">            idx1 = 2;</span>
+        }
+        
+        /*
+        p(x) - p(idx1)     p(idx0) - p(idx1)
+        ---------------- = -----------------
+        sd(x) - sd(idx1)   sd(idx0) - sd(idx1)
+        
+        r = (p(idx0) - p(idx1))/(sd(idx0) - sd(idx1))
+        
+        p(x) = p(idx1) + r * (sd(x) - sd(idx1))
+        */
+        
+<span class="nc" id="L291">        float r = calcCtoSD(idx0, idx1);</span>
+        
+<span class="nc" id="L293">        float p = threeSCounts[idx1] + r * (dist - threeS[idx1]);</span>
+        
+<span class="nc" id="L295">        return p;</span>
+    }
+    
+    private float calcCtoSD(int idx0, int idx1) {
+        
+        //r = (p(idx0) - p(idx1))/(sd(idx0) - sd(idx1))
+        
+<span class="fc" id="L302">        float r = (threeSCounts[idx0] - threeSCounts[idx1])/</span>
+            (threeS[idx0] - threeS[idx1]);
+        
+<span class="fc" id="L305">        return r;</span>
+    }
+    
+    protected void calcProbabilityAndError(int separation, float[] output) {
+        
+<span class="fc" id="L310">        float dist = separation;// * thresholdFactor;</span>
+        
+        int idx0, idx1;
+<span class="pc bpc" id="L313" title="1 of 2 branches missed.">        if (dist &lt; threeSCounts[0]) {</span>
+<span class="nc" id="L314">            Arrays.fill(output, 0);</span>
+<span class="nc" id="L315">            return;</span>
+<span class="fc bfc" id="L316" title="All 2 branches covered.">        } else if (dist &lt; threeSCounts[1]) {</span>
+<span class="fc" id="L317">            idx0 = 0;</span>
+<span class="fc" id="L318">            idx1 = 1;</span>
+        } else {
+<span class="fc" id="L320">            idx0 = 1;</span>
+<span class="fc" id="L321">            idx1 = 2;</span>
+        }
+        
+        /*
+        p(x) - p(idx1)     p(idx0) - p(idx1)
+        ---------------- = -----------------
+        sd(x) - sd(idx1)   sd(idx0) - sd(idx1)
+        
+        r = (p(idx0) - p(idx1))/(sd(idx0) - sd(idx1))
+        
+        p(x) = p(idx1) + r * (sd(x) - sd(idx1))
+        */
+        
+<span class="fc" id="L334">        float r = calcCtoSD(idx0, idx1);</span>
+        
+<span class="fc" id="L336">        float p = threeSCounts[idx1] + r * (dist - threeS[idx1]);</span>
+        
+        //using the same slopes for errors.
+<span class="fc" id="L339">        float pErr = threeSErrors[idx1] + r * (dist - threeS[idx1]);</span>
+    
+<span class="fc" id="L341">        output[0] = p;</span>
+<span class="fc" id="L342">        output[1] = pErr;</span>
+<span class="fc" id="L343">    }</span>
+    
+    float calcError(float prob, float separation, float xerr, float approxH) {
+
+        //TODO: need to revisit this and compare to other methods of 
+        // determining point-wise error
+        
+        //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
+        
+<span class="fc" id="L352">        float xerrsq = xerr * xerr;</span>
+<span class="fc" id="L353">        float t1 = xerrsq * (prob * prob);</span>
+
+<span class="fc" id="L355">        float count = prob;</span>
+<span class="fc" id="L356">        float t2 = count * separation * separation;</span>
+<span class="fc" id="L357">        t2 /= (approxH * approxH);</span>
+
+<span class="fc" id="L359">        float pErr = (float)Math.sqrt(t1 + t2);</span>
+
+        /*
+        consider MISE:
+            integral of E((p_smoothed(x) - p(x)^2)dx
+        
+            E[a] = integral_-inf_to_inf of (a * f(a) * a)
+                where f is the PDF
+        */
+        
+        /*
+        System.out.println(
+            &quot; sd=&quot; + surfDens
+            + &quot; p=&quot; + prob 
+            + &quot; pErr=&quot; + pErr 
+            + &quot; count=&quot; + count
+            + &quot; h=&quot; + approxH
+            + &quot; sqrt(t1)=&quot; + Math.sqrt(t1) +
+            &quot; sqrt(t2_=&quot; + Math.sqrt(t2));
+        */
+<span class="fc" id="L379">        return pErr;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

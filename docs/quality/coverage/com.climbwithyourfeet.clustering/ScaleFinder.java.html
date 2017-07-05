@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ScaleFinder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">ScaleFinder.java</span></div><h1>ScaleFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import algorithms.imageProcessing.FFTUtil;
+import algorithms.imageProcessing.Filters;
+import algorithms.misc.Complex;
+import algorithms.misc.Misc0;
+import algorithms.misc.MiscSorter;
+import algorithms.util.PixelHelper;
+import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.set.TIntSet;
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+
+/**
+ *
+ * @author nichole
+ */
+<span class="fc" id="L29">public class ScaleFinder {</span>
+    
+<span class="fc" id="L31">    private boolean debug = false;</span>
+    
+<span class="fc" id="L33">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+    public void setToDebug() {
+<span class="nc" id="L36">        debug = true;</span>
+<span class="nc" id="L37">    }</span>
+    
+    public int[] find(TIntSet pixelIdxs, int width, int height) {
+        
+<span class="nc bnc" id="L41" title="All 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L42">            throw new IllegalArgumentException(</span>
+                &quot;pixelIdxs.size must be 12 or more&quot;);
+        }
+        
+        //TODO: rewrite this method to use 1D methods for each axis
+        
+<span class="nc" id="L48">        double[][] input = Misc0.convertToBinary(pixelIdxs, width, height);</span>
+        
+<span class="nc" id="L50">        FFTUtil fftUtil = new FFTUtil();</span>
+        
+        // forward, normalize
+<span class="nc" id="L53">        Complex[][] fTr = fftUtil.create2DFFT(input, true, true);</span>
+    
+<span class="nc" id="L55">        float minV = Float.POSITIVE_INFINITY;</span>
+<span class="nc" id="L56">        float maxV = Float.NEGATIVE_INFINITY;</span>
+<span class="nc" id="L57">        float[][] ftr2 = new float[width][];</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="nc" id="L59">            ftr2[i] = new float[height];</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            for (int j = 0; j &lt; height; ++j) {</span>
+                
+<span class="nc" id="L62">                ftr2[i][j] = (float)fTr[i][j].abs();</span>
+                
+<span class="nc bnc" id="L64" title="All 2 branches missed.">                if (ftr2[i][j] &lt; minV) {</span>
+<span class="nc" id="L65">                    minV = ftr2[i][j];</span>
+                }
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                if (ftr2[i][j] &gt; maxV) {</span>
+<span class="nc" id="L68">                    maxV = ftr2[i][j];</span>
+                }                
+            }
+        }
+        
+        // scale to range 0:255
+<span class="nc" id="L74">        float range = maxV - minV;</span>
+<span class="nc" id="L75">        float rangeFactor = 255.f/range;</span>
+        
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            for (int j = 0; j &lt; height; ++j) {                </span>
+<span class="nc" id="L79">                ftr2[i][j] -= minV;</span>
+<span class="nc" id="L80">                ftr2[i][j] *= rangeFactor;</span>
+            }
+        }
+        
+        try {
+<span class="nc" id="L85">            writeDebugImage(ftr2, &quot;fft_&quot; + System.currentTimeMillis(), width,</span>
+                height);
+<span class="nc" id="L87">        } catch (IOException ex) {</span>
+<span class="nc" id="L88">            Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, </span>
+                null, ex);
+<span class="nc" id="L90">        }</span>
+          
+<span class="nc" id="L92">        Filters filters = new Filters();</span>
+        
+<span class="nc" id="L94">        TIntList outputMaximaX = new TIntArrayList(); </span>
+<span class="nc" id="L95">        TIntList outputMaximaY = new TIntArrayList();</span>
+        
+<span class="nc" id="L97">        float thresholdRel = 0.85f;//0.1f;</span>
+        
+<span class="nc" id="L99">        filters.peakLocalMax(ftr2, 0, thresholdRel, outputMaximaX, </span>
+            outputMaximaY);
+
+        // when the points are separated by a larger scale than 1 regularly,
+        // that pattern is apparent at
+        // xScale = width/(spacing of brightest peaks)
+        // and same for the y axis.
+        
+<span class="nc" id="L107">        int xSpacing = determineSpacing(outputMaximaX);</span>
+        
+<span class="nc" id="L109">        int ySpacing = determineSpacing(outputMaximaY);</span>
+        
+<span class="nc" id="L111">        int[] out = new int[2];</span>
+        
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (xSpacing &gt; 1) {</span>
+<span class="nc" id="L114">            out[0] = width/xSpacing;</span>
+        } else {
+<span class="nc" id="L116">            out[0] = 1;</span>
+        }
+        
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (ySpacing &gt; 1) {</span>
+<span class="nc" id="L120">            out[1] = height/ySpacing;</span>
+        } else {
+<span class="nc" id="L122">            out[1] = 1;</span>
+        }
+        
+<span class="nc" id="L125">        return out;</span>
+    }
+    
+    public int[] find1D(TIntSet pixelIdxs, int width, int height) {
+        
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L131">            throw new IllegalArgumentException(</span>
+                &quot;pixelIdxs.size must be 12 or more&quot;);
+        }
+
+<span class="fc" id="L135">        double[] xA = new double[width];</span>
+<span class="fc" id="L136">        double[] yA = new double[height];</span>
+
+<span class="fc" id="L138">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L139">        int[] xy = new int[2];</span>
+        
+<span class="fc" id="L141">        TIntIterator iter = pixelIdxs.iterator();</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L143">            int pixIdx = iter.next();</span>
+<span class="fc" id="L144">            ph.toPixelCoords(pixIdx, width, xy);</span>
+<span class="fc" id="L145">            xA[xy[0]]++;</span>
+<span class="fc" id="L146">            yA[xy[1]]++;</span>
+<span class="fc" id="L147">        }</span>
+                
+<span class="fc" id="L149">        FFTUtil fftUtil = new FFTUtil();</span>
+        
+        // forward, normalize
+<span class="fc" id="L152">        Complex[] fftX = fftUtil.create1DFFT(xA, true);</span>
+<span class="fc" id="L153">        Complex[] fftY = fftUtil.create1DFFT(yA, true);</span>
+    
+<span class="fc" id="L155">        float minVX = Float.POSITIVE_INFINITY;</span>
+<span class="fc" id="L156">        float maxVX = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L157">        float[] fftX2 = new float[width];</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="fc" id="L159">            fftX2[i] = (float)fftX[i].abs();</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">            if (fftX2[i] &lt; minVX) {</span>
+<span class="fc" id="L161">                minVX = fftX2[i];</span>
+            }
+<span class="fc bfc" id="L163" title="All 2 branches covered.">            if (fftX2[i] &gt; maxVX) {</span>
+<span class="fc" id="L164">                maxVX = fftX2[i];</span>
+            }
+        }
+        
+<span class="fc" id="L168">        float minVY = Float.POSITIVE_INFINITY;</span>
+<span class="fc" id="L169">        float maxVY = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L170">        float[] fftY2 = new float[height];</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
+<span class="fc" id="L172">            fftY2[i] = (float)fftY[i].abs();</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">            if (fftY2[i] &lt; minVY) {</span>
+<span class="fc" id="L174">                minVY = fftY2[i];</span>
+            }
+<span class="fc bfc" id="L176" title="All 2 branches covered.">            if (fftY2[i] &gt; maxVY) {</span>
+<span class="fc" id="L177">                maxVY = fftY2[i];</span>
+            }
+        }
+        
+        // scale to range 0:255
+<span class="fc" id="L182">        float rangeX = maxVX - minVX;</span>
+<span class="fc" id="L183">        float rangeFactorX = 255.f/rangeX;</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="fc" id="L185">            fftX2[i] -= minVX;</span>
+<span class="fc" id="L186">            fftX2[i] *= rangeFactorX;</span>
+        }
+        
+<span class="fc" id="L189">        float rangeY = maxVY - minVY;</span>
+<span class="fc" id="L190">        float rangeFactorY = 255.f/rangeY;</span>
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
+<span class="fc" id="L192">            fftY2[i] -= minVY;</span>
+<span class="fc" id="L193">            fftY2[i] *= rangeFactorY;</span>
+        }
+        
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if (debug) {</span>
+<span class="nc" id="L197">            float[][] img = new float[1][];</span>
+<span class="nc" id="L198">            img[0] = fftX2;</span>
+<span class="nc" id="L199">            long ts = System.currentTimeMillis();</span>
+            try {
+<span class="nc" id="L201">                writeDebugImage(img, &quot;fft_X&quot; + ts, 1, img[0].length);</span>
+<span class="nc" id="L202">                img[0] = fftY2;</span>
+<span class="nc" id="L203">                writeDebugImage(img, &quot;fft_Y&quot; + ts, 1, img[0].length);</span>
+<span class="nc" id="L204">            } catch (IOException ex) {</span>
+<span class="nc" id="L205">                Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, </span>
+                    null, ex);
+<span class="nc" id="L207">            }</span>
+        }
+          
+<span class="fc" id="L210">        Filters filters = new Filters();</span>
+        
+<span class="fc" id="L212">        TIntList outputMaximaX = new TIntArrayList();</span>
+        
+<span class="fc" id="L214">        TIntList outputMaximaY = new TIntArrayList();</span>
+        
+<span class="fc" id="L216">        float thresholdRel = 0.85f;//0.1f;</span>
+       
+        //outputMaximaX are the indexes of fftX2
+        
+<span class="fc" id="L220">        filters.peakLocalMax(fftX2, 0, thresholdRel, outputMaximaX);</span>
+        
+<span class="fc" id="L222">        filters.peakLocalMax(fftY2, 0, thresholdRel, outputMaximaY);</span>
+
+        // when the points are separated by a larger scale than 1 regularly,
+        // that pattern is apparent at
+        // xScale = width/(spacing of brightest peaks)
+        // and same for the y axis.
+        
+<span class="fc" id="L229">        int xSpacing = determineSpacing(outputMaximaX);</span>
+        
+<span class="fc" id="L231">        int ySpacing = determineSpacing(outputMaximaY);</span>
+        
+<span class="fc" id="L233">        int[] out = new int[2];</span>
+        
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        if (xSpacing &gt; 1) {</span>
+<span class="fc" id="L236">            out[0] = width/xSpacing;</span>
+        } else {
+<span class="fc" id="L238">            out[0] = 1;</span>
+        }
+        
+<span class="fc bfc" id="L241" title="All 2 branches covered.">        if (ySpacing &gt; 1) {</span>
+<span class="fc" id="L242">            out[1] = height/ySpacing;</span>
+        } else {
+<span class="fc" id="L244">            out[1] = 1;</span>
+        }
+        
+<span class="fc" id="L247">        return out;</span>
+    }
+    
+    private int determineSpacing(TIntList maxima) {
+        
+<span class="fc bfc" id="L252" title="All 2 branches covered.">        if (maxima.size() &lt; 2) {</span>
+<span class="fc" id="L253">            return -1;</span>
+        }
+        
+        // a brute force calculation of minimum separation between the
+        // maxima, but wanting to use only the most frequent points
+        // to do so.
+
+        //TODO: below here consider if aggregation of values within a tolerance
+        //  of similar values is needed.  the tolerance should depend
+        //  upon the range of separations and on the value to be aggregated
+        
+<span class="fc" id="L264">        TIntIntMap freqMap = new TIntIntHashMap();</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">        for (int i = 0; i &lt; maxima.size(); ++i) {</span>
+<span class="fc" id="L266">            int v = maxima.get(i);</span>
+<span class="fc" id="L267">            int c = freqMap.get(v);</span>
+<span class="fc" id="L268">            freqMap.put(v, c + 1);</span>
+        }
+        
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">        if (freqMap.size() &lt;= 1) {</span>
+<span class="nc" id="L272">            return -1;</span>
+        }
+        
+<span class="fc" id="L275">        int[] vs = new int[freqMap.size()];</span>
+<span class="fc" id="L276">        int[] vsc = new int[vs.length];</span>
+<span class="fc" id="L277">        TIntIntIterator iter = freqMap.iterator();</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
+<span class="fc" id="L279">            iter.advance();</span>
+<span class="fc" id="L280">            vs[i] = iter.key();</span>
+<span class="fc" id="L281">            vsc[i] = iter.value();</span>
+        }
+<span class="fc" id="L283">        MiscSorter.sortBy1stArg(vsc, vs);</span>
+        
+<span class="fc" id="L285">        int maxCount = vsc[vsc.length - 1];</span>
+        /*int limit = Math.round(0.8f * maxCount);
+        if (limit &lt; 1) {
+            limit = 1;
+        }*/
+        
+<span class="fc" id="L291">        freqMap.clear();</span>
+<span class="fc bfc" id="L292" title="All 2 branches covered.">        for (int i = vsc.length - 1; i &gt; -1; --i) {</span>
+            //if (vsc[i] &lt; limit) {
+            //    break;
+            //}
+<span class="fc bfc" id="L296" title="All 2 branches covered.">            for (int j = i - 1; j &gt; -1; --j) {</span>
+                //if (vsc[j] &lt; limit) {
+                //    break;
+                //}
+<span class="fc" id="L300">                int d = Math.abs(vs[i] - vs[j]);</span>
+<span class="fc" id="L301">                int c = freqMap.get(d);</span>
+<span class="fc" id="L302">                freqMap.put(d, c + 1);</span>
+            }
+        }
+        
+<span class="pc bpc" id="L306" title="1 of 2 branches missed.">        if (freqMap.size() == 0) {</span>
+<span class="nc" id="L307">            return -1;</span>
+        }
+        
+        // sort by highest frequency and smallest separation
+<span class="fc" id="L311">        vs = new int[freqMap.size()];</span>
+<span class="fc" id="L312">        vsc = new int[vs.length];</span>
+<span class="fc" id="L313">        iter = freqMap.iterator();</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
+<span class="fc" id="L315">            iter.advance();</span>
+<span class="fc" id="L316">            vs[i] = iter.key();</span>
+<span class="fc" id="L317">            vsc[i] = iter.value();</span>
+        }
+        
+        //order by devreasing frequency vsc
+        //    and increasing value vs
+<span class="fc" id="L322">        MiscSorter.sortBy1stArgDecrThen2ndIncr(vsc, vs);</span>
+                
+<span class="fc" id="L324">        return vs[0];</span>
+    }
+    
+     private void writeDebugImage(float[][] dt, String fileSuffix, int width, 
+        int height) throws IOException {
+
+<span class="nc" id="L330">        BufferedImage outputImage = new BufferedImage(width, height,</span>
+            BufferedImage.TYPE_BYTE_GRAY);
+
+<span class="nc" id="L333">        WritableRaster raster = outputImage.getRaster();</span>
+
+<span class="nc bnc" id="L335" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
+<span class="nc bnc" id="L336" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
+<span class="nc" id="L337">                int v = Math.round(dt[i][j]);</span>
+<span class="nc" id="L338">                raster.setSample(i, j, 0, v);</span>
+            }
+        }
+
+        // write to an output directory.  we have user.dir from system properties
+        // but no other knowledge of users's directory structure
+<span class="nc" id="L344">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
+<span class="nc" id="L345">        String baseDir = null;</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
+<span class="nc" id="L347">            baseDir = baseDirURL.getPath();</span>
+        } else {
+<span class="nc" id="L349">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
+        }
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        if (baseDir == null) {</span>
+<span class="nc" id="L352">            return;</span>
+        }
+<span class="nc" id="L354">        File t = new File(baseDir + &quot;/bin&quot;);</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">        if (t.exists()) {</span>
+<span class="nc" id="L356">            baseDir = t.getPath();</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
+<span class="nc" id="L358">            baseDir = baseDir + &quot;/target&quot;;</span>
+        }
+
+        // no longer need to use file.separator
+<span class="nc" id="L362">        String outFilePath = baseDir + &quot;/&quot; + fileSuffix + &quot;.png&quot;;</span>
+
+<span class="nc" id="L364">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
+
+<span class="nc" id="L366">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
+<span class="nc" id="L367">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
