@@ -144,7 +144,7 @@ public class ScaleFinder {
             freqMap.put(v, c + 1);
         }
         
-        if (freqMap.size() == 1) {
+        if (freqMap.size() <= 1) {
             return -1;
         }
         
@@ -159,24 +159,28 @@ public class ScaleFinder {
         MiscSorter.sortBy1stArg(vsc, vs);
         
         int maxCount = vsc[vsc.length - 1];
-        int limit = Math.round(0.8f * maxCount);
+        /*int limit = Math.round(0.8f * maxCount);
         if (limit < 1) {
             limit = 1;
-        }
+        }*/
         
         freqMap.clear();
         for (int i = vsc.length - 1; i > -1; --i) {
-            if (vsc[i] < limit) {
-                break;
-            }
+            //if (vsc[i] < limit) {
+            //    break;
+            //}
             for (int j = i - 1; j > -1; --j) {
-                if (vsc[j] < limit) {
-                    break;
-                }
+                //if (vsc[j] < limit) {
+                //    break;
+                //}
                 int d = Math.abs(vs[i] - vs[j]);
                 int c = freqMap.get(d);
                 freqMap.put(d, c + 1);
             }
+        }
+        
+        if (freqMap.size() == 0) {
+            return -1;
         }
         
         // sort by highest frequency and smallest separation

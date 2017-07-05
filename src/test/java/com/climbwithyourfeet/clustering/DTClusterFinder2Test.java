@@ -116,7 +116,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindRanGenClusters() throws Exception {
+    public void estFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
@@ -228,8 +228,6 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                     clusterFinder.setToDebug();
                 }
                 clusterFinder.setThreshholdFactor(1.f);
-                
-                clusterFinder.setToRescaleAxes();
 
                 clusterFinder.calculateBackgroundSeparation();
                 
@@ -333,7 +331,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindClustersOtherData() throws Exception {
+    public void testFindClustersOtherData() throws Exception {
         
         String[] fileNames = {
             "Aggregation.txt", 
@@ -399,8 +397,6 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 clusterFinder.setToDebug();
             }
             clusterFinder.setThreshholdFactor(1.f);
-
-            clusterFinder.setToRescaleAxes();
 
             clusterFinder.calculateBackgroundSeparation();
 

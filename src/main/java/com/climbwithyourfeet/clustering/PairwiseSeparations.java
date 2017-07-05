@@ -20,6 +20,7 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -222,18 +223,11 @@ public class PairwiseSeparations {
             }
             
         }
-        
-        /*
-        consider wavelet pyramidal smoothing
-        
-        -- after find crit separation,
-           find the first zero or rather the first point after crit sep
-           that is at avgMin of the maximaCounts.
-           -- note that this implies, can
-              reset the critical separation to the maxima between
-              and including the current crit sep and that first zero.
-        
-        */
+     
+        float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
+        System.out.println("qs=" + Arrays.toString(qs));
+           
+        //consider wavelet pyramidal smoothing
         
         MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
         float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);

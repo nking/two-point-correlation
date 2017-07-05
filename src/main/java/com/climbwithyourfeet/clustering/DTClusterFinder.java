@@ -55,7 +55,7 @@ public class DTClusterFinder {
 
     private Logger log = Logger.getLogger(this.getClass().getName());
     
-    private boolean rescaleAxes = false;
+    private boolean rescaleAxes = true;
     
     /**
      *
@@ -72,7 +72,7 @@ public class DTClusterFinder {
         state = STATE.INIT;
     }
     
-    public void setToRescaleAxes() {
+    public void setToNotRescaleAxes() {
         rescaleAxes = false;
     }
     
@@ -118,6 +118,8 @@ public class DTClusterFinder {
                         
             PairwiseSeparations.ScaledPoints sp = ps.scaleThePoints(
                 points, width, height);
+            
+            System.out.println("scales=" + sp.xScale + " , " + sp.yScale);
             
             sepHolder = ps.extract(sp.pixelIdxs, sp.width, sp.height);
             

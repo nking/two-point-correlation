@@ -153,9 +153,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     clusterFinder.setToDebug();
                 }
                 clusterFinder.setThreshholdFactor(1.f);
-
-                clusterFinder.setToRescaleAxes();
-
+                
                 clusterFinder.calculateBackgroundSeparation();
 
                 clusterFinder.findClusters();
@@ -317,8 +315,6 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 clusterFinder.setToDebug();
             }
             clusterFinder.setThreshholdFactor(1.f);
-
-            clusterFinder.setToRescaleAxes();
 
             clusterFinder.calculateBackgroundSeparation();
 
@@ -640,8 +636,6 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 clusterFinder.setToDebug();
             }
             clusterFinder.setThreshholdFactor(1.f);
-
-            clusterFinder.setToRescaleAxes();
 
             clusterFinder.calculateBackgroundSeparation();
 
