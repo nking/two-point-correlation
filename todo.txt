@@ -1,3 +1,5 @@
+-- correct the PDFs and finish the tests
+
 -- rewrite the one dbscan image unit test if missing since refactoring
 
 -- this project needs 2 different builds and the explanation
