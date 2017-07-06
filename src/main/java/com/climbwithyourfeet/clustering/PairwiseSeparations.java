@@ -1,6 +1,5 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.VeryLongBitString;
 import algorithms.connected.ConnectedValuesGroupFinder;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.MiscMath0;
@@ -91,14 +90,8 @@ public class PairwiseSeparations {
                if there are gaps,
                   that will be found.
                else the background separation will be found to be 1
-        
-        Note that throughout the refactoring in code:
-            -- the factor of 2 is dropped here for 2 points within distance
-            -- the factor of 2 should be dropped in the group finder
-            -- a factor of 1/thresholdFactor should possibly be applied 
-               here for the caveat case, for example
         */
-       
+               
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
                 
@@ -137,12 +130,17 @@ public class PairwiseSeparations {
         // key = index of values Group, value = adjacent indexes of valuesGroup
         TIntObjectMap<TIntSet> adjMap = createAdjacencyMap(
             valueGroups, width, height);
-        
-        //TODO: below here consider if aggregation of values within a tolerance
-        //  of similar values is needed.  the tolerance should depend
-        //  upon the range of separations and on the value to be aggregated
-        
-        // search for valueGroups which has value larger than all neighbors
+
+        // TODO: below here consider if aggregation of values within a tolerance
+        // of similar values is needed.  The tolerance should depend upon the 
+        // range of separations and on the value to be aggregated.
+        //  ...such a correction can be done with kernel smoothing using 
+        //     a kernel bandwidth fixed in the distance axis.
+        //     if implemented with fast wavelet transforms, 
+        //     the results is instead a K-Nearest Neighbors unless the 
+        //     input is resampled to fixed spacing.
+
+        // search for valueGroups which has value larger than all adj neighbors
         // key = valueGroups index, value = dt value for the group
         TIntIntMap groupMaximaIdxs = new TIntIntHashMap();
         
@@ -221,14 +219,11 @@ public class PairwiseSeparations {
             } catch (IOException ex) {
                 Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
         }
      
         float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
         System.out.println("qs=" + Arrays.toString(qs));
-           
-        //consider wavelet pyramidal smoothing
-        
+                
         MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
         float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
         
@@ -274,7 +269,7 @@ public class PairwiseSeparations {
         h.setXYBackgroundSeparations(m2, m2);
         
         h.setTheThreeSeparations(new float[]{
-            maximaValues[0], maximaValues[minMaximaIdx], 
+            0, maximaValues[minMaximaIdx], 
             maximaValues[firstZeroIdx]});
         
         h.setAndNormalizeCounts(new float[]{

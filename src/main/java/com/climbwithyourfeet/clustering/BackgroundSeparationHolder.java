@@ -12,14 +12,14 @@ public class BackgroundSeparationHolder {
     There are two states of data present here.
     
     (1) the PDF is in the scaled axes reference frame
-        if no scaling is performed the scaled is the original data.
+        (if no scaling is performed the scaled is the original data.)
     
         those variables are:
     
         float[] threeS;
         float[] threeSCounts;
         float[] threeSErrors;
-        int approxH = 1;
+        int approxH;
     
     (2) the original axes data are:
         
@@ -27,16 +27,14 @@ public class BackgroundSeparationHolder {
         int yScale is similar, but for y axis.
     
         float[] bckGndSep is the x separation and y separation in the
-           original reference frame that are used to define the
-           critical separation for association of 2 points
+           original reference frame. they are used to define the
+           critical separation for association of 2 points.
     */
     
-    
-    /*
-    
+    /* 
     TODO: need to reconsider this with the thresholdFactor
-       and the use of slopes to approx a PDF...
-       It's a placeholder for now.
+       and the use of slopes to approx a PDF.
+It's a placeholder for now.
     
     <pre>
     creating a PDF with x axis being point pairwise separation and
@@ -47,18 +45,18 @@ public class BackgroundSeparationHolder {
     
             |                   
      counts *                   |
-            |  \                |
-            |      *            |
-            |      | \          |
-            -------|--*---------|-
-                   c.s.        
+            | \                 |
+            |  *                |
+            |  |\               |
+            ---|-*--------------|-
+              c.s.        
               pairwise separations
     
     </pre>
     */
     
     /**
-     * in the case that the background density was found using scaled axes,
+     * In the case that the background density was found using scaled axes,
      * these scale factors will later be needed to apply the background
      * separation as a limit to each axis.
      * They are each "1" by default.
@@ -67,10 +65,10 @@ public class BackgroundSeparationHolder {
     protected int[] scales = new int[]{1, 1};
     
     /**
-      is the x separation and y separation in the
+      Is the x separation and y separation in the
       original reference frame that are used to define the
       critical separation for association of 2 points
-     
+   
      <pre>
      it's relationship to this.threeS[1] is:
          xd = (bckGndSep[0]/scales[0])
@@ -80,7 +78,7 @@ public class BackgroundSeparationHolder {
          
          this.threeS[1] should == sqrt(xd + yd)
      </pre>
-     */
+    */
     protected float[] bckGndSep = null;
    
     /**
