@@ -207,10 +207,10 @@ public class BackgroundSeparationHolder {
         cn0
                cn1
                    cn2
-        0      v1  v2
+        0      v1  v2  
         
-        v1*cn1 + (cn0-cn1)*v1*0.5 = area0Norm
-        
+        where cn2 is approx 0
+                
         (v2-v1)*cn1*0.5 = area1Norm
         cn1 = area1Norm / ((v2-v1)*0.5)
         
@@ -221,8 +221,8 @@ public class BackgroundSeparationHolder {
         
         threeSCounts = new float[3];
         threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));
-        threeSCounts[0] = (float)((area0Norm - threeS[1]*threeSCounts[1])/
-            (threeS[1] * 0.5));
+        threeSCounts[0] = threeSCounts[1] + 
+            (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
         
     }
     
@@ -242,8 +242,7 @@ public class BackgroundSeparationHolder {
         int xSep0 = xSeparation/scales[0];
         int ySep0 = ySeparation/scales[1];
         
-        // chessboard distance
-        int sep0 = xSep0 + ySep0;
+        int sep0 = (int)Math.round(xSep0*xSep0 + ySep0*ySep0);
         
         return calcProbability(sep0);
     }
@@ -254,18 +253,17 @@ public class BackgroundSeparationHolder {
         int xSep0 = xSeparation/scales[0];
         int ySep0 = ySeparation/scales[1];
         
-        // chessboard distance
-        int sep0 = xSep0 + ySep0;
+        int sep0 = (int)Math.round(xSep0*xSep0 + ySep0*ySep0);
         
         calcProbabilityAndError(sep0, output);
     }
     
     private float calcProbability(int separation) {
         
-        float dist = separation;// * thresholdFactor;
+        float dist = separation;
         
         int idx0, idx1;
-        if (separation < threeSCounts[0]) {
+        if (separation > threeSCounts[2]) {
             return 0;
         } else if (separation < threeSCounts[1]) {
             idx0 = 0;
@@ -307,7 +305,7 @@ public class BackgroundSeparationHolder {
         float dist = separation;// * thresholdFactor;
         
         int idx0, idx1;
-        if (dist < threeSCounts[0]) {
+        if (dist > threeSCounts[2]) {
             Arrays.fill(output, 0);
             return;
         } else if (dist < threeSCounts[1]) {
@@ -317,7 +315,7 @@ public class BackgroundSeparationHolder {
             idx0 = 1;
             idx1 = 2;
         }
-        
+                
         /*
         p(x) - p(idx1)     p(idx0) - p(idx1)
         ---------------- = -----------------
@@ -341,9 +339,9 @@ public class BackgroundSeparationHolder {
     
     float calcError(float prob, float separation, float xerr, float approxH) {
 
-        //TODO: need to revisit this and compare to other methods of 
-        // determining point-wise error
-        
+//TODO: need to revisit this and compare to other methods of 
+// determining point-wise error
+
         //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
         
         float xerrsq = xerr * xerr;
