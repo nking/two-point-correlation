@@ -3,12 +3,10 @@
 import algorithms.search.NearestNeighbor2D;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
-import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import java.util.Set;
@@ -17,115 +15,90 @@ import java.util.Set;
  *
  * @author nichole
  */
-<span class="fc" id="L20">public class StatsHelper {</span>
+<span class="fc" id="L18">public class StatsHelper {</span>
     
-    public void calculateProbabilities(BackgroundSeparationHolder dh, TIntSet pixIdxs, 
+    public void calculateProbabilities(BackgroundSeparationHolder dh, 
+        TIntSet pixIdxs, 
         int width, int height,
         TIntFloatMap outputPointProbMap,
         TIntFloatMap outputPointProbErrMap) {
-                
-<span class="fc" id="L27">        TIntIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height);</span>
+        
+<span class="fc" id="L26">        TIntIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height,</span>
+            dh.scales);
                             
 <span class="fc" id="L29">        setProbabilities(dh, pixSep, outputPointProbMap, </span>
             outputPointProbErrMap);        
 <span class="fc" id="L31">    }</span>
 
-    private TIntFloatMap calculatePixelSurfaceDensities(TIntSet pixIdxs, 
-        int width, int height) {
-        
-        /*
-        the pixel surface density could be estimated in many ways.
-        since the surface density estimate is pairwise, can make a pairwise
-        estimate for each pixIdxs using its nearest 2D xy neighbor.        
-        */
-        
-<span class="nc" id="L42">        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);</span>
-        
-<span class="nc" id="L44">        PixelHelper ph = new PixelHelper();</span>
-<span class="nc" id="L45">        int[] xy = new int[2];</span>
-        
-        // key = pixIdx, value = density
-<span class="nc" id="L48">        TIntFloatMap densMap = new TIntFloatHashMap();</span>
-        
-<span class="nc" id="L50">        TIntIterator iter = pixIdxs.iterator();</span>
-<span class="nc bnc" id="L51" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
-        
-<span class="nc" id="L53">            int pixIdx = iter.next();</span>
-        
-<span class="nc" id="L55">            ph.toPixelCoords(pixIdx, width, xy);</span>
-            
-<span class="nc" id="L57">            Set&lt;PairInt&gt; nearest = nn.findClosestNotEqual(xy[0], xy[1]);</span>
-            
-<span class="nc bnc" id="L59" title="All 4 branches missed.">            if (nearest != null &amp;&amp; nearest.size() &gt; 0) {</span>
-                
-<span class="nc" id="L61">                PairInt p1 = nearest.iterator().next();</span>
-                
-                //chess board distance d
-<span class="nc" id="L64">                int d = Math.abs(p1.getX() - xy[0]) + Math.abs(p1.getY() - xy[1]);</span>
-                
-<span class="nc" id="L66">                float density = (float)(1. / Math.sqrt(d));</span>
-                            
-<span class="nc" id="L68">                densMap.put(pixIdx, density);</span>
-            }
-<span class="nc" id="L70">        }</span>
-        
-<span class="nc" id="L72">        return densMap; </span>
-    } 
-
+    /**
+     * given pixel indexes, scale factors for the PDF in dh, and the data widht
+     * and height, calculate the separation of the nearest neighbors in the
+     * scaled reference frame.
+     * 
+     * @param pixIdxs
+     * @param width
+     * @param height
+     * @param scales
+     * @return 
+     */
     private TIntIntMap calculatePixelSeparations(TIntSet pixIdxs, 
-        int width, int height) {
+        int width, int height, int[] scales) {
         
-<span class="fc" id="L78">        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);</span>
+<span class="fc" id="L47">        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);</span>
         
-<span class="fc" id="L80">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L81">        int[] xy = new int[2];</span>
+<span class="fc" id="L49">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L50">        int[] xy = new int[2];</span>
         
-        // key = pixIdx, value = density
-<span class="fc" id="L84">        TIntIntMap densMap = new TIntIntHashMap();</span>
+        // key = pixIdx, value = separation
+<span class="fc" id="L53">        TIntIntMap dMap = new TIntIntHashMap();</span>
         
-<span class="fc" id="L86">        TIntIterator iter = pixIdxs.iterator();</span>
-<span class="fc bfc" id="L87" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L55">        TIntIterator iter = pixIdxs.iterator();</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
         
-<span class="fc" id="L89">            int pixIdx = iter.next();</span>
+<span class="fc" id="L58">            int pixIdx = iter.next();</span>
         
-<span class="fc" id="L91">            ph.toPixelCoords(pixIdx, width, xy);</span>
+<span class="fc" id="L60">            ph.toPixelCoords(pixIdx, width, xy);</span>
             
-<span class="fc" id="L93">            Set&lt;PairInt&gt; nearest = nn.findClosestNotEqual(xy[0], xy[1]);</span>
+<span class="fc" id="L62">            Set&lt;PairInt&gt; nearest = nn.findClosestNotEqual(xy[0], xy[1]);</span>
             
-<span class="pc bpc" id="L95" title="2 of 4 branches missed.">            if (nearest != null &amp;&amp; nearest.size() &gt; 0) {</span>
+<span class="pc bpc" id="L64" title="2 of 4 branches missed.">            if (nearest != null &amp;&amp; nearest.size() &gt; 0) {</span>
                 
-<span class="fc" id="L97">                PairInt p1 = nearest.iterator().next();</span>
+<span class="fc" id="L66">                PairInt p1 = nearest.iterator().next();</span>
                 
-                //chess board distance d
-<span class="fc" id="L100">                int d = Math.abs(p1.getX() - xy[0]) + Math.abs(p1.getY() - xy[1]);</span>
+<span class="fc" id="L68">                float dx = p1.getX() - xy[0];</span>
+<span class="fc" id="L69">                dx /= (float)scales[0];</span>
+<span class="fc" id="L70">                float dy = p1.getY() - xy[1];</span>
+<span class="fc" id="L71">                dy /= (float)scales[1];</span>
+                
+<span class="fc" id="L73">                int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));</span>
                                             
-<span class="fc" id="L102">                densMap.put(pixIdx, d);</span>
+<span class="fc" id="L75">                dMap.put(pixIdx, d);</span>
             }
-<span class="fc" id="L104">        }</span>
+<span class="fc" id="L77">        }</span>
         
-<span class="fc" id="L106">        return densMap; </span>
+<span class="fc" id="L79">        return dMap; </span>
     } 
 
     private void setProbabilities(BackgroundSeparationHolder dh, 
         TIntIntMap pixSep, TIntFloatMap outputPointProbMap, 
         TIntFloatMap outputPointProbErrMap) {
 
-<span class="fc" id="L113">        float[] pp = new float[2];</span>
+<span class="fc" id="L86">        float[] pp = new float[2];</span>
         
-<span class="fc" id="L115">        TIntIntIterator iter = pixSep.iterator();</span>
-<span class="fc bfc" id="L116" title="All 2 branches covered.">        for (int i = 0; i &lt; pixSep.size(); ++i) {</span>
-<span class="fc" id="L117">            iter.advance();</span>
+<span class="fc" id="L88">        TIntIntIterator iter = pixSep.iterator();</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        for (int i = 0; i &lt; pixSep.size(); ++i) {</span>
+<span class="fc" id="L90">            iter.advance();</span>
             
-<span class="fc" id="L119">            int pixIdx = iter.key();</span>
-<span class="fc" id="L120">            int sd = iter.value();</span>
+<span class="fc" id="L92">            int pixIdx = iter.key();</span>
+<span class="fc" id="L93">            int d = iter.value();</span>
             
-<span class="fc" id="L122">            dh.calcProbabilityAndError(sd, pp);</span>
+<span class="fc" id="L95">            dh.calcProbabilityAndError(d, pp);</span>
             
-<span class="fc" id="L124">            outputPointProbMap.put(pixIdx, pp[0]);</span>
+<span class="fc" id="L97">            outputPointProbMap.put(pixIdx, pp[0]);</span>
             
-<span class="fc" id="L126">            outputPointProbErrMap.put(pixIdx, pp[1]);</span>
+<span class="fc" id="L99">            outputPointProbErrMap.put(pixIdx, pp[1]);</span>
         }
-<span class="fc" id="L128">    }</span>
+<span class="fc" id="L101">    }</span>
     
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

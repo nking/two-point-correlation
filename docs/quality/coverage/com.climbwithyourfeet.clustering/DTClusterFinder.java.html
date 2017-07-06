@@ -130,22 +130,14 @@ public class DTClusterFinder {
 <span class="fc" id="L130">        } else {</span>
 <span class="nc" id="L131">            sepHolder = ps.extract(points, width, height);</span>
         }
-            
-        /*
-        if (!userSetThreshold) {
-            if (!densSolver.isSparse()) {
-                threshholdFactor = denseThreshholdFactor;
-            }
-        }
-        */
-        
-<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
-<span class="nc" id="L143">            throw new IllegalStateException(&quot;Error in algorithm: &quot;</span>
+         
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L135">            throw new IllegalStateException(&quot;Error in algorithm: &quot;</span>
                 + &quot; background separation did not get set&quot;);
         }
         
-<span class="fc" id="L147">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
-<span class="fc" id="L148">    }</span>
+<span class="fc" id="L139">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="fc" id="L140">    }</span>
     
     /**
      * set the pairwise distances for x and y that characterize the background
@@ -155,61 +147,54 @@ public class DTClusterFinder {
      */
     public void setBackgroundSeparation(int xSeparation, int ySeparation) {
         
-<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
-<span class="nc" id="L159">            throw new IllegalStateException(&quot;separation is already set&quot;);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
+<span class="nc" id="L151">            throw new IllegalStateException(&quot;separation is already set&quot;);</span>
         }
                 
-<span class="nc" id="L162">        this.sepHolder = new BackgroundSeparationHolder();</span>
+<span class="nc" id="L154">        this.sepHolder = new BackgroundSeparationHolder();</span>
         
-<span class="nc" id="L164">        sepHolder.setXYBackgroundSeparations(xSeparation, ySeparation);</span>
+<span class="nc" id="L156">        sepHolder.setXYBackgroundSeparations(xSeparation, ySeparation);</span>
         
-<span class="nc" id="L166">        int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation </span>
+<span class="nc" id="L158">        int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation </span>
             + ySeparation * ySeparation));
         
-<span class="nc" id="L169">        sepHolder.setTheThreeSeparations(</span>
+<span class="nc" id="L161">        sepHolder.setTheThreeSeparations(</span>
             new float[]{0, separation, separation + 1});
-<span class="nc" id="L171">        sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});</span>
+<span class="nc" id="L163">        sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});</span>
         
-<span class="nc" id="L173">        float[] errors = new float[] {</span>
-            0.1f*sepHolder.threeSCounts[0],
-            0.1f*sepHolder.threeSCounts[0],
-            0.1f*sepHolder.threeSCounts[0]
-        };
-<span class="nc" id="L178">        sepHolder.setTheThreeErrors(errors);</span>
-        
-<span class="nc" id="L180">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
-<span class="nc" id="L181">    }</span>
+<span class="nc" id="L165">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="nc" id="L166">    }</span>
     
     /**
      *
      */
     public void findClusters() {
         
-<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &lt; 0) {</span>
-<span class="nc" id="L189">            calculateBackgroundSeparation();</span>
-<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
-<span class="nc" id="L191">            return;</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &lt; 0) {</span>
+<span class="nc" id="L174">            calculateBackgroundSeparation();</span>
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
+<span class="nc" id="L176">            return;</span>
         }
         
-<span class="pc bpc" id="L194" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
-<span class="nc" id="L195">            throw new IllegalStateException(&quot;background separation must be &quot;</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L180">            throw new IllegalStateException(&quot;background separation must be &quot;</span>
                 + &quot; calculated first&quot;);
         }
     
-<span class="fc" id="L199">        System.out.println(&quot;findGroups: &quot; + </span>
-<span class="fc" id="L200">            &quot; bckGndSep=&quot; + Arrays.toString(sepHolder.bckGndSep) + </span>
+<span class="fc" id="L184">        System.out.println(&quot;findGroups: &quot; + </span>
+<span class="fc" id="L185">            &quot; bckGndSep=&quot; + Arrays.toString(sepHolder.bckGndSep) + </span>
             &quot; thresholdFactor=&quot; + threshholdFactor);
         
-<span class="fc" id="L203">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
+<span class="fc" id="L188">        DTGroupFinder groupFinder = new DTGroupFinder(width, height);</span>
         
-<span class="fc" id="L205">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
+<span class="fc" id="L190">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
         
-<span class="fc" id="L207">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
+<span class="fc" id="L192">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
         
-<span class="fc" id="L209">        groups = groupFinder.calculateGroupsUsingSepartion(</span>
-<span class="fc" id="L210">            sepHolder.getXBackgroundSeparation(), </span>
-<span class="fc" id="L211">            sepHolder.getYBackgroundSeparation(), points);        </span>
-<span class="fc" id="L212">    }</span>
+<span class="fc" id="L194">        groups = groupFinder.calculateGroupsUsingSepartion(</span>
+<span class="fc" id="L195">            sepHolder.getXBackgroundSeparation(), </span>
+<span class="fc" id="L196">            sepHolder.getYBackgroundSeparation(), points);        </span>
+<span class="fc" id="L197">    }</span>
     
     /**
      * applies the scale factors in sp to the fields sepHolder.bckGndSep
@@ -221,13 +206,13 @@ public class DTClusterFinder {
     private void correctForScales(BackgroundSeparationHolder sepHolder, 
         PairwiseSeparations.ScaledPoints sp) {
         
-<span class="pc bpc" id="L224" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
-<span class="nc" id="L225">            throw new IllegalStateException(&quot;sepHolder.bckGndSep cannot be null&quot;);</span>
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L210">            throw new IllegalStateException(&quot;sepHolder.bckGndSep cannot be null&quot;);</span>
         }
         
-<span class="fc" id="L228">        sepHolder.bckGndSep[0] *= sp.xScale;</span>
-<span class="fc" id="L229">        sepHolder.bckGndSep[1] *= sp.yScale;</span>
-<span class="fc" id="L230">    }</span>
+<span class="fc" id="L213">        sepHolder.bckGndSep[0] *= sp.xScale;</span>
+<span class="fc" id="L214">        sepHolder.bckGndSep[1] *= sp.yScale;</span>
+<span class="fc" id="L215">    }</span>
     
     /**
      *
@@ -235,11 +220,11 @@ public class DTClusterFinder {
      */
     public int getNumberOfClusters() {
         
-<span class="pc bpc" id="L238" title="1 of 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L239">            return 0;</span>
+<span class="pc bpc" id="L223" title="1 of 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L224">            return 0;</span>
         }
         
-<span class="fc" id="L242">        return groups.size();</span>
+<span class="fc" id="L227">        return groups.size();</span>
     }
     
     /**
@@ -249,20 +234,20 @@ public class DTClusterFinder {
      */
     public TIntSet getCluster(int idx) {
         
-<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (groups == null) {</span>
-<span class="nc" id="L253">            throw new IllegalArgumentException(</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L238">            throw new IllegalArgumentException(</span>
                 &quot;findClusters was not successfully invoked&quot;);
         }
         
-<span class="nc bnc" id="L257" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
-<span class="nc" id="L258">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
+<span class="nc bnc" id="L242" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
+<span class="nc" id="L243">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
         }
         
-<span class="nc" id="L261">        return groups.get(idx);</span>
+<span class="nc" id="L246">        return groups.get(idx);</span>
     }
     
     public List&lt;TIntSet&gt; getGroups() {
-<span class="fc" id="L265">        return groups;</span>
+<span class="fc" id="L250">        return groups;</span>
     }
     
     /**
@@ -270,7 +255,7 @@ public class DTClusterFinder {
      * @return
      */
     public BackgroundSeparationHolder getBackgroundSeparationHolder() {
-<span class="fc" id="L273">        return sepHolder;</span>
+<span class="fc" id="L258">        return sepHolder;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
