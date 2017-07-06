@@ -4,10 +4,17 @@ import algorithms.connected.ConnectedValuesGroupFinder;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
+import algorithms.signalProcessing.Interp;
+import algorithms.signalProcessing.MedianTransform1D;
+import algorithms.util.OneDFloatArray;
 import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.list.TFloatList;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TFloatArrayList;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -19,6 +26,7 @@ import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -219,7 +227,7 @@ public class PairwiseSeparations {
         
         // look at frequency of groupMaximaIdxs values
         int[] maximaValues = new int[valueCounts.size()];
-        int[] maximaCounts = new int[valueCounts.size()];
+        float[] maximaCounts = new float[valueCounts.size()];
         TIntIntIterator iter = valueCounts.iterator();
         for (int i = 0; i < valueCounts.size(); ++i) {
             iter.advance();
@@ -231,7 +239,7 @@ public class PairwiseSeparations {
        
         if (debug) {
             int[] x = maximaValues;
-            int[] y = maximaCounts;
+            float[] y = maximaCounts;
             float xMax = MiscMath0.findMax(x);
             float yMin = MiscMath0.findMin(y);
             float yMax = MiscMath0.findMax(y);
@@ -245,67 +253,114 @@ public class PairwiseSeparations {
                 Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-     
-        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        //System.out.println("qs=" + Arrays.toString(qs));
-                
-        MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
-        float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
         
-        // minMaximaIdx is for the first peak in maximaCounts,
-        // and firstZeroIdx is the first subsequent point that falls to approx 0
-        int minMaximaIdx = -1;
+        /*
+        TODO:
+           if the density curve of (maximaValues, maximaCounts) has more than
+              one profile (peak) in it,
+              need to use smoothing and choose the first convolvolution which
+              produces a single profile
+        
+              then the best representative peak looks like the average,
+              but might need to follow the else block below this
+           else
+              the best representative peak is found as:
+                 if the peak is not the first point,
+                    the average of the peak and the point before it
+                 else if the peak is the first point and it is > 1,
+                    half it
+        */
+        int peakIdx = findPeakIfSingleProfile(maximaCounts);
+        
+        //NOTE: this section may need revision.
+        
+        float reprValue, reprCounts;
         int firstZeroIdx = -1;
-        for (int i = 0; i < maximaValues.length; ++i) {
-            int d = maximaValues[i];
-            if (minMaximaIdx == -1 && (d == minMaxima)) {
-                minMaximaIdx = i;
+        if (peakIdx > -1) {
+            if (peakIdx == 0) {
+                if (maximaValues[0] > 1) {
+                    reprValue = maximaValues[0] / 2.f;
+                    reprCounts = maximaCounts[0] / 2.f;
+                } else {
+                    reprValue = maximaValues[0];
+                    reprCounts = maximaCounts[0];
+                }
+                firstZeroIdx = 0;
+            } else {
+                assert(maximaValues.length > 1);
+                reprValue = 
+                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
+                reprCounts = 
+                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
             }
-            if (d > minMaxima) {
-                int c = maximaCounts[i];
+        } else {
+            //kernel smoothing over evenly spaced data
+            
+            int n2 = maximaValues[maximaValues.length - 1] -
+                maximaValues[0] + 1;
+            TIntList outV = new TIntArrayList(n2);
+            TFloatList outC = new TFloatArrayList(n2);
+            integerResampling(maximaValues, maximaCounts, outV, outC);
+            maximaValues = outV.toArray(new int[outV.size()]);
+            maximaCounts = outC.toArray(new float[outC.size()]);
+            
+            float[][] smoothed = smooth(maximaValues, maximaCounts);
+            
+            maximaValues = new int[smoothed[0].length];
+            for (int j = 0; j < maximaValues.length; ++j) {
+                maximaValues[j] = Math.round(smoothed[0][j]);
+            }
+            maximaCounts = smoothed[1];
+            
+            peakIdx = averagePeak(maximaValues, maximaCounts);
+            
+            reprValue = maximaValues[peakIdx];
+            reprCounts = maximaCounts[peakIdx];            
+        }
+        
+        if (firstZeroIdx == -1) {
+            // calculate the firstZeroIdx after peak
+            float currentMinC = Float.POSITIVE_INFINITY;
+            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
+            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
+            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
+                int d = maximaValues[i];
+                if (firstZeroIdx == -1) {
+                    firstZeroIdx = i;
+                }
+                float c = maximaCounts[i];
                 if (c <= avgMin) {
                     firstZeroIdx = i;
                     break;
+                } else if (c < currentMinC) {
+                    firstZeroIdx = i;
+                    currentMinC = c;
                 }
             }
-        }
-        
-        assert(minMaximaIdx > -1);
-        
-        if (firstZeroIdx == -1) {
-            firstZeroIdx = minMaximaIdx + 1;
-            if (firstZeroIdx == maximaValues.length) {
-                firstZeroIdx = minMaximaIdx;
+            if (firstZeroIdx == -1) {
+                firstZeroIdx = maximaCounts.length - 1;
             }
         }
         
-        if (firstZeroIdx > minMaximaIdx) {
-            int maxCountIdx0 = -1;
-            int maxCount0 = Integer.MIN_VALUE;
-            for (int i = 0; i < firstZeroIdx; ++i) {
-                if (maximaCounts[i] > maxCount0) {
-                    maxCountIdx0 = i;
-                    maxCount0 = maximaCounts[i];
-                }
-            }
-            minMaximaIdx = maxCountIdx0;
-            minMaxima = maxCount0;
-        }
-        
-        System.out.println("found background separation=" 
-            + maximaValues[minMaximaIdx]);
+        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
+        //System.out.println("qs=" + Arrays.toString(qs));
+               
+        System.out.println("found background separation=" + reprValue);
         
         BackgroundSeparationHolder h = new BackgroundSeparationHolder();
                 
-        int m2 = (int)Math.round(maximaValues[minMaximaIdx]/Math.sqrt(2));
+        int m2 = (int)reprValue;
+        if (m2 < 1) {
+            m2 = 1;
+        }
         h.setXYBackgroundSeparations(m2, m2);
         
         h.setTheThreeSeparations(new float[]{
-            0, maximaValues[minMaximaIdx], 
+            0, m2, 
             maximaValues[firstZeroIdx]});
         
         h.setAndNormalizeCounts(new float[]{
-            maximaCounts[minMaximaIdx], maximaCounts[minMaximaIdx], 
+            reprCounts, reprCounts, 
             maximaCounts[firstZeroIdx]});
        
         return h;
@@ -506,4 +561,135 @@ public class PairwiseSeparations {
         System.out.println(sb2.toString());
     }
     
+    private int findPeakIfSingleProfile(float[] counts) {
+
+        int yMaxIdx = MiscMath0.findYMaxIndex(counts);
+        float yMax = counts[yMaxIdx];
+        
+        // increasing towards peak and decreasing after?
+        boolean sp = true;
+        float prev = counts[0];
+        for (int i = 1; i < counts.length; ++i) {
+            float v = counts[i];
+            if (i < yMaxIdx) {
+                if (v < prev || v > yMax) {
+                    sp = false;
+                    break;
+                }
+            } else if (i > yMaxIdx) {
+                if (v > prev || v > yMax) {
+                    sp = false;
+                    break;
+                }
+            }
+            prev = counts[i];
+        }
+        if (sp) {
+            return yMaxIdx;
+        }
+        
+        return -1;
+    }
+    
+    private void integerResampling(int[] values, float[] counts,
+        TIntList outputValues, TFloatList outputCounts) {
+        
+        int sStart = values[0];
+        int sEnd = values[values.length - 1];
+        
+        int n = sEnd - sStart + 1;
+        
+        Interp interp = new Interp();
+        float[] input = new float[2];
+        
+        for (int i = 0; i < values.length - 1; ++i) {
+            int a0 = values[i];
+            int a1 = values[i + 1];
+            if (a1 == (a0 + 1)) {
+                outputValues.add(a0);
+                outputCounts.add(counts[i]);
+                continue;
+            }
+            input[0] = counts[i];
+            input[1] = counts[i + 1];
+            int n2 = a1 - a0 + 1;
+            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);
+            for (int j = 0; j < n2; ++j) {
+                outputValues.add(j + a0);
+                outputCounts.add(Math.round(output[j]));
+            }
+        }        
+    }
+    
+    // result[0] is the array transformed values
+    // result[1] is the array of transformed counts
+    private float[][] smooth(int[] maximaValues, float[] maximaCounts) {
+
+        MedianTransform1D mt = new MedianTransform1D();
+        
+        List<OneDFloatArray> outTrans = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeff = new ArrayList<OneDFloatArray>();
+        
+        //using pyramidal means need to rescale maximaValues too
+        List<OneDFloatArray> outTransV = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffV = new ArrayList<OneDFloatArray>();
+
+        float[] input = maximaCounts;
+        float[] inputV = new float[maximaValues.length];
+        for (int i = 0; i < maximaValues.length; ++i) {
+            inputV[i] = maximaValues[i];
+        }
+        
+        while (true) {
+            
+            mt.multiscalePyramidalMedianTransform2(input, outTrans, outCoeff);
+            mt.multiscalePyramidalMedianTransform2(inputV, outTransV, outCoeffV);
+
+            // search for the first transformed which has only one pea in it
+            for (int i = 0; i < outTrans.size(); ++i) {
+                OneDFloatArray tr = outTrans.get(i);
+                OneDFloatArray trV = outTransV.get(i);
+                assert(tr.a.length == trV.a.length);
+                
+                int peakIdx = findPeakIfSingleProfile(tr.a);
+                if (peakIdx > -1) {
+                    float[][] a = new float[2][];
+                    a[0] = trV.a;
+                    a[1] = tr.a;
+                    return a;
+                }
+            }
+            
+            input = outTrans.get(outTrans.size() - 1).a;
+            inputV = outTransV.get(outTransV.size() - 1).a;
+            assert(input.length > 3);
+            outTrans.clear();
+            outCoeff.clear();
+            outTransV.clear();
+            outCoeffV.clear();
+        }
+    }
+
+    private int averagePeak(int[] values, float[] counts) {
+
+        float avg = 0;
+        for (float c : counts) {
+            avg += c;
+        }
+        avg /= (float)counts.length;
+        
+        int idx = 0;
+        for (int i = 0; i < counts.length; ++i) {
+            if (counts[i] < avg) {
+                idx = i;
+            } else if (counts[i] == avg) {
+                idx = i;
+                break;
+            } else {
+                break;
+            }
+        }
+        return idx;
+    }
+
 }
