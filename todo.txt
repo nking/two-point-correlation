@@ -1,11 +1,6 @@
--- correct the PDFs:
-   -- cases in PairwiseSeparations where there is no
-      firstZero
-   -- revisit the errors.  h=1 is not correct for current context
+-- findGroups : add nearest neighbor 2D
 
--- tests:
-   -- make test for single filled circle centered
-   -- finish the changes to the "other" separation results.
+-- edit the README.txt and documentation
 
 -- rewrite the one dbscan image unit test if missing since refactoring
 
