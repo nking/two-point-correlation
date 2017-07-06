@@ -214,9 +214,64 @@ public class BackgroundSeparationHolder {
         */
         
         threeSCounts = new float[3];
-        threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));
-        threeSCounts[0] = threeSCounts[1] + 
-            (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
+        if (threeS[2] == threeS[1] && threeS[1] == threeS[0]) {
+            //TODO: revisit this
+            threeSCounts[0] = 0.333f;
+            threeSCounts[1] = 0.333f;
+            threeSCounts[2] = 0.333f;
+        } else if (threeS[2] == threeS[1]) {
+          
+            /*
+            cn0
+                   cn1
+                     
+            0      v1
+            */
+            double areaR = threeS[1] * counts[1];
+            double areaT = 0.5f * threeS[1] * Math.abs(counts[0] - counts[1]);
+            // areaR_Norm/area = areaR/(areaR + areaT)
+            double areaR_Norm = area * areaR/(areaR + areaT);
+            // v1*cn1 = areaR_Norm
+            // cn1 = areaR_Norm/v1
+            threeSCounts[1] = (float)areaR_Norm/threeS[1];
+            
+            double areaT_Norm = area * areaR/(areaR + areaT);
+            if (counts[0] > counts[1]) {
+                //(cn0-cn1)*v1 = areaT_Norm
+                threeSCounts[0] = threeSCounts[1] + (float)(areaT_Norm/threeS[1]);
+            } else {
+                //(cn1-cn0)*v1 = areaT_Norm
+                // (cn1-cn0) = areaT_Norm/v1
+                // cn0 = cn1 - (areaT_Norm/v1)
+                threeSCounts[0] = threeSCounts[1] - (float)(areaT_Norm/threeS[1]);
+            }
+            
+            // 2 and 1 share same value
+            threeSCounts[1] /= 2.f;
+            threeSCounts[2] = threeSCounts[1];
+            
+        } else if (threeS[1] == threeS[0]) {
+            /*
+            cn0
+                  
+                   cn2
+            0      v2
+            
+            where cn2 is approx 0
+            
+            v2 * cn0 = area
+            */
+            threeSCounts[0] = (float)(area)/threeS[2];
+            
+            // 1 and 0 share same value
+            threeSCounts[0] /= 2.f;
+            threeSCounts[1] = threeSCounts[0];
+            
+        } else {
+            threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));
+            threeSCounts[0] = threeSCounts[1] + 
+                (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
+        }
         
     }
     
@@ -236,7 +291,7 @@ public class BackgroundSeparationHolder {
         int xSep0 = xSeparation/scales[0];
         int ySep0 = ySeparation/scales[1];
         
-        int sep0 = (int)Math.round(xSep0*xSep0 + ySep0*ySep0);
+        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);
         
         return calcProbability(sep0);
     }
@@ -247,7 +302,7 @@ public class BackgroundSeparationHolder {
         int xSep0 = xSeparation/scales[0];
         int ySep0 = ySeparation/scales[1];
         
-        int sep0 = (int)Math.round(xSep0*xSep0 + ySep0*ySep0);
+        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);
         
         calcProbabilityAndError(sep0, output);
     }
@@ -261,17 +316,26 @@ public class BackgroundSeparationHolder {
      */
     private float calcProbability(int separation) {
         
-        float dist = separation;
-        
         int idx0, idx1;
-        if (separation > threeSCounts[2]) {
-            return 0;
-        } else if (separation < threeSCounts[1]) {
-            idx0 = 0;
-            idx1 = 1;
-        } else {
+        
+        if (threeS[0] == threeS[1] && threeS[0] == threeS[2]) {
+            return threeSCounts[1];
+        } else if (threeS[0] == threeS[1]) {
             idx0 = 1;
             idx1 = 2;
+        } else if (threeS[1] == threeS[2]) {
+            idx0 = 0;
+            idx1 = 1;
+        } else {        
+            if (separation > threeSCounts[2]) {
+                return 0;
+            } else if (separation < threeSCounts[1]) {
+                idx0 = 0;
+                idx1 = 1;
+            } else {
+                idx0 = 1;
+                idx1 = 2;
+            }
         }
         
         /*
@@ -286,7 +350,7 @@ public class BackgroundSeparationHolder {
         
         float r = calcCtoSD(idx0, idx1);
         
-        float p = threeSCounts[idx1] + r * (dist - threeS[idx1]);
+        float p = threeSCounts[idx1] + r * (separation - threeS[idx1]);
         
         return p;
     }
@@ -309,19 +373,30 @@ public class BackgroundSeparationHolder {
      * @param output resulting probability and error
      */    
     protected void calcProbabilityAndError(int separation, float[] output) {
-        
-        float dist = separation;// * thresholdFactor;
-        
+                
         int idx0, idx1;
-        if (dist > threeSCounts[2]) {
-            Arrays.fill(output, 0);
+        
+        if (threeS[0] == threeS[1] && threeS[0] == threeS[2]) {
+            output[0] = threeSCounts[1];
+            output[1] = threeSErrors[1];
             return;
-        } else if (dist < threeSCounts[1]) {
-            idx0 = 0;
-            idx1 = 1;
-        } else {
+        } else if (threeS[0] == threeS[1]) {
             idx0 = 1;
             idx1 = 2;
+        } else if (threeS[1] == threeS[2]) {
+            idx0 = 0;
+            idx1 = 1;
+        } else {        
+            if (separation > threeSCounts[2]) {
+                Arrays.fill(output, 0);
+                return;
+            } else if (separation < threeSCounts[1]) {
+                idx0 = 0;
+                idx1 = 1;
+            } else {
+                idx0 = 1;
+                idx1 = 2;
+            }
         }
                 
         /*
@@ -333,13 +408,13 @@ public class BackgroundSeparationHolder {
         
         p(x) = p(idx1) + r * (sd(x) - sd(idx1))
         */
-        
+                    
         float r = calcCtoSD(idx0, idx1);
         
-        float p = threeSCounts[idx1] + r * (dist - threeS[idx1]);
+        float p = threeSCounts[idx1] + r * (separation - threeS[idx1]);
         
         //using the same slopes for errors.
-        float pErr = threeSErrors[idx1] + r * (dist - threeS[idx1]);
+        float pErr = threeSErrors[idx1] + r * (separation - threeS[idx1]);
     
         output[0] = p;
         output[1] = pErr;
