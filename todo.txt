@@ -1,8 +1,9 @@
 -- findGroups : add nearest neighbor 2D
 
 -- edit the README.txt and documentation
-
--- rewrite the one dbscan image unit test if missing since refactoring
+-- update the wiki github io web pages
+   -- redo a couple of "other" snapshots on two-pt-correl web page:
+   the dbscan and the curved arrow from the finnish data set
 
 -- this project needs 2 different builds and the explanation
    added to both added to README.txt and a note considering 
@@ -15,23 +16,3 @@
 -- create ability for multiple dimensions
    -- that is n^2/2 number of dts and/or knn
 -- need improvements in hist...
-
--- update the javadocs
--- update coverage reports
--- update the wiki github io web pages
--- redo a couple of "other" snapshots on two-pt-correl web page:
-   the dbscan and the curved arrow from the finnish data set
-
--- low priority future task:
-   replace the result of a single critical density w/
-   that of a critical density for x and y separately.
-   - haven't thought this through yet, but
-     the distance transforms for x and y directions 
-     separately can be done and used after the
-     critical density for the combined are found, then 
-     using the same points deciding the combined critical
-     density the separate can be calculated.
-   - this change would make it easier to use on multiple
-     dimensions and less sensitive to user applied scaling
-     to data that are not naturally on same scales.
-
