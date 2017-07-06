@@ -289,6 +289,15 @@ public class PairwiseSeparations {
         minMaximaIdx = maxCountIdx0;
         minMaxima = maxCount0;
         
+        if (minMaximaIdx == -1) {
+            if (maximaValues.length == 1) {
+                minMaximaIdx = firstZeroIdx;
+            } else {
+                minMaximaIdx = firstZeroIdx - 1;
+            }
+            minMaxima = maximaValues[minMaximaIdx];
+        }
+        
         System.out.println("found background separation=" 
             + maximaValues[minMaximaIdx]);
         
