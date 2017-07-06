@@ -163,9 +163,13 @@ public class PairwiseSeparations {
             ph.toPixelCoords(tPix, width, xy);
             int v = dt[xy[0]][xy[1]];
             
+            if (v == 0) {
+                continue;
+            }
+            
             // if this is a boundary pixel and v > 1, skip it
-            if (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
-                (xy[1] == (height - 1))) {
+            if (v > 1 && (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
+                (xy[1] == (height - 1)))) {
                 continue;
             }
             
@@ -250,12 +254,14 @@ public class PairwiseSeparations {
             }
         }
      
-        float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        System.out.println("qs=" + Arrays.toString(qs));
+        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
+        //System.out.println("qs=" + Arrays.toString(qs));
                 
         MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
         float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
         
+        // minMaximaIdx is for the first peak in maximaCounts,
+        // and firstZeroIdx is the first subsequent point that falls to approx 0
         int minMaximaIdx = -1;
         int firstZeroIdx = -1;
         for (int i = 0; i < maximaValues.length; ++i) {
@@ -271,6 +277,9 @@ public class PairwiseSeparations {
                 }
             }
         }
+        
+        assert(minMaximaIdx > -1);
+        
         if (firstZeroIdx == -1) {
             firstZeroIdx = minMaximaIdx + 1;
             if (firstZeroIdx == maximaValues.length) {
@@ -278,24 +287,17 @@ public class PairwiseSeparations {
             }
         }
         
-        int maxCountIdx0 = -1;
-        int maxCount0 = Integer.MIN_VALUE;
-        for (int i = 0; i < firstZeroIdx; ++i) {
-            if (maximaCounts[i] > maxCount0) {
-                maxCountIdx0 = i;
-                maxCount0 = maximaCounts[i];
+        if (firstZeroIdx > minMaximaIdx) {
+            int maxCountIdx0 = -1;
+            int maxCount0 = Integer.MIN_VALUE;
+            for (int i = 0; i < firstZeroIdx; ++i) {
+                if (maximaCounts[i] > maxCount0) {
+                    maxCountIdx0 = i;
+                    maxCount0 = maximaCounts[i];
+                }
             }
-        }
-        minMaximaIdx = maxCountIdx0;
-        minMaxima = maxCount0;
-        
-        if (minMaximaIdx == -1) {
-            if (maximaValues.length == 1) {
-                minMaximaIdx = firstZeroIdx;
-            } else {
-                minMaximaIdx = firstZeroIdx - 1;
-            }
-            minMaxima = maximaValues[minMaximaIdx];
+            minMaximaIdx = maxCountIdx0;
+            minMaxima = maxCount0;
         }
         
         System.out.println("found background separation=" 
@@ -311,7 +313,8 @@ public class PairwiseSeparations {
             maximaValues[firstZeroIdx]});
         
         h.setAndNormalizeCounts(new float[]{
-            maxCount0, maxCount0, maximaCounts[firstZeroIdx]});
+            maximaCounts[minMaximaIdx], maximaCounts[minMaximaIdx], 
+            maximaCounts[firstZeroIdx]});
        
         // calculate the errors for the 3 points
         float[] errors = new float[] {
