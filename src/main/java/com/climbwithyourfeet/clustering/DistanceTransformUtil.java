@@ -19,12 +19,8 @@ public class DistanceTransformUtil {
         int[] xy = new int[2];
         
         int[][] data = new int[width][];
-        int[][] dtX = new int[width][];
-        int[][] dtY = new int[width][];
         for (int i = 0; i < width; ++i) {
             data[i] = new int[height];
-            dtX[i] = new int[height];
-            dtY[i] = new int[height];
         }
         
         TIntIterator iter = pixIdxs.iterator();
@@ -36,42 +32,10 @@ public class DistanceTransformUtil {
         
         DistanceTransform trans = new DistanceTransform();
         
-        for (int i = 0; i < width; ++i) {
-            dtX[i] = trans.applyMeijsterEtAl1D(data[i]);
-        }
-        
-        // transform data by 90 degrees, then the results by -90
-        for (int j = 0; j < height; ++j) {
-            int[] dataTr = new int[width];
-            for (int i = 0; i < width; ++i) {
-                dataTr[i] = data[i][j];
-            }
-            int[] tmp = trans.applyMeijsterEtAl1D(dataTr);
-            for (int i = 0; i < width; ++i) {
-                dtY[i][j] = tmp[i];
-            }
-        }
-        
         int[][] dt = trans.applyMeijsterEtAl(data);
         
         //System.out.println("2D:");
         //printDT(dt);
-        
-        int v;
-        for (int i = 0; i < width; ++i) {
-            for (int j = 0; j < height; ++j) {
-                v = Math.min(dtX[i][j], dtY[i][j]);
-                if (v > 2) {
-                    v *= v;
-                }
-                dt[i][j] = Math.min(dt[i][j], v);
-            }
-        }
-        
-        //System.out.println("dtX:");
-        //printDT(dtX);
-        //System.out.println("dtY:");
-        //printDT(dtY);
         
         return dt;
     }
