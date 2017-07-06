@@ -19,7 +19,6 @@ public class BackgroundSeparationHolder {
         float[] threeS;
         float[] threeSCounts;
         float[] threeSErrors;
-        int approxH;
     
     (2) the original axes data are:
         
@@ -102,12 +101,7 @@ public class BackgroundSeparationHolder {
      * the errors for the points in (threeSs, threeSCounts)
      */
     protected float[] threeSErrors;
-    
-    /**
-     * the effective bandwidth a point
-     */
-    public int approxH = 1;
-    
+      
     public void setTheThreeSeparations(float[] s) {
         if (s.length != 3) {
             throw new IllegalArgumentException(
@@ -258,6 +252,13 @@ public class BackgroundSeparationHolder {
         calcProbabilityAndError(sep0, output);
     }
     
+    /**
+     * infer the probability of the given separation.
+     * NOTE that the separation must be in the reference frame of the scaled
+     * data.
+     * @param separation in scaled reference frame
+     * @return resulting probability
+     */
     private float calcProbability(int separation) {
         
         float dist = separation;
@@ -299,7 +300,14 @@ public class BackgroundSeparationHolder {
         
         return r;
     }
-    
+
+    /**
+     * infer the probability and error of the given separation.
+     * NOTE that the separation must be in the reference frame of the scaled
+     * data.
+     * @param separation in scaled reference frame
+     * @param output resulting probability and error
+     */    
     protected void calcProbabilityAndError(int separation, float[] output) {
         
         float dist = separation;// * thresholdFactor;
@@ -337,10 +345,7 @@ public class BackgroundSeparationHolder {
         output[1] = pErr;
     }
     
-    float calcError(float prob, float separation, float xerr, float approxH) {
-
-//TODO: need to revisit this and compare to other methods of 
-// determining point-wise error
+    float calcError(float prob, float separation, float xerr) {
 
         //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
         
@@ -349,12 +354,12 @@ public class BackgroundSeparationHolder {
 
         float count = prob;
         float t2 = count * separation * separation;
-        t2 /= (approxH * approxH);
 
         float pErr = (float)Math.sqrt(t1 + t2);
 
         /*
-        consider MISE:
+        NOTE: if add kernel smoothing,
+          consider MISE:
             integral of E((p_smoothed(x) - p(x)^2)dx
         
             E[a] = integral_-inf_to_inf of (a * f(a) * a)
@@ -367,7 +372,6 @@ public class BackgroundSeparationHolder {
             + " p=" + prob 
             + " pErr=" + pErr 
             + " count=" + count
-            + " h=" + approxH
             + " sqrt(t1)=" + Math.sqrt(t1) +
             " sqrt(t2_=" + Math.sqrt(t2));
         */

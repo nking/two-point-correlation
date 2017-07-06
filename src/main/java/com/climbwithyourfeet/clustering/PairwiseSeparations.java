@@ -262,9 +262,7 @@ public class PairwiseSeparations {
             + maximaValues[minMaximaIdx]);
         
         BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-        
-        h.approxH = 1;
-        
+                
         int m2 = (int)Math.round(maximaValues[minMaximaIdx]/Math.sqrt(2));
         h.setXYBackgroundSeparations(m2, m2);
         
@@ -277,9 +275,9 @@ public class PairwiseSeparations {
        
         // calculate the errors for the 3 points
         float[] errors = new float[] {
-            h.calcError(h.threeSCounts[0], h.threeS[0], 0, h.approxH),
-            h.calcError(h.threeSCounts[1], h.threeS[1], 0, h.approxH),
-            h.calcError(h.threeSCounts[2], h.threeS[2], 0, h.approxH)
+            h.calcError(h.threeSCounts[0], h.threeS[0], 0),
+            h.calcError(h.threeSCounts[1], h.threeS[1], 0),
+            h.calcError(h.threeSCounts[2], h.threeS[2], 0)
         };
         h.setTheThreeErrors(errors);
         
