@@ -120,6 +120,9 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 INCREASE SPACING by factor of 4
                 */
                 
+                int xscl = 4;
+                int yscl = 4;
+                
                 int[] minMaxXY = new int[4];
                 minMaxXY[0] = Integer.MAX_VALUE;
                 minMaxXY[1] = Integer.MIN_VALUE;
@@ -128,8 +131,8 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
-                       4*Math.round(indexer.getX()[k]),
-                       4*Math.round(indexer.getY()[k]));
+                       xscl*Math.round(indexer.getX()[k]),
+                       yscl*Math.round(indexer.getY()[k]));
                     points.add(p);
                     if (p.getX() < minMaxXY[0]) {
                         minMaxXY[0] = p.getX();
@@ -189,16 +192,16 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 }
                 
                 if (plotClusters) {
-                plotter.addPlotWithoutHull(
-                    (int)Math.floor(minMaxXY[0] - 1), 
-                    (int)Math.ceil(minMaxXY[1] + 1), 
-                    (int)Math.floor(minMaxXY[2] - 1), 
-                    (int)Math.ceil(minMaxXY[3] + 1), 
-                    points, groupList, 
-                    clusterFinder.getBackgroundSeparationHolder().bckGndSep,
-                    "ran" + ii + "_" + i);
-                
-                plotter.writeFile("random2_");
+                    plotter.addPlotWithoutHull(
+                        (int)Math.floor(minMaxXY[0] - 1), 
+                        (int)Math.ceil(minMaxXY[1] + 1), 
+                        (int)Math.floor(minMaxXY[2] - 1), 
+                        (int)Math.ceil(minMaxXY[3] + 1), 
+                        points, groupList, 
+                        clusterFinder.getBackgroundSeparationHolder().bckGndSep,
+                        "ran" + ii + "_" + i);
+
+                    plotter.writeFile("random2_");
                 }
                 
                 BackgroundSeparationHolder sh = 
@@ -227,9 +230,9 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
                 */
 
                 if (plotContours) {
-                ContourPlotter plotter2 = new ContourPlotter();
-                plotter2.writeFile(probMap, width, height,
-                    "random_contour2_" + i);
+                    ContourPlotter plotter2 = new ContourPlotter();
+                    plotter2.writeFile(probMap, width, height,
+                        "random_contour2_" + i);
                 }
                 
                 count++;
@@ -289,6 +292,9 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
             AxisIndexer indexer = CreateClusterDataTest.getUEFClusteringDataset(
                 fileName);
             
+            int xscl = 4;
+            int yscl = 4;
+                
             int[] minMaxXY = new int[4];
             minMaxXY[0] = Integer.MAX_VALUE;
             minMaxXY[1] = Integer.MIN_VALUE;
@@ -297,8 +303,8 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(
-                    4 * Math.round(indexer.getX()[k]),
-                    4 * Math.round(indexer.getY()[k]));
+                    xscl * Math.round(indexer.getX()[k]),
+                    yscl * Math.round(indexer.getY()[k]));
                 points.add(p);
                 if (p.getX() < minMaxXY[0]) {
                     minMaxXY[0] = p.getX();
@@ -332,6 +338,34 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
 
             clusterFinder.findClusters();
 
+            float[] seps = clusterFinder.getBackgroundSeparationHolder().bckGndSep;
+            // 0:  0.3 to 0.7
+            // 1:  0.3 ish
+            // 2:  0.15 to 0.42
+            // 3:  0.3 to 0.55
+            // 4:  0.3 to 0.75
+            // 5:  approx 0.35 to 0.75
+            // 6:  0.285 to 0.35
+            // 7:  0.1 to 0.3
+            switch (i) {
+                case 0:
+                case 1:
+                case 2:
+                case 6:
+                case 7:
+                    assertEquals(1.0f*xscl, seps[0]);
+                    assertEquals(1.0f*xscl, seps[1]);
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                    assertTrue(seps[0] >= 1.0f*xscl && seps[0] <= 2.0f*xscl);
+                    assertTrue(seps[1] >= 1.0f*xscl && seps[1] <= 2.0f*xscl);
+                    break;
+                default:
+                    break;
+            }
+            
             int nGroups = clusterFinder.getNumberOfClusters();
 
             System.out.println("  nGroups=" + nGroups);
@@ -358,16 +392,16 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
             }
 
             if (plotClusters) {
-            plotter.addPlotWithoutHull(
-                (int)Math.floor(minMaxXY[0] - 1), 
-                (int)Math.ceil(minMaxXY[1] + 1), 
-                (int)Math.floor(minMaxXY[2] - 1), 
-                (int)Math.ceil(minMaxXY[3] + 1), 
-                points, groupList,
-                clusterFinder.getBackgroundSeparationHolder().bckGndSep,
-                "other" + i);
+                plotter.addPlotWithoutHull(
+                    (int)Math.floor(minMaxXY[0] - 1), 
+                    (int)Math.ceil(minMaxXY[1] + 1), 
+                    (int)Math.floor(minMaxXY[2] - 1), 
+                    (int)Math.ceil(minMaxXY[3] + 1), 
+                    points, groupList,
+                    clusterFinder.getBackgroundSeparationHolder().bckGndSep,
+                    "other" + i);
 
-            plotter.writeFile("other2_");
+                plotter.writeFile("other2_");
             }
 
             BackgroundSeparationHolder sh = 
@@ -395,9 +429,9 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
             }*/
             
             if (plotContours) {
-            ContourPlotter plotter2 = new ContourPlotter();
-            plotter2.writeFile(probMap, width, height, 
-                "other_contour2_" + i);
+                ContourPlotter plotter2 = new ContourPlotter();
+                plotter2.writeFile(probMap, width, height, 
+                    "other_contour2_" + i);
             }
         }
         
