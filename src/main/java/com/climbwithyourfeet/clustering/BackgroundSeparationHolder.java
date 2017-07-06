@@ -31,17 +31,13 @@ public class BackgroundSeparationHolder {
            critical separation for association of 2 points.
     */
     
-    /* 
-    TODO: need to reconsider this with the thresholdFactor
-       and the use of slopes to approx a PDF.
-It's a placeholder for now.
-    
+    /*
     <pre>
-    creating a PDF with x axis being point pairwise separation and
-    the function being 3 non-uniform regions:
-       (1) x being 0 to thr * cs
-       (2) cs to to end of increasig x with counts above zero
-       (3) increasing x beyond (2) has density 0.
+    creating a PDF with x axis being point pairwise separation and 
+    the function being 3 non-uniform regions as inclined lines:
+       (1) x-axis: 0 to c.s.
+       (2) x-axis: c.s. to first x with count of 0 (or effectively zero)
+       (3) x-axis: first x w/ zero count to last x
     
             |                   
      counts *                   |
@@ -56,18 +52,18 @@ It's a placeholder for now.
     */
     
     /**
-     * In the case that the background density was found using scaled axes,
-     * these scale factors will later be needed to apply the background
-     * separation as a limit to each axis.
+     * The PDF was created using the scaled axes.
+     * scales holds the scale factors for that and they can be used on 
+     * variables in the original reference frame (= not scaled) to transform
+     * to the reference frame of the PDF.
      * They are each "1" by default.
      * The first dimension is for the x axis and the 2nd is for the y axis.
      */
     protected int[] scales = new int[]{1, 1};
     
     /**
-      Is the x separation and y separation in the
-      original reference frame that are used to define the
-      critical separation for association of 2 points
+      The x separation and y separation in the original reference frame that 
+      are used to define the critical separation for association of 2 points
    
      <pre>
      it's relationship to this.threeS[1] is:
@@ -82,25 +78,28 @@ It's a placeholder for now.
     protected float[] bckGndSep = null;
    
     /**
-     * the separations of 3 points in the discrete point separation density
-     * curve:
+     * These are the 3 discrete points of the x-points of the PDF between which
+     * continuous lines are interpreted.
+     * 
+     * The three points are:
      * threeS[0] is 0;
-     * threeS[1] is the critical separation point. The threshold factor
-     * should be multiplied by it upon use.
+     * threeS[1] is the representative background separation point. 
+     *    The threshold factor should be multiplied by it upon use.
      * threeS[2] is a separation value larger than threeS[1] and is the
-     * last with a count or density above 0.  The threshold factor
+     * last with a count or density above approximately 0.  The threshold factor
      * should be multiplied by it upon use.
      */
     protected float[] threeS;
     
     /**
-     * the counts for the separations in array threeSs.
-     * These can be normalized using the setter.
+     * These are the normalized counts of the 3 discrete points in threeS.
+     * They are the y-points of the PDF between which continuous lines are 
+     * interpreted.
      */
     protected float[] threeSCounts;
     
     /**
-     * the errors for the points in threeSs
+     * the errors for the points in (threeSs, threeSCounts)
      */
     protected float[] threeSErrors;
     

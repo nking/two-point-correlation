@@ -418,7 +418,7 @@ public class PairwiseSeparations {
         return adjMap;
     }
     
-     private void writeDebugImage(double[][] dt, String fileSuffix, int width, 
+    private void writeDebugImage(double[][] dt, String fileSuffix, int width, 
         int height) throws IOException {
 
         BufferedImage outputImage = new BufferedImage(width, height,
