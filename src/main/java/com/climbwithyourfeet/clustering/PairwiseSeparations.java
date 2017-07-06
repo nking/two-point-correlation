@@ -119,7 +119,7 @@ public class PairwiseSeparations {
             try {
                 plotter = new PolygonAndPointPlotter();
                 plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
-                "separation");
+                    "separation");
                 plotter.writeFile("_separation_" + ts);
             } catch (IOException ex) {
                 Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
@@ -137,8 +137,8 @@ public class PairwiseSeparations {
         //  ...such a correction can be done with kernel smoothing using 
         //     a kernel bandwidth fixed in the distance axis.
         //     if implemented with fast wavelet transforms, 
-        //     the results is instead a K-Nearest Neighbors unless the 
-        //     input is resampled to fixed spacing.
+        //     the results are instead a K-Nearest Neighbors smoothing 
+        //     unless the input is resampled to fixed spacing.
 
         // search for valueGroups which has value larger than all adj neighbors
         // key = valueGroups index, value = dt value for the group
@@ -346,7 +346,7 @@ public class PairwiseSeparations {
         ScaledPoints sp = new ScaledPoints();
         sp.pixelIdxs = pixelIdxs2;
         sp.width = width2;
-        sp.height = height;
+        sp.height = height2;
         sp.xScale = xyScales[0];
         sp.yScale = xyScales[1];
     
