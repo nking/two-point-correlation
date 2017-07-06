@@ -130,15 +130,7 @@ public class DTClusterFinder {
         } else {
             sepHolder = ps.extract(points, width, height);
         }
-            
-        /*
-        if (!userSetThreshold) {
-            if (!densSolver.isSparse()) {
-                threshholdFactor = denseThreshholdFactor;
-            }
-        }
-        */
-        
+         
         if (sepHolder.bckGndSep == null) {
             throw new IllegalStateException("Error in algorithm: "
                 + " background separation did not get set");
@@ -170,6 +162,7 @@ public class DTClusterFinder {
             new float[]{0, separation, separation + 1});
         sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});
         
+        //TODO: improve these
         float[] errors = new float[] {
             0.1f*sepHolder.threeSCounts[0],
             0.1f*sepHolder.threeSCounts[0],

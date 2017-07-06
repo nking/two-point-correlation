@@ -3,7 +3,6 @@ package com.climbwithyourfeet.clustering;
 import algorithms.imageProcessing.FFTUtil;
 import algorithms.imageProcessing.Filters;
 import algorithms.misc.Complex;
-import algorithms.misc.Misc0;
 import algorithms.misc.MiscSorter;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntIntIterator;
@@ -37,95 +36,6 @@ public class ScaleFinder {
     }
     
     public int[] find(TIntSet pixelIdxs, int width, int height) {
-        
-        if (pixelIdxs.size() < 12) {
-            throw new IllegalArgumentException(
-                "pixelIdxs.size must be 12 or more");
-        }
-        
-        //TODO: rewrite this method to use 1D methods for each axis
-        
-        double[][] input = Misc0.convertToBinary(pixelIdxs, width, height);
-        
-        FFTUtil fftUtil = new FFTUtil();
-        
-        // forward, normalize
-        Complex[][] fTr = fftUtil.create2DFFT(input, true, true);
-    
-        float minV = Float.POSITIVE_INFINITY;
-        float maxV = Float.NEGATIVE_INFINITY;
-        float[][] ftr2 = new float[width][];
-        for (int i = 0; i < width; ++i) {
-            ftr2[i] = new float[height];
-            for (int j = 0; j < height; ++j) {
-                
-                ftr2[i][j] = (float)fTr[i][j].abs();
-                
-                if (ftr2[i][j] < minV) {
-                    minV = ftr2[i][j];
-                }
-                if (ftr2[i][j] > maxV) {
-                    maxV = ftr2[i][j];
-                }                
-            }
-        }
-        
-        // scale to range 0:255
-        float range = maxV - minV;
-        float rangeFactor = 255.f/range;
-        
-        for (int i = 0; i < width; ++i) {
-            for (int j = 0; j < height; ++j) {                
-                ftr2[i][j] -= minV;
-                ftr2[i][j] *= rangeFactor;
-            }
-        }
-        
-        try {
-            writeDebugImage(ftr2, "fft_" + System.currentTimeMillis(), width,
-                height);
-        } catch (IOException ex) {
-            Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, 
-                null, ex);
-        }
-          
-        Filters filters = new Filters();
-        
-        TIntList outputMaximaX = new TIntArrayList(); 
-        TIntList outputMaximaY = new TIntArrayList();
-        
-        float thresholdRel = 0.85f;//0.1f;
-        
-        filters.peakLocalMax(ftr2, 0, thresholdRel, outputMaximaX, 
-            outputMaximaY);
-
-        // when the points are separated by a larger scale than 1 regularly,
-        // that pattern is apparent at
-        // xScale = width/(spacing of brightest peaks)
-        // and same for the y axis.
-        
-        int xSpacing = determineSpacing(outputMaximaX);
-        
-        int ySpacing = determineSpacing(outputMaximaY);
-        
-        int[] out = new int[2];
-        
-        if (xSpacing > 1) {
-            out[0] = width/xSpacing;
-        } else {
-            out[0] = 1;
-        }
-        
-        if (ySpacing > 1) {
-            out[1] = height/ySpacing;
-        } else {
-            out[1] = 1;
-        }
-        
-        return out;
-    }
-    
-    public int[] find1D(TIntSet pixelIdxs, int width, int height) {
         
         if (pixelIdxs.size() < 12) {
             throw new IllegalArgumentException(

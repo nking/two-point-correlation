@@ -44,7 +44,7 @@ public class DTGroupFinder {
     /**
      *
      */
-    protected float threshholdFactor = 2.5f;
+    protected float threshholdFactor = 1.0f;
 
     protected Logger log = Logger.getLogger(this.getClass().getName());
 
@@ -91,7 +91,8 @@ public class DTGroupFinder {
      * given the pairwise separation of background points
      * and having the threshold factor, find the
      * groups of points within a critical distance of one another.
-     * runtime complexity is O(N_points * lg2(N_points)).
+     * runtime complexity is 
+     * 
      * @param criticalSeparationX
      * @param criticalSeparationY
      * @param pixIdxs
@@ -99,8 +100,6 @@ public class DTGroupFinder {
      */
     public List<TIntSet> calculateGroupsUsingSepartion(
         float criticalSeparationX, float criticalSeparationY, TIntSet pixIdxs) {
-
-        PixelHelper ph = new PixelHelper();
 
         initMap(pixIdxs);
         
@@ -128,6 +127,9 @@ public class DTGroupFinder {
 
         log.info("critSepX=" + critSepX + " critSepY=" + critSepY);
 
+        //TODO: to improve the runtime complexity for large critical separations,
+        //   should consider replacing this ordered scan with nearest neighbor 2D.
+        
         /*
         because the critical separation may be > 1, cannot use the simplest
         DFS with neighbor search by 1 pixel.
@@ -145,25 +147,6 @@ public class DTGroupFinder {
         } else {
             //TODO: add nearest neighbors method
         }
-
-        //TODO: need to port the nearest neighbors code here too.
-        //    paused to make a shared library for projects
-
-        /*
-                int diffX = xy[0] - vX;
-                int diffY = xy[1] - vY;
-                double sep = Math.sqrt(diffX*diffX + diffY*diffY);
-
-System.out.format("(%d,%d) (%d,%d) %d,%d, sep=%.2f (crit=%.2f)\n",
-    xy[0], xy[1], vX, vY, diffX, diffY, sep, critSep);
-
-                if (sep > critSep) {
-                    continue;
-                }
-
-                processPair(uIndex, vIndex);
-            */
-
     }
 
     private void processPair(Integer uPoint, Integer vPoint) {
