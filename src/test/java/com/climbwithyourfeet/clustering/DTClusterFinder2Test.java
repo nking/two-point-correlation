@@ -46,7 +46,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
         
         //NOTE: high density results in using a higher threshold during the
         //   stage of finding clusters with the estimated critical density
