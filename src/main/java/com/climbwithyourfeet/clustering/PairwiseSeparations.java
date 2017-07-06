@@ -69,6 +69,8 @@ public class PairwiseSeparations {
             }
         }
         
+        //printDT(dt);
+        
         /*
         within dt 
            want to find the local maxima in which the surrounding points are
@@ -161,6 +163,12 @@ public class PairwiseSeparations {
             ph.toPixelCoords(tPix, width, xy);
             int v = dt[xy[0]][xy[1]];
             
+            // if this is a boundary pixel and v > 1, skip it
+            if (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
+                (xy[1] == (height - 1))) {
+                continue;
+            }
+            
             boolean allAreLower = true;
             
             TIntSet adj = adjMap.get(i);
@@ -191,6 +199,27 @@ public class PairwiseSeparations {
         }
         
         adjMap = null;
+        
+        if (valueCounts.size() == 0) {
+            
+            // this can happen when a convex filled point set is centered
+            // in the range.  there will be no maxima in the "void"
+            
+            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+            h.setXYBackgroundSeparations(1, 1);
+            h.setTheThreeSeparations(new float[]{0, 1, 2});
+            h.setAndNormalizeCounts(new float[]{1, 1, 0});
+
+            // calculate the errors for the 3 points
+            float[] errors = new float[]{
+                h.calcError(h.threeSCounts[0], h.threeS[0], 0),
+                h.calcError(h.threeSCounts[1], h.threeS[1], 0),
+                h.calcError(h.threeSCounts[2], h.threeS[2], 0)
+            };
+            h.setTheThreeErrors(errors);
+
+            return h;
+        }
         
         // look at frequency of groupMaximaIdxs values
         int[] maximaValues = new int[valueCounts.size()];
@@ -244,7 +273,9 @@ public class PairwiseSeparations {
         }
         if (firstZeroIdx == -1) {
             firstZeroIdx = minMaximaIdx + 1;
-            assert(firstZeroIdx < maximaValues.length);
+            if (firstZeroIdx == maximaValues.length) {
+                firstZeroIdx = minMaximaIdx;
+            }
         }
         
         int maxCountIdx0 = -1;
@@ -304,16 +335,16 @@ public class PairwiseSeparations {
         } else if (xyScales[0] <= 1 && xyScales[1] > 1) {
             pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
             width2 = width;
-            height2 = height/xyScales[1];            
+            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);            
         } else if (xyScales[0] > 1 && xyScales[1] <= 1) {
             pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
-            width2 = width/xyScales[0];
+            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);
             height2 = height;
         } else {
             // scale both axes
             pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
-            width2 = width/xyScales[0];
-            height2 = height/xyScales[1];
+            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);
+            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);
         }
         
         if (pixelIdxs2.isEmpty()) {
@@ -456,6 +487,27 @@ public class PairwiseSeparations {
         ImageIO.write(outputImage, "PNG", new File(outFilePath));
 
         Logger.getLogger(this.getClass().getName()).info("wrote " + outFilePath);
+    }
+   
+    private static void printDT(int[][] dt) {
+        
+        int w = dt.length;
+        int h = dt[0].length;
+        
+        StringBuilder sb2 = new StringBuilder();
+        for (int j = 0; j < h; ++j) {
+            sb2.append("row ").append(j).append(": ");
+            for (int i = 0; i < w; ++i) {
+                int v = dt[i][j];
+                if (v > (Integer.MAX_VALUE - 3)) {
+                    sb2.append(String.format(" ---"));
+                } else {
+                    sb2.append(String.format(" %3d", v));
+                }
+            }
+            sb2.append("\n");
+        }
+        System.out.println(sb2.toString());
     }
     
 }
