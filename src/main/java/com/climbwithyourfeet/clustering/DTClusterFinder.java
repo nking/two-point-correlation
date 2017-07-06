@@ -162,14 +162,6 @@ public class DTClusterFinder {
             new float[]{0, separation, separation + 1});
         sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});
         
-        //TODO: improve these
-        float[] errors = new float[] {
-            0.1f*sepHolder.threeSCounts[0],
-            0.1f*sepHolder.threeSCounts[0],
-            0.1f*sepHolder.threeSCounts[0]
-        };
-        sepHolder.setTheThreeErrors(errors);
-        
         this.state = STATE.HAVE_BACKGROUND_SEPARATION;
     }
     

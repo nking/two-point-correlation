@@ -110,14 +110,6 @@ public class BackgroundSeparationHolder {
         threeS = Arrays.copyOf(s, s.length);
     }
     
-    public void setTheThreeErrors(float[] errs) {
-        if (errs.length != 3) {
-            throw new IllegalArgumentException(
-                " the length should be 3.  see variable documentation");
-        }
-        threeSErrors = Arrays.copyOf(errs, errs.length);
-    }
-    
     public void setXYScales(int xScale, int yScale) {
         this.scales[0] = xScale;
         this.scales[1] = yScale;
@@ -173,6 +165,11 @@ public class BackgroundSeparationHolder {
         return bckGndSep[1];
     }
     
+    /**
+     * normalize the counts and set them internally.  has side effect
+     * of calculating the errors too.
+     * @param counts 
+     */
     public void setAndNormalizeCounts(float[] counts) {
     
         if (counts.length != 3) {
@@ -214,6 +211,7 @@ public class BackgroundSeparationHolder {
         */
         
         threeSCounts = new float[3];
+        
         if (threeS[2] == threeS[1] && threeS[1] == threeS[0]) {
             //TODO: revisit this
             threeSCounts[0] = 0.333f;
@@ -273,6 +271,24 @@ public class BackgroundSeparationHolder {
                 (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
         }
         
+        /*
+        for errors, will approximate them as sqrt(counts):
+          v = counts
+          e = sqrt(counts)
+          vn = normalized counts
+          r = vn/counts
+          en = r * e
+        */
+        threeSErrors = new float[3];
+        for (int i = 0; i < 3; ++i) {
+            if (counts[i] == 0) {
+                threeSErrors[i] = Float.POSITIVE_INFINITY;
+                continue;
+            }
+            float e = (float)Math.sqrt(counts[i]);
+            float r = threeSCounts[i]/counts[i];
+            threeSErrors[i] = r * e;
+        }
     }
     
     /**
@@ -327,9 +343,9 @@ public class BackgroundSeparationHolder {
             idx0 = 0;
             idx1 = 1;
         } else {        
-            if (separation > threeSCounts[2]) {
+            if (separation > threeS[2]) {
                 return 0;
-            } else if (separation < threeSCounts[1]) {
+            } else if (separation < threeS[1]) {
                 idx0 = 0;
                 idx1 = 1;
             } else {
@@ -364,6 +380,16 @@ public class BackgroundSeparationHolder {
         
         return r;
     }
+    
+    private float calcEtoSD(int idx0, int idx1) {
+        
+        //r = (pE(idx0) - pE(idx1))/(sd(idx0) - sd(idx1))
+        
+        float r = (threeSErrors[idx0] - threeSErrors[idx1])/
+            (threeS[idx0] - threeS[idx1]);
+        
+        return r;
+    }
 
     /**
      * infer the probability and error of the given separation.
@@ -387,10 +413,10 @@ public class BackgroundSeparationHolder {
             idx0 = 0;
             idx1 = 1;
         } else {        
-            if (separation > threeSCounts[2]) {
+            if (separation > threeS[2]) {
                 Arrays.fill(output, 0);
                 return;
-            } else if (separation < threeSCounts[1]) {
+            } else if (separation < threeS[1]) {
                 idx0 = 0;
                 idx1 = 1;
             } else {
@@ -408,13 +434,17 @@ public class BackgroundSeparationHolder {
         
         p(x) = p(idx1) + r * (sd(x) - sd(idx1))
         */
+        
+        float sDiff = separation - threeS[idx1];
                     
         float r = calcCtoSD(idx0, idx1);
         
-        float p = threeSCounts[idx1] + r * (separation - threeS[idx1]);
+        float p = threeSCounts[idx1] + r * sDiff;
+        
+        float rE = calcEtoSD(idx0, idx1);
         
         //using the same slopes for errors.
-        float pErr = threeSErrors[idx1] + r * (separation - threeS[idx1]);
+        float pErr = threeSErrors[idx1] + rE * sDiff;
     
         output[0] = p;
         output[1] = pErr;

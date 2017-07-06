@@ -292,15 +292,6 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     minMaxXY[3] = p.getY();
                 }
             }
-            
-            // 0:  0.3 to 0.7
-            // 1:  0.3 ish
-            // 2:  0.15 to 0.42
-            // 3:  0.3 to 0.55
-            // 4:  0.3 to 0.75
-            // 5:  approx 0.35 to 0.75
-            // 6:  0.285 to 0.35
-            // 7:  0.1 to 0.3
 
             int width = minMaxXY[1] + 1;
             int height = minMaxXY[3] + 1;
@@ -324,6 +315,35 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
             System.out.println("  nGroups=" + nGroups);
 
+            float[] seps = clusterFinder.getBackgroundSeparationHolder()
+                .bckGndSep;
+            // 0:  0.3 to 0.7
+            // 1:  0.3 ish
+            // 2:  0.15 to 0.42
+            // 3:  0.3 to 0.55
+            // 4:  0.3 to 0.75
+            // 5:  approx 0.35 to 0.75
+            // 6:  0.285 to 0.35
+            // 7:  0.1 to 0.3
+            switch(i) {
+                case 0:
+                case 1:
+                case 2:
+                case 6:
+                case 7:
+                    assertEquals(1.0f, seps[0]);
+                    assertEquals(1.0f, seps[1]);
+                    break;                
+                case 3:
+                case 4:
+                case 5:
+                    assertTrue(seps[0] >= 1.0f && seps[0] <= 2.0f);
+                    assertTrue(seps[1] >= 1.0f && seps[1] <= 2.0f);
+                    break;
+                default:
+                    break;
+            }            
+            
             List<TIntSet> groupListPix = clusterFinder.getGroups();
 
             TIntIterator iter;
@@ -380,7 +400,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 ph.toPixelCoords(pixIdx, width, xy);
                 System.out.println(Arrays.toString(xy) + " p=" + p + 
                     " err=" + probEMap.get(pixIdx));
-            }*/
+            }
+            */
             
             if (plotContours) {
             ContourPlotter plotter2 = new ContourPlotter();
@@ -390,123 +411,6 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
         }
         
         plotter.writeFile("other_");
-        
-    }
-    
-    /**
-     *
-     * @throws Exception
-     */
-    public void estKDEOtherData() throws Exception {
-        
-        String[] fileNames = {
-            "Aggregation.txt", 
-            "Compound.txt", 
-            "Pathbased.txt" , 
-            "Spiral.txt",
-            "D31.txt", 
-           "R15.txt" , 
-            "Jain.txt", 
-            "Flame.txt",
-            //"a1.txt", "a2.txt", "a3.txt"
-            /*,
-            "s1.txt", "s2.txt", "s3.txt", "s4.txt",
-            "birch1.txt", "birch2.txt", "birch3.txt" */
-        };
-                
-        for (int i = 0; i < fileNames.length; i++) {
-        //for (int i = 6; i < 7; i++) {
-
-            String fileName = fileNames[i];
-            
-            //NOTE:  for i=8, distance transform needs alot of memory for array size, so have divided numbers there by 10
-            AxisIndexer indexer = CreateClusterDataTest.getUEFClusteringDataset(
-                fileName);
-            
-            int[] minMaxXY = new int[4];
-            minMaxXY[0] = Integer.MAX_VALUE;
-            minMaxXY[1] = Integer.MIN_VALUE;
-            minMaxXY[2] = Integer.MAX_VALUE;
-            minMaxXY[3] = Integer.MIN_VALUE;
-            Set<PairInt> points = new HashSet<PairInt>();
-            for (int k = 0; k < indexer.getNXY(); ++k) {
-                PairInt p = new PairInt(Math.round(indexer.getX()[k]),
-                    Math.round(indexer.getY()[k]));
-                points.add(p);
-                if (p.getX() < minMaxXY[0]) {
-                    minMaxXY[0] = p.getX();
-                }
-                if (p.getY() < minMaxXY[2]) {
-                    minMaxXY[2] = p.getY();
-                }
-                if (p.getX() > minMaxXY[1]) {
-                    minMaxXY[1] = p.getX();
-                }
-                if (p.getY() > minMaxXY[3]) {
-                    minMaxXY[3] = p.getY();
-                }
-            }
-
-            int width = minMaxXY[1] + 1;
-            int height = minMaxXY[3] + 1;
-
-            PixelHelper ph = new PixelHelper();
-            TIntSet pixIdxs = ph.convert(points, width);
-
-            PairwiseSeparations ps = new PairwiseSeparations();
-            BackgroundSeparationHolder sepHolder 
-                = ps.extract(pixIdxs, width, height);
-            
-            /*
-            
-            System.out.println("i=" + i + " critDens=" + criticalDensity);
-            // 0:  0.3 to 0.7
-            // 1:  0.3 ish
-            // 2:  0.15 to 0.42
-            // 3:  0.3 to 0.55
-            // 4:  0.3 to 0.75
-            // 5:  approx 0.35 to 0.75
-            // 6:  0.285 to 0.35
-            // 7:  0.1 to 0.3
-            switch(i) {
-                case 0:
-                    assertTrue(criticalDensity >= 0.3);
-                    assertTrue(criticalDensity <= 0.7);
-                    break;
-                case 1:
-                    assertTrue(criticalDensity >= 0.25);
-                    assertTrue(criticalDensity <= 0.6);//0.4
-                    break;
-                case 2:
-                    assertTrue(criticalDensity >= 0.15);
-                    assertTrue(criticalDensity <= 0.5);//.42
-                    break;
-                case 3:
-                    assertTrue(criticalDensity >= 0.3);
-                    assertTrue(criticalDensity <= 0.55);
-                    break;
-                case 4:
-                    assertTrue(criticalDensity >= 0.3);
-                    assertTrue(criticalDensity <= 0.75);
-                    break;
-                case 5:
-                    assertTrue(criticalDensity >= 0.3);
-                    assertTrue(criticalDensity <= 0.75);
-                    break;
-                case 6:
-                    assertTrue(criticalDensity >= 0.285);
-                    assertTrue(criticalDensity <= 0.45);//35
-                    break;
-                case 7:
-                    assertTrue(criticalDensity >= 0.1);
-                    assertTrue(criticalDensity <= 0.51);
-                    break;
-                default:
-                    break;
-            }
-            */
-        }
-                
     }
     
     /**

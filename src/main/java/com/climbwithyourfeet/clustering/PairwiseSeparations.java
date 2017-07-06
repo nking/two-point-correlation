@@ -214,14 +214,6 @@ public class PairwiseSeparations {
             h.setTheThreeSeparations(new float[]{0, 1, 2});
             h.setAndNormalizeCounts(new float[]{1, 1, 0});
 
-            // calculate the errors for the 3 points
-            float[] errors = new float[]{
-                h.calcError(h.threeSCounts[0], h.threeS[0], 0),
-                h.calcError(h.threeSCounts[1], h.threeS[1], 0),
-                h.calcError(h.threeSCounts[2], h.threeS[2], 0)
-            };
-            h.setTheThreeErrors(errors);
-
             return h;
         }
         
@@ -316,14 +308,6 @@ public class PairwiseSeparations {
             maximaCounts[minMaximaIdx], maximaCounts[minMaximaIdx], 
             maximaCounts[firstZeroIdx]});
        
-        // calculate the errors for the 3 points
-        float[] errors = new float[] {
-            h.calcError(h.threeSCounts[0], h.threeS[0], 0),
-            h.calcError(h.threeSCounts[1], h.threeS[1], 0),
-            h.calcError(h.threeSCounts[2], h.threeS[2], 0)
-        };
-        h.setTheThreeErrors(errors);
-        
         return h;
     }
     
