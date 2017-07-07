@@ -3,7 +3,12 @@ package com.climbwithyourfeet.clustering;
 import algorithms.util.PixelHelper;
 import algorithms.disjointSets.DisjointSet2Helper;
 import algorithms.disjointSets.DisjointSet2Node;
+import algorithms.search.NearestNeighbor2D;
+import algorithms.util.PairInt;
 import algorithms.util.PairIntArray;
+import thirdparty.edu.princeton.cs.algs4.QuadTree;
+import thirdparty.edu.princeton.cs.algs4.Interval;
+import thirdparty.edu.princeton.cs.algs4.Interval2D;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.TIntObjectMap;
@@ -12,6 +17,7 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -126,27 +132,8 @@ public class DTGroupFinder {
         }
 
         log.info("critSepX=" + critSepX + " critSepY=" + critSepY);
-
-        //TODO: to improve the runtime complexity for large critical separations,
-        //   should consider replacing this ordered scan with nearest neighbor 2D.
-        
-        /*
-        because the critical separation may be > 1, cannot use the simplest
-        DFS with neighbor search by 1 pixel.
-
-        can either sort by x and y then scan around each point by distance
-        of critical separation,
-        or use DFS traversal and a nearest neighbors algorithm to find neighbors
-        within critical separation.
-        */
-        
-        boolean useSortedScan = true;
-        
-        if (useSortedScan) {
-            findGroupsWithSortedScan(pixIdxs, critSepX, critSepY);            
-        } else {
-            //TODO: add nearest neighbors method
-        }
+                
+        findGroupsWithNN2D(pixIdxs, critSepX, critSepY);
     }
 
     private void processPair(Integer uPoint, Integer vPoint) {
@@ -241,105 +228,64 @@ public class DTGroupFinder {
         }
     }
 
-    private void findGroupsWithSortedScan(TIntSet pixIdxs, float critSepX,
+    private void findGroupsWithNN2D(TIntSet pixIdxs, float critSepX, 
         float critSepY) {
-
+        
         PixelHelper ph = new PixelHelper();
-        PairIntArray sorted = new PairIntArray(pixIdxs.size());
-        TIntIterator iter = pixIdxs.iterator();
         int[] xy = new int[2];
+        
+        QuadTree<Integer, Integer> centroidQT = new QuadTree<Integer, Integer>();
+        TIntIterator iter = pixIdxs.iterator();
         while (iter.hasNext()) {
-            int pixIdx = iter.next();
-            ph.toPixelCoords(pixIdx, imgWidth, xy);
-            sorted.add(xy[0], xy[1]);
+            int uIdx = iter.next();            
+            ph.toPixelCoords(uIdx, imgWidth, xy);
+            centroidQT.insert(xy[0], xy[1], Integer.valueOf(uIdx)); 
         }
-        assert(sorted.getN() == pixIdxs.size());
         
-        sorted.sortByXAsc();
-        
-        int n = sorted.getN();
-     
-        for (int i = 0; i < n; ++i) {
+        iter = pixIdxs.iterator();
+        while (iter.hasNext()) {
             
-            // process the pair when their point density is higher than thrsh:
-            //  
-            //   2/sep_u_v  > thrsh  where thrsh is 2.5*the background linear density
+            int uIdx = iter.next();
             
-            // association of 2 points for separation <= critSeparation
+            ph.toPixelCoords(uIdx, imgWidth, xy);
             
-            int uX = sorted.getX(i);
-            float minXAssoc = uX - critSepX;
-            float maxXAssoc = uX + critSepX;
-            int uY = sorted.getY(i);
-            float minYAssoc = uY - critSepY;
-            float maxYAssoc = uY + critSepY;
+            int uX = xy[0];
+            int uY = xy[1];
             
-            int uPoint = ph.toPixelIndex(uX, uY, imgWidth);
-                    
-            /*
-            uX = sorted[0].x
-                search backward while x >= minXAssoc
-                    while x == minXAssoc, only proceed for y >= minYAssoc
-                search forward while x <= maxXAssoc
-                    while x == maxXAssoc, only proceed for y <= maxYAssoc
-            */
-            
-            // search backward within radius critSep
-            for (int j = (i - 1); j > -1; --j) {
-                
-                int vX = sorted.getX(j);
-                int vY = sorted.getY(j);
-                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);
-                
-                if (vX < minXAssoc || vX > maxXAssoc) {
-                    break;
-                }
-                
-                if (vX == minXAssoc) {
-                    if (vY < minYAssoc) {
-                        break;
-                    }
-                }
-                // for given x, if y < minYAssoc can skip, but not break
-                if (vY < minYAssoc || vY > maxYAssoc) {
-                    continue;
-                }
-                
-                assert(Math.abs(vX - uX) <= critSepX);
-                assert(Math.abs(vY - uY) <= critSepY);
-                
-                // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);                                
+            int x0 = Math.round(uX - critSepX);
+            if (x0 < 0) {
+                x0 = 0;
             }
-                
-            // search forward within radius critSep
-            for (int j = (i + 1); j < n; ++j) {
-            
-                int vX = sorted.getX(j);
-                int vY = sorted.getY(j);
-                int vPoint = ph.toPixelIndex(vX, vY, imgWidth);
-                
-                if (vX > maxXAssoc || vX < minXAssoc) {
-                    break;
-                }
-                
-                if (vX == maxXAssoc) {
-                    if (vY > maxYAssoc) {
-                        break;
-                    }
-                }
-                // for given x, if y > maxYAssoc can skip, but not break
-                if (vY > maxYAssoc || vY < minYAssoc) {
-                    //TODO: if knew where next x was in sorted, could increment j to that
-                    continue;
-                }
-                
-                assert(Math.abs(vX - uX) <= critSepX);
-                assert(Math.abs(vY - uY) <= critSepY);
-                
-                // if arrive here, vX is within an assoc radius and so is vY
-                processPair(uPoint, vPoint);                                
+            int x1 = Math.round(uX + critSepX);
+            if (x1 >= imgWidth) {
+                x1 = imgWidth - 1;
             }
-        } 
+            int y0 = Math.round(uY - critSepY);
+            if (y0 < 0) {
+                y0 = 0;
+            }
+            int y1 = Math.round(uY + critSepY);
+            if (y1 >= imgHeight) {
+                y1 = imgHeight - 1;
+            }
+            
+            Interval<Integer> intX = new Interval<Integer>(x0, x1);
+            Interval<Integer> intY = new Interval<Integer>(y0, y1);
+            Interval2D<Integer> rect = new Interval2D<Integer>(intX, intY);
+
+            List<Integer> pixIndexes = centroidQT.query2D(rect);
+            if (pixIndexes == null || pixIndexes.size() < 2) {
+                continue;
+            }
+
+            for (Integer pixIndex : pixIndexes) {
+                int vPix = pixIndex.intValue();
+                //ph.toPixelCoords(vPix, imgWidth, xy);
+                //int vX = xy[0];
+                //int vY = xy[1];
+                
+                processPair(uIdx, pixIndex);
+            }            
+        }        
     }
 }
