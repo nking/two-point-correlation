@@ -176,7 +176,7 @@
             sourcepath="${src.dir}"
             destdir="${doc.dir}/api"
             package="true"
-            packagenames="algorithms.*,com.climbwithyourfeet.*" >
+            packagenames="algorithms.*,com.climbwithyourfeet.*, thirdparty.*" >
             <classpath refid="compile.classpath"/>
         </javadoc>
     </target>
