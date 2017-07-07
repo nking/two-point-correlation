@@ -1,5 +1,3 @@
--- findGroups : add nearest neighbor 2D
-
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
    -- redo a couple of "other" snapshots on two-pt-correl web page:
