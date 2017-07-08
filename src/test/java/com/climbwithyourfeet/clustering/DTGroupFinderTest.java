@@ -4,6 +4,7 @@ import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import gnu.trove.set.TIntSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import junit.framework.TestCase;
 
@@ -17,7 +18,7 @@ public class DTGroupFinderTest extends TestCase {
      *
      * @throws Exception
      */
-    public void testCalculateGroupsUsingDensity() throws Exception {
+    public void testCalculateGroups() throws Exception {
         
         Set<PairInt> points = getData0();
         
@@ -27,17 +28,11 @@ public class DTGroupFinderTest extends TestCase {
         
         DTGroupFinder finder = new DTGroupFinder(8, 8);
                 
-        //float critSep = 2.f/(criticalDensity * threshholdFactor);
-        
-        /*
-        float expectedCritSep = 2;
-        float thresh = finder.getThreshholdFactor();
-        // critDens = (2./critSep)/thresh
-        
-        float critDensity = (2.f/expectedCritSep)/thresh;
+        float critSep = 2.f;
         
         List<TIntSet> groups = 
-            finder.calculateGroupsUsingDensity(critDensity, pixIdxs);
+            finder.calculateGroupsUsingSepartion(critSep, critSep, 
+                pixIdxs);
         
         assertTrue(groups.size() == 1);
         
@@ -52,7 +47,6 @@ public class DTGroupFinderTest extends TestCase {
         assertTrue(points.contains(new PairInt(2, 3)));
         assertTrue(points.contains(new PairInt(2, 5)));
         assertTrue(points.contains(new PairInt(3, 6)));
-        */
     }
 
     private Set<PairInt> getData0() {
