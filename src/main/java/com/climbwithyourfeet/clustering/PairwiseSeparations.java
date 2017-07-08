@@ -1,12 +1,15 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.connected.ConnectedValuesGroupFinder;
+import algorithms.connected.*;
 import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
+import algorithms.search.NearestNeighbor2D;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
 import algorithms.util.OneDFloatArray;
+import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.iterator.TIntIntIterator;
@@ -29,6 +32,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -62,6 +67,115 @@ public class PairwiseSeparations {
             throw new IllegalArgumentException(
                 "pixelIdxs.size must be 12 or more");
         }
+        
+        int n0 = pixelIdxs.size();
+        n0 += (int)Math.ceil(Math.log(n0)/Math.log(2));
+        
+        int n1 = width * height;
+        
+        if (n0 < n1) {
+            return extractWithNN2D(pixelIdxs, width, height);
+        } else {
+            return extractWithDistTrans(pixelIdxs, width, height);
+        }
+    }
+    
+    protected BackgroundSeparationHolder extractWithNN2D(TIntSet pixelIdxs, int width, 
+        int height) {
+        
+        // randomly sample void and find NN pixelIdxs
+        // then store that separation in value counts map
+        //  assume the repeated random draws are almost always unique
+        
+        TIntIntMap valueCounts = new TIntIntHashMap();
+        
+        NearestNeighbor2D nn2d = new NearestNeighbor2D(pixelIdxs, width, height);
+        
+        int len = width * height;
+        
+        // For random draws, considering 2 different approaches:
+        // (1) random draw of integer within range width*height
+        // (2) use of Low Discrepancy Sequences (requires moving the code to shared library)
+        
+        Random rand = Misc0.getSecureRandom();
+        long seed = System.currentTimeMillis();
+        System.out.println("SEED=" + seed);
+        rand.setSeed(seed);
+        
+        PixelHelper ph = new PixelHelper();
+        int[] xy = new int[2];
+        
+        final int[] dx4 = new int[]{-1,  0, 1, 0};
+        final int[] dy4 = new int[]{ 0, -1, 0, 1};
+        
+        int nDraws = pixelIdxs.size();
+        
+        for (int i = 0; i < nDraws; ++i) {
+            int pixIdx1 = rand.nextInt(len);
+            if (!pixelIdxs.contains(pixIdx1)) {
+                ph.toPixelCoords(pixIdx1, width, xy);
+                
+                if (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
+                    (xy[1] == (height - 1))) {
+                    continue;
+                }
+                
+                Set<PairInt> nearest = nn2d.findClosest(xy[0], xy[1]);
+                if (nearest != null && nearest.size() > 0) {
+                    PairInt p2 = nearest.iterator().next();
+                    int dx = xy[0] - p2.getX();
+                    int dy = xy[1] - p2.getY();
+                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
+                    
+                    // check the 4 neighbors and if they are all lower
+                    // (possibly == too), store this separation
+                    boolean allAreLower = true;
+                    
+                    for (int k = 0; k < dx4.length; ++k) {
+                        int x3 = xy[0] + dx4[k];
+                        int y3 = xy[1] + dy4[k];
+                        if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= width) {
+                            continue;
+                        }
+                        int pixIdx3 = ph.toPixelIndex(x3, y3, width);
+                        if (pixelIdxs.contains(pixIdx3)) {
+                            continue;
+                        }
+                        Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
+                        if (nearest3 == null || nearest3.size() > 0) {
+                            continue;
+                        }
+                        PairInt p3 = nearest3.iterator().next();
+                        int dx3 = x3 - p3.getX();
+                        int dy3 = y3 - p3.getY();
+                        int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
+
+                        if (d3 > d) {
+                            allAreLower = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allAreLower) {
+                        if (valueCounts.containsKey(d)) {
+                            valueCounts.put(d, valueCounts.size() + 1);
+                        } else {
+                            valueCounts.put(d, 1);
+                        }
+                    }
+                }
+            }
+        }
+        
+        long ts = System.currentTimeMillis();
+        
+        BackgroundSeparationHolder h = findBackgroundOfRandom(valueCounts, ts);
+        
+        return h;
+    }
+    
+    protected BackgroundSeparationHolder extractWithDistTrans(TIntSet pixelIdxs, int width, 
+        int height) {
         
         // these are the non-point distances to the points        
         int[][] dt = DistanceTransformUtil.transform(pixelIdxs, width, height);
@@ -104,11 +218,27 @@ public class PairwiseSeparations {
                
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
-                
-        ConnectedValuesGroupFinder finder = new ConnectedValuesGroupFinder();
+            
+        // need to look at amount of memory
+        // to decide between these two.
+        // use the later if many many objects and not enough
+        // memory
+        IConnectedValuesGroupFinder finder = null;
+        if (false) {
+            finder = new ConnectedValuesGroupFinder();
+        } else {
+            finder = new ConnectedValuesGroupFinder2();
+        }
         finder.setMinimumNumberInCluster(1);
+        TIntSet exclude = new TIntHashSet();
+        exclude.add(0);
+        finder.setValuesToExclude(exclude);
         List<TIntSet> valueGroups = finder.findGroups(dt);
+        finder = null;
      
+        System.out.println("number of connected same value distants=" +
+            valueGroups.size());
+        
         long ts = System.currentTimeMillis();
         
         if (debug) {
@@ -210,159 +340,13 @@ public class PairwiseSeparations {
             }
         }
         
+        valueGroups = null;
         adjMap = null;
         
-        if (valueCounts.size() == 0) {
-            
-            // this can happen when a convex filled point set is centered
-            // in the range.  there will be no maxima in the "void"
-            
-            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-            h.setXYBackgroundSeparations(1, 1);
-            h.setTheThreeSeparations(new float[]{0, 1, 2});
-            h.setAndNormalizeCounts(new float[]{1, 1, 0});
-
-            return h;
-        }
+        System.out.println("number of void distance maxima=" + valueCounts.size());
         
-        // look at frequency of groupMaximaIdxs values
-        int[] maximaValues = new int[valueCounts.size()];
-        float[] maximaCounts = new float[valueCounts.size()];
-        TIntIntIterator iter = valueCounts.iterator();
-        for (int i = 0; i < valueCounts.size(); ++i) {
-            iter.advance();
-            maximaValues[i] = iter.key();
-            maximaCounts[i] = iter.value();
-        }
+        BackgroundSeparationHolder h = findBackgroundOfMaxima(valueCounts, ts);
         
-        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
-       
-        if (debug) {
-            int[] x = maximaValues;
-            float[] y = maximaCounts;
-            float xMax = MiscMath0.findMax(x);
-            float yMin = MiscMath0.findMin(y);
-            float yMax = MiscMath0.findMax(y);
-            PolygonAndPointPlotter plotter;
-            try {
-                plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
-                    "max sep");
-            plotter.writeFile("_separation_maxima_" + ts);
-            } catch (IOException ex) {
-                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        
-        /*
-        TODO:
-           if the density curve of (maximaValues, maximaCounts) has more than
-              one profile (peak) in it,
-              need to use smoothing and choose the first convolvolution which
-              produces a single profile
-        
-              then the best representative peak looks like the average,
-              but might need to follow the else block below this
-           else
-              the best representative peak is found as:
-                 if the peak is not the first point,
-                    the average of the peak and the point before it
-                 else if the peak is the first point and it is > 1,
-                    half it
-        */
-        int peakIdx = findPeakIfSingleProfile(maximaCounts);
-        
-        //NOTE: this section may need revision.
-        
-        float reprValue, reprCounts;
-        int firstZeroIdx = -1;
-        if (peakIdx > -1) {
-            if (peakIdx == 0) {
-                if (maximaValues[0] > 1) {
-                    reprValue = maximaValues[0] / 2.f;
-                    reprCounts = maximaCounts[0] / 2.f;
-                } else {
-                    reprValue = maximaValues[0];
-                    reprCounts = maximaCounts[0];
-                }
-                firstZeroIdx = 0;
-            } else {
-                assert(maximaValues.length > 1);
-                reprValue = 
-                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
-                reprCounts = 
-                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
-            }
-        } else {
-            //kernel smoothing over evenly spaced data
-            
-            int n2 = maximaValues[maximaValues.length - 1] -
-                maximaValues[0] + 1;
-            TIntList outV = new TIntArrayList(n2);
-            TFloatList outC = new TFloatArrayList(n2);
-            integerResampling(maximaValues, maximaCounts, outV, outC);
-            maximaValues = outV.toArray(new int[outV.size()]);
-            maximaCounts = outC.toArray(new float[outC.size()]);
-            
-            float[][] smoothed = smooth(maximaValues, maximaCounts);
-            
-            maximaValues = new int[smoothed[0].length];
-            for (int j = 0; j < maximaValues.length; ++j) {
-                maximaValues[j] = Math.round(smoothed[0][j]);
-            }
-            maximaCounts = smoothed[1];
-            
-            peakIdx = averagePeak(maximaValues, maximaCounts);
-            
-            reprValue = maximaValues[peakIdx];
-            reprCounts = maximaCounts[peakIdx];            
-        }
-        
-        if (firstZeroIdx == -1) {
-            // calculate the firstZeroIdx after peak
-            float currentMinC = Float.POSITIVE_INFINITY;
-            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
-            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
-            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
-                int d = maximaValues[i];
-                if (firstZeroIdx == -1) {
-                    firstZeroIdx = i;
-                }
-                float c = maximaCounts[i];
-                if (c <= avgMin) {
-                    firstZeroIdx = i;
-                    break;
-                } else if (c < currentMinC) {
-                    firstZeroIdx = i;
-                    currentMinC = c;
-                }
-            }
-            if (firstZeroIdx == -1) {
-                firstZeroIdx = maximaCounts.length - 1;
-            }
-        }
-        
-        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        //System.out.println("qs=" + Arrays.toString(qs));
-               
-        System.out.println("found background separation=" + reprValue);
-        
-        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-                
-        int m2 = (int)reprValue;
-        if (m2 < 1) {
-            m2 = 1;
-        }
-        h.setXYBackgroundSeparations(m2, m2);
-        
-        h.setTheThreeSeparations(new float[]{
-            0, m2, 
-            maximaValues[firstZeroIdx]});
-        
-        h.setAndNormalizeCounts(new float[]{
-            reprCounts, reprCounts, 
-            maximaCounts[firstZeroIdx]});
-       
         return h;
     }
     
@@ -670,6 +654,67 @@ public class PairwiseSeparations {
         }
     }
 
+    // result[0] is the array transformed values
+    // result[1] is the array of transformed counts
+    private float[][] smooth2(int[] maximaValues, float[] maximaCounts) {
+
+        System.out.println("smooth2 input length=" + maximaValues.length);
+        
+        MedianTransform1D mt = new MedianTransform1D();
+        
+        List<OneDFloatArray> outTrans = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeff = new ArrayList<OneDFloatArray>();
+        
+        //using pyramidal means need to rescale maximaValues too
+        List<OneDFloatArray> outTransV = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffV = new ArrayList<OneDFloatArray>();
+
+        float[] input = maximaCounts;
+        float[] inputV = new float[maximaValues.length];
+        for (int i = 0; i < maximaValues.length; ++i) {
+            inputV[i] = maximaValues[i];
+        }
+        
+        mt.multiscalePyramidalMedianTransform2(input, outTrans, outCoeff);
+        mt.multiscalePyramidalMedianTransform2(inputV, outTransV, outCoeffV);
+
+        TIntList peakIdxs = new TIntArrayList();
+        float peakAvg = 0;
+        
+        // search for the first transformed which has only one pea in it
+        for (int i = 0; i < outTrans.size(); ++i) {
+            OneDFloatArray trC = outTrans.get(i);
+            OneDFloatArray trV = outTransV.get(i);
+            assert (trC.a.length == trV.a.length);
+            
+            int len = trV.a.length;
+            
+            int yMaxIdx = MiscMath0.findYMaxIndex(trC.a);
+            
+            System.out.format("len=%d  maxC=%f d=%f\n", len,
+                trC.a[yMaxIdx], trV.a[yMaxIdx]);
+            
+            if (len >= 10 && len <= 100) {
+                peakAvg += trV.a[yMaxIdx];
+                peakIdxs.add(i);
+            } 
+        }
+        peakAvg /= (float)peakIdxs.size();
+        System.out.println("dMin=" + peakAvg);
+        if (peakIdxs.size() == 0) {
+            if (outTrans.size() > 1) {
+                peakIdxs.add(1);
+            } else {
+                peakIdxs.add(0);
+            }
+        }
+        int dIdx = peakIdxs.get(peakIdxs.size()/2);
+        float[][] a = new float[2][];
+        a[0] = outTransV.get(dIdx).a;
+        a[1] = outTrans.get(dIdx).a;
+        return a;
+    }
+    
     private int averagePeak(int[] values, float[] counts) {
 
         float avg = 0;
@@ -692,4 +737,319 @@ public class PairwiseSeparations {
         return idx;
     }
 
+    private BackgroundSeparationHolder findBackgroundOfMaxima(TIntIntMap valueCounts,
+        long ts) {
+
+        if (valueCounts.size() == 0) {
+            
+            // this can happen when a convex filled point set is centered
+            // in the range.  there will be no maxima in the "void"
+            
+            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+            h.setXYBackgroundSeparations(1, 1);
+            h.setTheThreeSeparations(new float[]{0, 1, 2});
+            h.setAndNormalizeCounts(new float[]{1, 1, 0});
+
+            return h;
+        }
+        
+        int[] maximaValues = new int[valueCounts.size()];
+        float[] maximaCounts = new float[valueCounts.size()];
+        TIntIntIterator iter = valueCounts.iterator();
+        for (int i = 0; i < valueCounts.size(); ++i) {
+            iter.advance();
+            maximaValues[i] = iter.key();
+            maximaCounts[i] = iter.value();
+        }
+        
+        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
+       
+        if (debug) {
+            int[] x = maximaValues;
+            float[] y = maximaCounts;
+            float xMax = MiscMath0.findMax(x);
+            float yMin = MiscMath0.findMin(y);
+            float yMax = MiscMath0.findMax(y);
+            PolygonAndPointPlotter plotter;
+            try {
+                plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
+                    "max sep");
+            plotter.writeFile("_separation_maxima_" + ts);
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        /*
+           if the density curve of (maximaValues, maximaCounts) has more than
+              one profile (peak) in it,
+              need to use smoothing and choose the first convolvolution which
+              produces a single profile
+        
+              then the best representative peak looks like the average,
+              but might need to follow the else block below this
+           else
+              the best representative peak is found as:
+                 if the peak is not the first point,
+                    the average of the peak and the point before it
+                 else if the peak is the first point and it is > 1,
+                    half it
+        */
+        int peakIdx = findPeakIfSingleProfile(maximaCounts);
+        
+        //NOTE: this section may need revision.
+        
+        float reprValue, reprCounts;
+        int firstZeroIdx = -1;
+        if (peakIdx > -1) {
+            if (peakIdx == 0) {
+                if (maximaValues[0] > 1) {
+                    reprValue = maximaValues[0] / 2.f;
+                    reprCounts = maximaCounts[0] / 2.f;
+                } else {
+                    reprValue = maximaValues[0];
+                    reprCounts = maximaCounts[0];
+                }
+                firstZeroIdx = 0;
+            } else {
+                assert(maximaValues.length > 1);
+                reprValue = 
+                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
+                reprCounts = 
+                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
+            }
+        } else {
+            //kernel smoothing over evenly spaced data
+            
+            int n2 = maximaValues[maximaValues.length - 1] -
+                maximaValues[0] + 1;
+            
+            System.out.println("resampling to " + n2 + " integers");
+            
+            TIntList outV = new TIntArrayList(n2);
+            TFloatList outC = new TFloatArrayList(n2);
+            integerResampling(maximaValues, maximaCounts, outV, outC);
+            maximaValues = outV.toArray(new int[outV.size()]);
+            maximaCounts = outC.toArray(new float[outC.size()]);
+            
+            float[][] smoothed = smooth(maximaValues, maximaCounts);
+            
+            maximaValues = new int[smoothed[0].length];
+            for (int j = 0; j < maximaValues.length; ++j) {
+                maximaValues[j] = Math.round(smoothed[0][j]);
+            }
+            maximaCounts = smoothed[1];
+            
+            peakIdx = averagePeak(maximaValues, maximaCounts);
+            
+            reprValue = maximaValues[peakIdx];
+            reprCounts = maximaCounts[peakIdx];            
+        }
+        
+        if (firstZeroIdx == -1) {
+            // calculate the firstZeroIdx after peak
+            float currentMinC = Float.POSITIVE_INFINITY;
+            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
+            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
+            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
+                int d = maximaValues[i];
+                if (firstZeroIdx == -1) {
+                    firstZeroIdx = i;
+                }
+                float c = maximaCounts[i];
+                if (c <= avgMin) {
+                    firstZeroIdx = i;
+                    break;
+                } else if (c < currentMinC) {
+                    firstZeroIdx = i;
+                    currentMinC = c;
+                }
+            }
+            if (firstZeroIdx == -1) {
+                firstZeroIdx = maximaCounts.length - 1;
+            }
+        }
+        
+        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
+        //System.out.println("qs=" + Arrays.toString(qs));
+               
+        System.out.println("found background separation=" + reprValue);
+        
+        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+                
+        int m2 = (int)reprValue;
+        if (m2 < 1) {
+            m2 = 1;
+        }
+        h.setXYBackgroundSeparations(m2, m2);
+        
+        h.setTheThreeSeparations(new float[]{
+            0, m2, 
+            maximaValues[firstZeroIdx]});
+        
+        h.setAndNormalizeCounts(new float[]{
+            reprCounts, reprCounts, 
+            maximaCounts[firstZeroIdx]});
+       
+        return h;
+    }
+
+    private BackgroundSeparationHolder findBackgroundOfRandom(TIntIntMap valueCounts,
+        long ts) {
+
+        if (valueCounts.size() == 0) {
+            
+            // this can happen when a convex filled point set is centered
+            // in the range.  there will be no maxima in the "void"
+            
+            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+            h.setXYBackgroundSeparations(1, 1);
+            h.setTheThreeSeparations(new float[]{0, 1, 2});
+            h.setAndNormalizeCounts(new float[]{1, 1, 0});
+
+            return h;
+        }
+        
+        int[] maximaValues = new int[valueCounts.size()];
+        float[] maximaCounts = new float[valueCounts.size()];
+        TIntIntIterator iter = valueCounts.iterator();
+        for (int i = 0; i < valueCounts.size(); ++i) {
+            iter.advance();
+            maximaValues[i] = iter.key();
+            maximaCounts[i] = iter.value();
+        }
+        
+        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
+       
+        if (debug) {
+            int[] x = maximaValues;
+            float[] y = maximaCounts;
+            float xMax = MiscMath0.findMax(x);
+            float yMin = MiscMath0.findMin(y);
+            float yMax = MiscMath0.findMax(y);
+            PolygonAndPointPlotter plotter;
+            try {
+                plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
+                    "max sep");
+            plotter.writeFile("_separation_maxima_" + ts);
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        /*
+           if the density curve of (maximaValues, maximaCounts) has more than
+              one profile (peak) in it,
+              need to use smoothing and choose the first convolvolution which
+              produces a single profile
+        
+              then the best representative peak looks like the average,
+              but might need to follow the else block below this
+           else
+              the best representative peak is found as:
+                 if the peak is not the first point,
+                    the average of the peak and the point before it
+                 else if the peak is the first point and it is > 1,
+                    half it
+        */
+        int peakIdx = findPeakIfSingleProfile(maximaCounts);
+        
+        //NOTE: this section may need revision.
+        
+        float reprValue, reprCounts;
+        int firstZeroIdx = -1;
+        if (peakIdx > -1) {
+            if (peakIdx == 0) {
+                if (maximaValues[0] > 1) {
+                    reprValue = maximaValues[0] / 2.f;
+                    reprCounts = maximaCounts[0] / 2.f;
+                } else {
+                    reprValue = maximaValues[0];
+                    reprCounts = maximaCounts[0];
+                }
+                firstZeroIdx = 0;
+            } else {
+                assert(maximaValues.length > 1);
+                reprValue = 
+                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
+                reprCounts = 
+                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
+            }
+        } else {
+            //kernel smoothing over evenly spaced data
+            
+            int n2 = maximaValues[maximaValues.length - 1] -
+                maximaValues[0] + 1;
+            
+            System.out.println("resampling to " + n2 + " integers");
+            
+            TIntList outV = new TIntArrayList(n2);
+            TFloatList outC = new TFloatArrayList(n2);
+            integerResampling(maximaValues, maximaCounts, outV, outC);
+            maximaValues = outV.toArray(new int[outV.size()]);
+            maximaCounts = outC.toArray(new float[outC.size()]);
+            
+            float[][] smoothed = smooth2(maximaValues, maximaCounts);
+            
+            maximaValues = new int[smoothed[0].length];
+            for (int j = 0; j < maximaValues.length; ++j) {
+                maximaValues[j] = Math.round(smoothed[0][j]);
+            }
+            maximaCounts = smoothed[1];
+            
+            peakIdx = averagePeak(maximaValues, maximaCounts);
+            
+            reprValue = maximaValues[peakIdx];
+            reprCounts = maximaCounts[peakIdx];            
+        }
+        
+        if (firstZeroIdx == -1) {
+            // calculate the firstZeroIdx after peak
+            float currentMinC = Float.POSITIVE_INFINITY;
+            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
+            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
+            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
+                int d = maximaValues[i];
+                if (firstZeroIdx == -1) {
+                    firstZeroIdx = i;
+                }
+                float c = maximaCounts[i];
+                if (c <= avgMin) {
+                    firstZeroIdx = i;
+                    break;
+                } else if (c < currentMinC) {
+                    firstZeroIdx = i;
+                    currentMinC = c;
+                }
+            }
+            if (firstZeroIdx == -1) {
+                firstZeroIdx = maximaCounts.length - 1;
+            }
+        }
+        
+        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
+        //System.out.println("qs=" + Arrays.toString(qs));
+               
+        System.out.println("found background separation=" + reprValue);
+        
+        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+                
+        int m2 = (int)reprValue;
+        if (m2 < 1) {
+            m2 = 1;
+        }
+        h.setXYBackgroundSeparations(m2, m2);
+        
+        h.setTheThreeSeparations(new float[]{
+            0, m2, 
+            maximaValues[firstZeroIdx]});
+        
+        h.setAndNormalizeCounts(new float[]{
+            reprCounts, reprCounts, 
+            maximaCounts[firstZeroIdx]});
+       
+        return h;
+    }
 }
