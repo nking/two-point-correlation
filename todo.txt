@@ -1,3 +1,6 @@
+-- need to change pixIdxs to longs everywhere
+   starting with the shared library and then affected code.
+
 -- in the cluster finder,
    need to make an alternate extraction of the background distance
    PDF for use when the distance transform is comparable to
@@ -7,6 +10,7 @@
       -- considering random sampling of the void and determining the
          distance of nearest point.  the runtime complexity would 
          be closer to N_draws * log_2(N_points).
+         - one caveat is that they are not maxima.
 
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
