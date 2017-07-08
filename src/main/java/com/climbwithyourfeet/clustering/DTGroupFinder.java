@@ -15,6 +15,8 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -139,25 +141,19 @@ public class DTGroupFinder {
     private void processPair(Integer uPoint, Integer vPoint) {
 
         DisjointSet2Node<Integer> uNode = pixNodes.get(uPoint);
-        DisjointSet2Node<Integer> uParentNode
-            = disjointSetHelper.findSet(uNode);
+        DisjointSet2Node<Integer> uParentNode = disjointSetHelper.findSet(uNode);
         assert(uParentNode != null);
 
-        int uGroupId = uParentNode.getMember().intValue();
+        //int uGroupId = uParentNode.getMember().intValue();
 
         DisjointSet2Node<Integer> vNode = pixNodes.get(vPoint);
-        DisjointSet2Node<Integer> vParentNode
-            = disjointSetHelper.findSet(vNode);
+        DisjointSet2Node<Integer> vParentNode = disjointSetHelper.findSet(vNode);
         assert(vParentNode != null);
 
-        int vGroupId = vParentNode.getMember().intValue();
+        //int vGroupId = vParentNode.getMember().intValue();
 
         DisjointSet2Node<Integer> merged =
             disjointSetHelper.union(uParentNode, vParentNode);
-
-        pixNodes.put(uGroupId, merged);
-
-        pixNodes.put(vGroupId, merged);
     }
 
     private void prune() {
@@ -210,11 +206,19 @@ public class DTGroupFinder {
 
     private void initMap(TIntSet pixIdxs) {
 
+        System.out.println("initMap for " + pixIdxs.size());
+        
         pixNodes = new TIntObjectHashMap<DisjointSet2Node<Integer>>();
 
         disjointSetHelper = new DisjointSet2Helper();
 
         TIntIterator iter = pixIdxs.iterator();
+
+        //long totalMemory = Runtime.getRuntime().totalMemory();
+        //MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
+        //long heapUsage = mbean.getHeapMemoryUsage().getUsed();
+        //long avail = totalMemory - heapUsage;
+        //System.out.println("mem avail=" + avail + " used=" + heapUsage);
 
         while (iter.hasNext()) {
 
@@ -225,6 +229,8 @@ public class DTGroupFinder {
                     new DisjointSet2Node<Integer>(Integer.valueOf(pixIdx)));
 
             pixNodes.put(pixIdx, pNode);
+            
+            //System.out.println("mem avail=" + avail + " used=" + heapUsage);
         }
     }
 
