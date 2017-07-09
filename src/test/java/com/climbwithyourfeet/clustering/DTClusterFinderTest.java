@@ -10,10 +10,15 @@ import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntFloatIterator;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.map.TIntFloatMap;
+import gnu.trove.map.TLongFloatMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
+import gnu.trove.map.hash.TLongFloatHashMap;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TIntHashSet;
+import gnu.trove.set.hash.TLongHashSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -45,11 +50,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindRanGenClusters() throws Exception {
-        
-        //NOTE: high density results in using a higher threshold during the
-        //   stage of finding clusters with the estimated critical density
-        //float threshFactor = 2.5f;
+    public void estFindRanGenClusters() throws Exception {
         
         float xmin = 0;
         float xmax = 300;
@@ -144,7 +145,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 int height = minMaxXY[3] + 1;
                 
                 PixelHelper ph = new PixelHelper();
-                TIntSet pixIdxs = ph.convert(points, width);
+                TLongSet pixIdxs = ph.convert(points, width);
                 
                 DTClusterFinder clusterFinder
                     = new DTClusterFinder(pixIdxs, width, height);
@@ -162,19 +163,19 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
                 System.out.println("  nGroups=" + nGroups);
 
-                List<TIntSet> groupListPix = clusterFinder.getGroups();
+                List<TLongSet> groupListPix = clusterFinder.getGroups();
 
-                TIntIterator iter;
+                TLongIterator iter;
                 int[] xy = new int[2];
 
-                TIntSet allClusters = new TIntHashSet();
+                TLongSet allClusters = new TLongHashSet();
 
                 List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
                 for (int k = 0; k < groupListPix.size(); ++k) {
                     Set<PairInt> set = new HashSet<PairInt>();
                     iter = groupListPix.get(k).iterator();
                     while (iter.hasNext()) {
-                        int pixIdx = iter.next();
+                        long pixIdx = iter.next();
                         ph.toPixelCoords(pixIdx, width, xy);
                         PairInt p = new PairInt(xy[0], xy[1]);
                         set.add(p);
@@ -200,8 +201,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     = clusterFinder.getBackgroundSeparationHolder();
 
                 StatsHelper kdsh = new StatsHelper();
-                TIntFloatMap probMap = new TIntFloatHashMap();
-                TIntFloatMap probEMap = new TIntFloatHashMap();
+                TLongFloatMap probMap = new TLongFloatHashMap();
+                TLongFloatMap probEMap = new TLongFloatHashMap();
 
                 kdsh.calculateProbabilities(
                     sh, allClusters, width, height, probMap, probEMap);
@@ -251,15 +252,19 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
            "R15.txt" , 
             "Jain.txt", 
             "Flame.txt",
-            //"a1.txt", "a2.txt", "a3.txt"
+            //"a1.txt", 
+            //"a2.txt", "a3.txt"
             /*,
             "s1.txt", "s2.txt", "s3.txt", "s4.txt",
             "birch1.txt", "birch2.txt", "birch3.txt" */
         };
         
+        //TODO: rewrite plotter to read from a file
+        // instead of writing numbers in file
         ClusterPlotter plotter = new ClusterPlotter();
         
-        for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 0; i < fileNames.length; i++) {
+        for (int i = 8; i < fileNames.length; i++) {
         //for (int i = 6; i < 7; i++) {
 
             String fileName = fileNames[i];
@@ -279,6 +284,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     Math.round(indexer.getX()[k]),
                     Math.round(indexer.getY()[k]));
                 points.add(p);
+                assertTrue(p.getX() > -1);
+                assertTrue(p.getY() > -1);
                 if (p.getX() < minMaxXY[0]) {
                     minMaxXY[0] = p.getX();
                 }
@@ -297,7 +304,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             int height = minMaxXY[3] + 1;
 
             PixelHelper ph = new PixelHelper();
-            TIntSet pixIdxs = ph.convert(points, width);
+            TLongSet pixIdxs = ph.convert(points, width);
             
             DTClusterFinder clusterFinder
                 = new DTClusterFinder(pixIdxs, width, height);
@@ -344,19 +351,19 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     break;
             }            
             
-            List<TIntSet> groupListPix = clusterFinder.getGroups();
+            List<TLongSet> groupListPix = clusterFinder.getGroups();
 
-            TIntIterator iter;
+            TLongIterator iter;
             int[] xy = new int[2];
 
-            TIntSet allClusters = new TIntHashSet();
+            TLongSet allClusters = new TLongHashSet();
 
             List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
             for (int k = 0; k < groupListPix.size(); ++k) {
                 Set<PairInt> set = new HashSet<PairInt>();
                 iter = groupListPix.get(k).iterator();
                 while (iter.hasNext()) {
-                    int pixIdx = iter.next();
+                    long pixIdx = iter.next();
                     ph.toPixelCoords(pixIdx, width, xy);
                     PairInt p = new PairInt(xy[0], xy[1]);
                     set.add(p);
@@ -382,8 +389,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 = clusterFinder.getBackgroundSeparationHolder();
 
             StatsHelper kdsh = new StatsHelper();
-            TIntFloatMap probMap = new TIntFloatHashMap();
-            TIntFloatMap probEMap = new TIntFloatHashMap();
+            TLongFloatMap probMap = new TLongFloatHashMap();
+            TLongFloatMap probEMap = new TLongFloatHashMap();
 
             kdsh.calculateProbabilities(
                 sh, allClusters, width, height, probMap, probEMap);
@@ -531,7 +538,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             int height = minMaxXY[3] + 1;
 
             PixelHelper ph = new PixelHelper();
-            TIntSet pixIdxs = ph.convert(points, width);
+            TLongSet pixIdxs = ph.convert(points, width);
 
             DTClusterFinder clusterFinder = 
                 new DTClusterFinder(pixIdxs, width, height);
@@ -549,19 +556,19 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
             System.out.println("  nGroups=" + nGroups);
 
-            List<TIntSet> groupListPix = clusterFinder.getGroups();
+            List<TLongSet> groupListPix = clusterFinder.getGroups();
 
-            TIntIterator iter;
+            TLongIterator iter;
             int[] xy = new int[2];
 
-            TIntSet allClusters = new TIntHashSet();
+            TLongSet allClusters = new TLongHashSet();
 
             List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
             for (int k = 0; k < groupListPix.size(); ++k) {
                 Set<PairInt> set = new HashSet<PairInt>();
                 iter = groupListPix.get(k).iterator();
                 while (iter.hasNext()) {
-                    int pixIdx = iter.next();
+                    long pixIdx = iter.next();
                     ph.toPixelCoords(pixIdx, width, xy);
                     PairInt p = new PairInt(xy[0], xy[1]);
                     set.add(p);

@@ -5,7 +5,7 @@ import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
-import algorithms.search.NearestNeighbor2D;
+import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
 import algorithms.util.OneDFloatArray;
@@ -14,16 +14,21 @@ import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.TLongIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TIntHashSet;
+import gnu.trove.set.hash.TLongHashSet;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
@@ -53,14 +58,14 @@ public class PairwiseSeparations {
     }
 
     public static class ScaledPoints {
-        public TIntSet pixelIdxs;
+        public TLongSet pixelIdxs;
         int width;
         int height;
         int xScale;
         int yScale;
     }
     
-    public BackgroundSeparationHolder extract(TIntSet pixelIdxs, int width, 
+    public BackgroundSeparationHolder extract(TLongSet pixelIdxs, int width, 
         int height) {
         
         if (pixelIdxs.size() < 12) {
@@ -80,8 +85,8 @@ public class PairwiseSeparations {
         }
     }
     
-    protected BackgroundSeparationHolder extractWithNN2D(TIntSet pixelIdxs, int width, 
-        int height) {
+    protected BackgroundSeparationHolder extractWithNN2D(TLongSet pixelIdxs, 
+        int width, int height) {
         
         // randomly sample void and find NN pixelIdxs
         // then store that separation in value counts map
@@ -89,9 +94,10 @@ public class PairwiseSeparations {
         
         TIntIntMap valueCounts = new TIntIntHashMap();
         
-        NearestNeighbor2D nn2d = new NearestNeighbor2D(pixelIdxs, width, height);
+        NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
+            width, height);
         
-        int len = width * height;
+        long len = width * height;
         
         // For random draws, considering 2 different approaches:
         // (1) random draw of integer within range width*height
@@ -110,8 +116,10 @@ public class PairwiseSeparations {
         
         int nDraws = pixelIdxs.size();
         
+        long rFactor = (long)Math.ceil(Long.MAX_VALUE/len);
+ 
         for (int i = 0; i < nDraws; ++i) {
-            int pixIdx1 = rand.nextInt(len);
+            long pixIdx1 = rand.nextLong()/rFactor;
             if (!pixelIdxs.contains(pixIdx1)) {
                 ph.toPixelCoords(pixIdx1, width, xy);
                 
@@ -137,7 +145,7 @@ public class PairwiseSeparations {
                         if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= width) {
                             continue;
                         }
-                        int pixIdx3 = ph.toPixelIndex(x3, y3, width);
+                        long pixIdx3 = ph.toPixelIndex(x3, y3, width);
                         if (pixelIdxs.contains(pixIdx3)) {
                             continue;
                         }
@@ -174,8 +182,8 @@ public class PairwiseSeparations {
         return h;
     }
     
-    protected BackgroundSeparationHolder extractWithDistTrans(TIntSet pixelIdxs, int width, 
-        int height) {
+    protected BackgroundSeparationHolder extractWithDistTrans(
+        TLongSet pixelIdxs, int width, int height) {
         
         // these are the non-point distances to the points        
         int[][] dt = DistanceTransformUtil.transform(pixelIdxs, width, height);
@@ -233,7 +241,7 @@ public class PairwiseSeparations {
         TIntSet exclude = new TIntHashSet();
         exclude.add(0);
         finder.setValuesToExclude(exclude);
-        List<TIntSet> valueGroups = finder.findGroups(dt);
+        List<TLongSet> valueGroups = finder.findGroups(dt);
         finder = null;
      
         System.out.println("number of connected same value distants=" +
@@ -245,8 +253,8 @@ public class PairwiseSeparations {
             float[] x = new float[valueGroups.size()];
             float[] y = new float[x.length];
             for (int i = 0; i < valueGroups.size(); ++i) {
-                TIntSet group = valueGroups.get(i);
-                int tPix = group.iterator().next();
+                TLongSet group = valueGroups.get(i);
+                long tPix = group.iterator().next();
                 ph.toPixelCoords(tPix, width, xy);
                 int v = dt[xy[0]][xy[1]];
                 x[i] = v;
@@ -295,9 +303,9 @@ public class PairwiseSeparations {
                 continue;
             }
             
-            TIntSet group = valueGroups.get(i);
+            TLongSet group = valueGroups.get(i);
             
-            int tPix = group.iterator().next();
+            long tPix = group.iterator().next();
             ph.toPixelCoords(tPix, width, xy);
             int v = dt[xy[0]][xy[1]];
             
@@ -318,8 +326,8 @@ public class PairwiseSeparations {
             TIntIterator iter2 = adj.iterator();
             while (iter2.hasNext()) {
                 int aIdx = iter2.next();
-                TIntSet group2 = valueGroups.get(aIdx);
-                int tPix2 = group2.iterator().next();
+                TLongSet group2 = valueGroups.get(aIdx);
+                long tPix2 = group2.iterator().next();
                 ph.toPixelCoords(tPix2, width, xy);
                 int v2 = dt[xy[0]][xy[1]];
             
@@ -350,7 +358,7 @@ public class PairwiseSeparations {
         return h;
     }
     
-    public ScaledPoints scaleThePoints(TIntSet pixelIdxs, int width, int height) {
+    public ScaledPoints scaleThePoints(TLongSet pixelIdxs, int width, int height) {
         
         if (pixelIdxs.size() < 12) {
             throw new IllegalArgumentException(
@@ -361,23 +369,23 @@ public class PairwiseSeparations {
         
         int[] xyScales = sf.find(pixelIdxs, width, height);
         
-        TIntSet pixelIdxs2;
+        TLongSet pixelIdxs2;
         int width2, height2;
         if (xyScales[0] <= 1 && xyScales[1] <= 1) {
-            pixelIdxs2 = new TIntHashSet(pixelIdxs);
+            pixelIdxs2 = new TLongHashSet(pixelIdxs);
             width2 = width;
             height2 = height;
         } else if (xyScales[0] <= 1 && xyScales[1] > 1) {
-            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
+            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());
             width2 = width;
             height2 = (int)Math.ceil((float)height/(float)xyScales[1]);            
         } else if (xyScales[0] > 1 && xyScales[1] <= 1) {
-            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
+            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());
             width2 = (int)Math.ceil((float)width/(float)xyScales[0]);
             height2 = height;
         } else {
             // scale both axes
-            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());
+            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());
             width2 = (int)Math.ceil((float)width/(float)xyScales[0]);
             height2 = (int)Math.ceil((float)height/(float)xyScales[1]);
         }
@@ -387,12 +395,12 @@ public class PairwiseSeparations {
             PixelHelper ph = new PixelHelper();
             int[] xy = new int[2];
             
-            TIntIterator iter = pixelIdxs.iterator();
+            TLongIterator iter = pixelIdxs.iterator();
             while (iter.hasNext()) {
                 
-                int pixIsx = iter.next();
+                long pixIdx = iter.next();
                 
-                ph.toPixelCoords(pixIsx, width, xy);
+                ph.toPixelCoords(pixIdx, width, xy);
                 
                 if (xyScales[0] > 1) {
                     xy[0] /= xyScales[0];
@@ -401,7 +409,7 @@ public class PairwiseSeparations {
                     xy[1] /= xyScales[1];
                 }
                 
-                int pixIdx2 = ph.toPixelIndex(xy[0], xy[1], width2);
+                long pixIdx2 = ph.toPixelIndex(xy[0], xy[1], width2);
                 
                 pixelIdxs2.add(pixIdx2);
             }
@@ -418,14 +426,14 @@ public class PairwiseSeparations {
     }
     
     private TIntObjectMap<TIntSet> createAdjacencyMap(
-        List<TIntSet> groupList, int width, int height) {
+        List<TLongSet> groupList, int width, int height) {
         
-        TIntIntMap pixGroupMap = new TIntIntHashMap();
+        TLongIntMap pixGroupMap = new TLongIntHashMap();
         for (int i = 0; i < groupList.size(); ++i) {
-            TIntSet group = groupList.get(i);
-            TIntIterator iter = group.iterator();
+            TLongSet group = groupList.get(i);
+            TLongIterator iter = group.iterator();
             while (iter.hasNext()) {
-                int pixIdx = iter.next();
+                long pixIdx = iter.next();
                 assert(!pixGroupMap.containsKey(pixIdx));
                 pixGroupMap.put(pixIdx, i);
             }
@@ -441,15 +449,16 @@ public class PairwiseSeparations {
         
         System.out.println("nBSLen=" + nBSLen);
         
+        // key = index of group list, value = set of adjacent group indexes
         TIntObjectMap<TIntSet> adjMap = new TIntObjectHashMap<TIntSet>();
         
         for (int i = 0; i < groupList.size(); ++i) {
-            TIntSet group = groupList.get(i);
-            TIntIterator iter = group.iterator();
+            TLongSet group = groupList.get(i);
+            TLongIterator iter = group.iterator();
             TIntSet adj = adjMap.get(i);
             
             while (iter.hasNext()) {
-                int pixIdx = iter.next();
+                long pixIdx = iter.next();
                 ph.toPixelCoords(pixIdx, width, xy);
                 
                 for (int k = 0; k < dx8.length; ++k) {
@@ -458,7 +467,7 @@ public class PairwiseSeparations {
                     if (vX < 0 || vY < 0 || vX >= width || vY >= height) {
                         continue;
                     }
-                    int pixIdx2 = ph.toPixelIndex(vX, vY, width);
+                    long pixIdx2 = ph.toPixelIndex(vX, vY, width);
                     
                     if (!pixGroupMap.containsKey(pixIdx2)) {
                         continue;
@@ -694,7 +703,7 @@ public class PairwiseSeparations {
             System.out.format("len=%d  maxC=%f d=%f\n", len,
                 trC.a[yMaxIdx], trV.a[yMaxIdx]);
             
-            if (len >= 10 && len <= 100) {
+            if (len >= 10 && len < 500) {
                 peakAvg += trV.a[yMaxIdx];
                 peakIdxs.add(i);
             } 

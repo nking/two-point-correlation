@@ -2,8 +2,8 @@ package com.climbwithyourfeet.clustering;
 
 import algorithms.imageProcessing.DistanceTransform;
 import algorithms.util.PixelHelper;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.set.TIntSet;
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.set.TLongSet;
 
 /**
  * miscellaneous methods to examine the x and y transforms
@@ -13,7 +13,7 @@ import gnu.trove.set.TIntSet;
  */
 public class DistanceTransformUtil {
     
-    public static int[][] transform(TIntSet pixIdxs, int width, int height) {
+    public static int[][] transform(TLongSet pixIdxs, int width, int height) {
         
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
@@ -23,9 +23,9 @@ public class DistanceTransformUtil {
             data[i] = new int[height];
         }
         
-        TIntIterator iter = pixIdxs.iterator();
+        TLongIterator iter = pixIdxs.iterator();
         while (iter.hasNext()) {
-            int pixIdx = iter.next();
+            long pixIdx = iter.next();
             ph.toPixelCoords(pixIdx, width, xy);
             data[xy[0]][xy[1]] = 1;
         }

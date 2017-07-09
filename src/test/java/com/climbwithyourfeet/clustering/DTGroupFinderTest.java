@@ -3,6 +3,7 @@ package com.climbwithyourfeet.clustering;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,19 +25,19 @@ public class DTGroupFinderTest extends TestCase {
         
         PixelHelper ph = new PixelHelper();
         
-        TIntSet pixIdxs = ph.convert(points, 8);
+        TLongSet pixIdxs = ph.convert(points, 8);
         
         DTGroupFinder finder = new DTGroupFinder(8, 8);
                 
         float critSep = 2.f;
         
-        List<TIntSet> groups = 
+        List<TLongSet> groups = 
             finder.calculateGroupsUsingSepartion(critSep, critSep, 
                 pixIdxs);
         
         assertTrue(groups.size() == 1);
         
-        TIntSet g0p = groups.get(0);
+        TLongSet g0p = groups.get(0);
         Set<PairInt> g0 = ph.convert(g0p, 8);
         
         assertTrue(g0.size() == 6);

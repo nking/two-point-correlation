@@ -1,6 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
-import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -27,13 +27,13 @@ public class DTClusterFinder {
     /**
      * pixel indexes
      */
-    private final TIntSet points;
+    private final TLongSet points;
     private final int width;
     private final int height;
     
     private BackgroundSeparationHolder sepHolder = null;
     
-    private List<TIntSet> groups = null;
+    private List<TLongSet> groups = null;
 
     private enum STATE {
         INIT, HAVE_BACKGROUND_SEPARATION, HAVE_GROUPS
@@ -63,7 +63,7 @@ public class DTClusterFinder {
      * @param width
      * @param height
      */
-    public DTClusterFinder(TIntSet thePoints, int width, int height) {
+    public DTClusterFinder(TLongSet thePoints, int width, int height) {
         
         this.points = thePoints;
         this.width = width;
@@ -232,7 +232,7 @@ public class DTClusterFinder {
      * @param idx
      * @return
      */
-    public TIntSet getCluster(int idx) {
+    public TLongSet getCluster(int idx) {
         
         if (groups == null) {
             throw new IllegalArgumentException(
@@ -246,7 +246,7 @@ public class DTClusterFinder {
         return groups.get(idx);
     }
     
-    public List<TIntSet> getGroups() {
+    public List<TLongSet> getGroups() {
         return groups;
     }
     

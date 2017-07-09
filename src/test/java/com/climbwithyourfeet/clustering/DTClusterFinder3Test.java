@@ -10,12 +10,17 @@ import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntFloatMap;
+import gnu.trove.map.TLongFloatMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
+import gnu.trove.map.hash.TLongFloatHashMap;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TIntHashSet;
+import gnu.trove.set.hash.TLongHashSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -54,7 +59,7 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
         int height = 20;
         
         // drawing a filled circle at (10, 10) of radius 5
-        TIntSet pixIdxs = new TIntHashSet();
+        TLongSet pixIdxs = new TLongHashSet();
         
         /*
          9
@@ -110,19 +115,19 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
 
         System.out.println("  nGroups=" + nGroups);
 
-        List<TIntSet> groupListPix = clusterFinder.getGroups();
+        List<TLongSet> groupListPix = clusterFinder.getGroups();
 
-        TIntIterator iter;
+        TLongIterator iter;
         int[] xy = new int[2];
 
-        TIntSet allClusters = new TIntHashSet();
+        TLongSet allClusters = new TLongHashSet();
 
         List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
         for (int k = 0; k < groupListPix.size(); ++k) {
             Set<PairInt> set = new HashSet<PairInt>();
             iter = groupListPix.get(k).iterator();
             while (iter.hasNext()) {
-                int pixIdx = iter.next();
+                long pixIdx = iter.next();
                 ph.toPixelCoords(pixIdx, width, xy);
                 PairInt p = new PairInt(xy[0], xy[1]);
                 set.add(p);
@@ -147,8 +152,8 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
             clusterFinder.getBackgroundSeparationHolder();
 
         StatsHelper kdsh = new StatsHelper();
-        TIntFloatMap probMap = new TIntFloatHashMap();
-        TIntFloatMap probEMap = new TIntFloatHashMap();
+        TLongFloatMap probMap = new TLongFloatHashMap();
+        TLongFloatMap probEMap = new TLongFloatHashMap();
 
         kdsh.calculateProbabilities(
             sh, allClusters, width, height, probMap, probEMap);
@@ -212,7 +217,7 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
         ClusterPlotter plotter = new ClusterPlotter();
 
         PixelHelper ph = new PixelHelper();
-        TIntSet pixIdxs = ph.convert(points, width);
+        TLongSet pixIdxs = ph.convert(points, width);
 
         DTClusterFinder clusterFinder
             = new DTClusterFinder(pixIdxs, width, height);
@@ -231,19 +236,19 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
 
         System.out.println("  nGroups=" + nGroups);
 
-        List<TIntSet> groupListPix = clusterFinder.getGroups();
+        List<TLongSet> groupListPix = clusterFinder.getGroups();
 
-        TIntIterator iter;
+        TLongIterator iter;
         int[] xy = new int[2];
 
-        TIntSet allClusters = new TIntHashSet();
+        TLongSet allClusters = new TLongHashSet();
 
         List<Set<PairInt>> groupList = new ArrayList<Set<PairInt>>(groupListPix.size());
         for (int k = 0; k < groupListPix.size(); ++k) {
             Set<PairInt> set = new HashSet<PairInt>();
             iter = groupListPix.get(k).iterator();
             while (iter.hasNext()) {
-                int pixIdx = iter.next();
+                long pixIdx = iter.next();
                 ph.toPixelCoords(pixIdx, width, xy);
                 PairInt p = new PairInt(xy[0], xy[1]);
                 set.add(p);
@@ -269,8 +274,8 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
             = clusterFinder.getBackgroundSeparationHolder();
 
         StatsHelper kdsh = new StatsHelper();
-        TIntFloatMap probMap = new TIntFloatHashMap();
-        TIntFloatMap probEMap = new TIntFloatHashMap();
+        TLongFloatMap probMap = new TLongFloatHashMap();
+        TLongFloatMap probEMap = new TLongFloatHashMap();
 
         kdsh.calculateProbabilities(
             sh, allClusters, width, height, probMap, probEMap);

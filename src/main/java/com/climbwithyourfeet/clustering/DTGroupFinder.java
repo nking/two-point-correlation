@@ -3,23 +3,17 @@ package com.climbwithyourfeet.clustering;
 import algorithms.util.PixelHelper;
 import algorithms.disjointSets.DisjointSet2Helper;
 import algorithms.disjointSets.DisjointSet2Node;
-import algorithms.search.NearestNeighbor2D;
-import algorithms.util.PairInt;
-import algorithms.util.PairIntArray;
 import thirdparty.edu.princeton.cs.algs4.QuadTree;
 import thirdparty.edu.princeton.cs.algs4.Interval;
 import thirdparty.edu.princeton.cs.algs4.Interval2D;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.iterator.TLongObjectIterator;
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TLongHashSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -31,14 +25,14 @@ public class DTGroupFinder {
     private DisjointSet2Helper disjointSetHelper = null;
 
     // key = pixIdx, value = disjoint set node with key pixIdx
-    private TIntObjectMap<DisjointSet2Node<Integer>> pixNodes = null;
+    private TLongObjectMap<DisjointSet2Node<Long>> pixNodes = null;
 
     protected boolean use4Neighbors = false;
 
     /**
      * a list to hold each group as an item of pixel indexes
      */
-    protected List<TIntSet> groupList = null;
+    protected List<TLongSet> groupList = null;
 
     protected int minimumNumberInCluster = 3;
 
@@ -106,8 +100,8 @@ public class DTGroupFinder {
      * @param pixIdxs
      * @return the groups found using critical density
      */
-    public List<TIntSet> calculateGroupsUsingSepartion(
-        float criticalSeparationX, float criticalSeparationY, TIntSet pixIdxs) {
+    public List<TLongSet> calculateGroupsUsingSepartion(
+        float criticalSeparationX, float criticalSeparationY, TLongSet pixIdxs) {
 
         initMap(pixIdxs);
         
@@ -127,7 +121,7 @@ public class DTGroupFinder {
      * the critical separation.
      * @param points
      */
-    private void findGroups(float critSepX, float critSepY, TIntSet pixIdxs) {
+    private void findGroups(float critSepX, float critSepY, TLongSet pixIdxs) {
 
         if (pixIdxs.isEmpty()) {
             return;
@@ -138,45 +132,45 @@ public class DTGroupFinder {
         findGroupsWithNN2D(pixIdxs, critSepX, critSepY);
     }
 
-    private void processPair(Integer uPoint, Integer vPoint) {
+    private void processPair(Long uPoint, Long vPoint) {
 
-        DisjointSet2Node<Integer> uNode = pixNodes.get(uPoint);
-        DisjointSet2Node<Integer> uParentNode = disjointSetHelper.findSet(uNode);
+        DisjointSet2Node<Long> uNode = pixNodes.get(uPoint);
+        DisjointSet2Node<Long> uParentNode = disjointSetHelper.findSet(uNode);
         assert(uParentNode != null);
 
         //int uGroupId = uParentNode.getMember().intValue();
 
-        DisjointSet2Node<Integer> vNode = pixNodes.get(vPoint);
-        DisjointSet2Node<Integer> vParentNode = disjointSetHelper.findSet(vNode);
+        DisjointSet2Node<Long> vNode = pixNodes.get(vPoint);
+        DisjointSet2Node<Long> vParentNode = disjointSetHelper.findSet(vNode);
         assert(vParentNode != null);
 
         //int vGroupId = vParentNode.getMember().intValue();
 
-        DisjointSet2Node<Integer> merged =
+        DisjointSet2Node<Long> merged =
             disjointSetHelper.union(uParentNode, vParentNode);
     }
 
     private void prune() {
 
         // key = repr node index, value = set of pixels w/ repr
-        TIntObjectMap<TIntSet> map = new TIntObjectHashMap<TIntSet>();
+        TLongObjectMap<TLongSet> map = new TLongObjectHashMap<TLongSet>();
 
-        TIntObjectIterator<DisjointSet2Node<Integer>> iter =
+        TLongObjectIterator<DisjointSet2Node<Long>> iter =
             pixNodes.iterator();
         for (int i = 0; i < pixNodes.size(); ++i) {
 
             iter.advance();
 
-            int pixIdx = iter.key();
-            DisjointSet2Node<Integer> node = iter.value();
+            long pixIdx = iter.key();
+            DisjointSet2Node<Long> node = iter.value();
 
-            DisjointSet2Node<Integer> repr = disjointSetHelper.findSet(node);
+            DisjointSet2Node<Long> repr = disjointSetHelper.findSet(node);
 
-            int reprIdx = repr.getMember().intValue();
+            long reprIdx = repr.getMember().longValue();
 
-            TIntSet set = map.get(reprIdx);
+            TLongSet set = map.get(reprIdx);
             if (set == null) {
-                set = new TIntHashSet();
+                set = new TLongHashSet();
                 map.put(reprIdx, set);
             }
             set.add(pixIdx);
@@ -185,14 +179,14 @@ public class DTGroupFinder {
         log.finest("number of groups before prune=" + map.size());
 
         // rewrite the above into a list
-        List<TIntSet> groups = new ArrayList<TIntSet>();
+        List<TLongSet> groups = new ArrayList<TLongSet>();
 
-        TIntObjectIterator<TIntSet> iter2 = map.iterator();
+        TLongObjectIterator<TLongSet> iter2 = map.iterator();
         for (int i = 0; i < map.size(); ++i) {
             
             iter2.advance();
 
-            TIntSet idxs = iter2.value();
+            TLongSet idxs = iter2.value();
 
             if (idxs.size() >= minimumNumberInCluster) {
                 groups.add(idxs);
@@ -204,15 +198,15 @@ public class DTGroupFinder {
         log.finest("number of groups after prune=" + groups.size());
     }
 
-    private void initMap(TIntSet pixIdxs) {
+    private void initMap(TLongSet pixIdxs) {
 
         System.out.println("initMap for " + pixIdxs.size());
         
-        pixNodes = new TIntObjectHashMap<DisjointSet2Node<Integer>>();
+        pixNodes = new TLongObjectHashMap<DisjointSet2Node<Long>>();
 
         disjointSetHelper = new DisjointSet2Helper();
 
-        TIntIterator iter = pixIdxs.iterator();
+        TLongIterator iter = pixIdxs.iterator();
 
         //long totalMemory = Runtime.getRuntime().totalMemory();
         //MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
@@ -222,11 +216,11 @@ public class DTGroupFinder {
 
         while (iter.hasNext()) {
 
-            int pixIdx = iter.next();
+            long pixIdx = iter.next();
 
-            DisjointSet2Node<Integer> pNode =
+            DisjointSet2Node<Long> pNode =
                 disjointSetHelper.makeSet(
-                    new DisjointSet2Node<Integer>(Integer.valueOf(pixIdx)));
+                    new DisjointSet2Node<Long>(Long.valueOf(pixIdx)));
 
             pixNodes.put(pixIdx, pNode);
             
@@ -234,24 +228,24 @@ public class DTGroupFinder {
         }
     }
 
-    private void findGroupsWithNN2D(TIntSet pixIdxs, float critSepX, 
+    private void findGroupsWithNN2D(TLongSet pixIdxs, float critSepX, 
         float critSepY) {
         
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
         
-        QuadTree<Integer, Integer> centroidQT = new QuadTree<Integer, Integer>();
-        TIntIterator iter = pixIdxs.iterator();
+        QuadTree<Integer, Long> centroidQT = new QuadTree<Integer, Long>();
+        TLongIterator iter = pixIdxs.iterator();
         while (iter.hasNext()) {
-            int uIdx = iter.next();            
+            long uIdx = iter.next();            
             ph.toPixelCoords(uIdx, imgWidth, xy);
-            centroidQT.insert(xy[0], xy[1], Integer.valueOf(uIdx)); 
+            centroidQT.insert(xy[0], xy[1], Long.valueOf(uIdx)); 
         }
         
         iter = pixIdxs.iterator();
         while (iter.hasNext()) {
             
-            int uIdx = iter.next();
+            long uIdx = iter.next();
             
             ph.toPixelCoords(uIdx, imgWidth, xy);
             
@@ -279,19 +273,19 @@ public class DTGroupFinder {
             Interval<Integer> intY = new Interval<Integer>(y0, y1);
             Interval2D<Integer> rect = new Interval2D<Integer>(intX, intY);
 
-            List<Integer> pixIndexes = centroidQT.query2D(rect);
+            List<Long> pixIndexes = centroidQT.query2D(rect);
             if (pixIndexes == null || pixIndexes.size() < 2) {
                 continue;
             }
 
-            for (Integer pixIndex : pixIndexes) {
-                int vPix = pixIndex.intValue();
+            for (Long pixIndex : pixIndexes) {
+                long vPix = pixIndex.longValue();
                 //ph.toPixelCoords(vPix, imgWidth, xy);
                 //int vX = xy[0];
                 //int vY = xy[1];
                 
                 processPair(uIdx, pixIndex);
-            }            
-        }        
+            }
+        }    
     }
 }

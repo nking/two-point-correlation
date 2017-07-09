@@ -7,11 +7,13 @@ import algorithms.misc.MiscSorter;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
@@ -35,7 +37,7 @@ public class ScaleFinder {
         debug = true;
     }
     
-    public int[] find(TIntSet pixelIdxs, int width, int height) {
+    public int[] find(TLongSet pixelIdxs, final int width, final int height) {
         
         if (pixelIdxs.size() < 12) {
             throw new IllegalArgumentException(
@@ -48,10 +50,19 @@ public class ScaleFinder {
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
         
-        TIntIterator iter = pixelIdxs.iterator();
+        TLongIterator iter = pixelIdxs.iterator();
         while (iter.hasNext()) {
-            int pixIdx = iter.next();
+            long pixIdx = iter.next();
             ph.toPixelCoords(pixIdx, width, xy);
+            
+            //DEBUG
+            if (xy[0] >= xA.length || xy[0] < 0) {
+                int z = 0;
+            }
+            if (xy[1] >= yA.length || xy[1] < 0) {
+                int z = 0;
+            }
+            
             xA[xy[0]]++;
             yA[xy[1]]++;
         }

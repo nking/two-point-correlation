@@ -1,14 +1,14 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.search.NearestNeighbor2D;
+import algorithms.search.NearestNeighbor2DLong;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
-import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.map.TIntFloatMap;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.set.TIntSet;
+import gnu.trove.iterator.TLongIntIterator;
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.map.TLongFloatMap;
+import gnu.trove.map.TLongIntMap;
+import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.set.TLongSet;
 import java.util.Set;
 
 /**
@@ -18,12 +18,12 @@ import java.util.Set;
 public class StatsHelper {
     
     public void calculateProbabilities(BackgroundSeparationHolder dh, 
-        TIntSet pixIdxs, 
+        TLongSet pixIdxs, 
         int width, int height,
-        TIntFloatMap outputPointProbMap,
-        TIntFloatMap outputPointProbErrMap) {
+        TLongFloatMap outputPointProbMap,
+        TLongFloatMap outputPointProbErrMap) {
         
-        TIntIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height,
+        TLongIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height,
             dh.scales);
                             
         setProbabilities(dh, pixSep, outputPointProbMap, 
@@ -41,21 +41,21 @@ public class StatsHelper {
      * @param scales
      * @return 
      */
-    private TIntIntMap calculatePixelSeparations(TIntSet pixIdxs, 
+    private TLongIntMap calculatePixelSeparations(TLongSet pixIdxs, 
         int width, int height, int[] scales) {
         
-        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);
+        NearestNeighbor2DLong nn = new NearestNeighbor2DLong(pixIdxs, width, height);
         
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
         
         // key = pixIdx, value = separation
-        TIntIntMap dMap = new TIntIntHashMap();
+        TLongIntMap dMap = new TLongIntHashMap();
         
-        TIntIterator iter = pixIdxs.iterator();
+        TLongIterator iter = pixIdxs.iterator();
         while (iter.hasNext()) {
         
-            int pixIdx = iter.next();
+            long pixIdx = iter.next();
         
             ph.toPixelCoords(pixIdx, width, xy);
             
@@ -80,16 +80,16 @@ public class StatsHelper {
     } 
 
     private void setProbabilities(BackgroundSeparationHolder dh, 
-        TIntIntMap pixSep, TIntFloatMap outputPointProbMap, 
-        TIntFloatMap outputPointProbErrMap) {
+        TLongIntMap pixSep, TLongFloatMap outputPointProbMap, 
+        TLongFloatMap outputPointProbErrMap) {
 
         float[] pp = new float[2];
         
-        TIntIntIterator iter = pixSep.iterator();
+        TLongIntIterator iter = pixSep.iterator();
         for (int i = 0; i < pixSep.size(); ++i) {
             iter.advance();
             
-            int pixIdx = iter.key();
+            long pixIdx = iter.key();
             int d = iter.value();
             
             dh.calcProbabilityAndError(d, pp);
