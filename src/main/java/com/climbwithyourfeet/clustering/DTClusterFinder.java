@@ -1,5 +1,7 @@
 package com.climbwithyourfeet.clustering;
 
+import algorithms.search.NearestNeighbor2D;
+import algorithms.search.NearestNeighbor2DLong;
 import gnu.trove.set.TLongSet;
 import java.util.Arrays;
 import java.util.List;
@@ -113,6 +115,14 @@ public class DTClusterFinder {
         if (debug) {
             ps.setToDebug();
         }
+        
+        /*
+        TODO:
+        for background density calculation, 
+        need to look at data size and available memory to learn whether
+        may need to partition the data and process each section, then combine
+        results.
+        */
             
         if (rescaleAxes) {
                         
@@ -120,7 +130,7 @@ public class DTClusterFinder {
                 points, width, height);
             
             System.out.println("scales=" + sp.xScale + " , " + sp.yScale);
-            
+        
             sepHolder = ps.extract(sp.pixelIdxs, sp.width, sp.height);
             
             sepHolder.setXYScales(sp.xScale, sp.yScale);
@@ -141,9 +151,11 @@ public class DTClusterFinder {
     
     /**
      * set the pairwise distances for x and y that characterize the background
-     * pairwise distances.  
+     * pairwise distances instead of calculating them.
      * The critical distance that is the maximum for association in a cluster
      * is thresholdFactor times these background separations.
+     * @param xSeparation
+     * @param ySeparation
      */
     public void setBackgroundSeparation(int xSeparation, int ySeparation) {
         

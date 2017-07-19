@@ -5,9 +5,11 @@ import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
+import algorithms.search.KDTree;
 import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
+import algorithms.util.ObjectSpaceEstimator;
 import algorithms.util.OneDFloatArray;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
@@ -33,6 +35,9 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -73,12 +78,32 @@ public class PairwiseSeparations {
                 "pixelIdxs.size must be 12 or more");
         }
         
-        int n0 = pixelIdxs.size();
-        n0 += (int)Math.ceil(Math.log(n0)/Math.log(2));
+        long maxC = (long)width * height;
+        int maxW = 1 + (int) Math.ceil(Math.log(maxC) / Math.log(2));
+        long nn2dMemory = NearestNeighbor2DLong.estimateSizeOnHeap(
+            pixelIdxs.size(), maxW)/(1024*1024);
+        long kdtreeMemory = 
+            KDTree.estimateSizeOnHeap(pixelIdxs.size())/(1024*1024);
+        long totalMemory = Runtime.getRuntime().totalMemory();
+        MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
+        long heapUsage = mbean.getHeapMemoryUsage().getUsed();
+        long avail = (totalMemory - heapUsage)/(1024*1024);
+        long distTransMemory = 
+            ((long)width*ObjectSpaceEstimator.getArrayReferenceSize()
+            /(1024*1024))
+            + ((((long)width * height)/(1024*1024)) 
+            * ObjectSpaceEstimator.estimateIntSize());
         
-        int n1 = width * height;
+        boolean useDT = distTransMemory < (0.75*avail);
+        System.out.println("MB avail=" + avail 
+            + " nn2dMem=" + nn2dMemory 
+            + " kdtreeMem=" + kdtreeMemory
+            + " distTransMem=" + distTransMemory
+            + " distTransMemory < 0.75*avail=" + useDT
+        );
         
-        if (n0 < n1) {
+        if (!useDT) {
+            // random sampling of points in the void and their nearest neighbor
             return extractWithNN2D(pixelIdxs, width, height);
         } else {
             return extractWithDistTrans(pixelIdxs, width, height);
@@ -97,7 +122,7 @@ public class PairwiseSeparations {
         NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
             width, height);
         
-        long len = width * height;
+        long len = (long)width * height;
         
         // For random draws, considering 2 different approaches:
         // (1) random draw of integer within range width*height
@@ -150,7 +175,7 @@ public class PairwiseSeparations {
                             continue;
                         }
                         Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
-                        if (nearest3 == null || nearest3.size() > 0) {
+                        if (nearest3 == null || nearest3.isEmpty()) {
                             continue;
                         }
                         PairInt p3 = nearest3.iterator().next();
