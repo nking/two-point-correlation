@@ -6,6 +6,7 @@ import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
 import algorithms.search.KDTree;
+import algorithms.search.KDTreeNode;
 import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
@@ -110,17 +111,31 @@ public class PairwiseSeparations {
         }
     }
     
+    /**
+     * NOTE: this method is in progress and not ready for use yet
+     * 
+     * @param pixelIdxs
+     * @param width
+     * @param height
+     * @return 
+     */
     protected BackgroundSeparationHolder extractWithNN2D(TLongSet pixelIdxs, 
         int width, int height) {
         
-        // randomly sample void and find NN pixelIdxs
-        // then store that separation in value counts map
-        //  assume the repeated random draws are almost always unique
+        /*
+        NOTE: this method is in progress.
+        random sampling of void points to find maxima in separation from nearest
+        pixelIdx is not working as well as the distance transform method.
+        
+        may include full sample of pixelsIdxs and their NN2D and contrast it
+        with the random void sample to find the threshold separation.
+        */
         
         TIntIntMap valueCounts = new TIntIntHashMap();
         
-        NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
-            width, height);
+        KDTree nn2d = new KDTree(pixelIdxs, width, height);
+        //NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
+        //    width, height);
         
         long len = (long)width * height;
         
@@ -134,67 +149,66 @@ public class PairwiseSeparations {
         rand.setSeed(seed);
         
         PixelHelper ph = new PixelHelper();
-        int[] xy = new int[2];
         
         final int[] dx4 = new int[]{-1,  0, 1, 0};
         final int[] dy4 = new int[]{ 0, -1, 0, 1};
         
         int nDraws = pixelIdxs.size();
+           
+        int x, y;
+        long pixIdx1;
         
-        long rFactor = (long)Math.ceil(Long.MAX_VALUE/len);
- 
         for (int i = 0; i < nDraws; ++i) {
-            long pixIdx1 = rand.nextLong()/rFactor;
-            if (!pixelIdxs.contains(pixIdx1)) {
-                ph.toPixelCoords(pixIdx1, width, xy);
-                
-                if (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
-                    (xy[1] == (height - 1))) {
-                    continue;
-                }
-                
-                Set<PairInt> nearest = nn2d.findClosest(xy[0], xy[1]);
-                if (nearest != null && nearest.size() > 0) {
-                    PairInt p2 = nearest.iterator().next();
-                    int dx = xy[0] - p2.getX();
-                    int dy = xy[1] - p2.getY();
-                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
-                    
-                    // check the 4 neighbors and if they are all lower
-                    // (possibly == too), store this separation
-                    boolean allAreLower = true;
-                    
-                    for (int k = 0; k < dx4.length; ++k) {
-                        int x3 = xy[0] + dx4[k];
-                        int y3 = xy[1] + dy4[k];
-                        if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= width) {
-                            continue;
-                        }
-                        long pixIdx3 = ph.toPixelIndex(x3, y3, width);
-                        if (pixelIdxs.contains(pixIdx3)) {
-                            continue;
-                        }
-                        Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
-                        if (nearest3 == null || nearest3.isEmpty()) {
-                            continue;
-                        }
-                        PairInt p3 = nearest3.iterator().next();
-                        int dx3 = x3 - p3.getX();
-                        int dy3 = y3 - p3.getY();
-                        int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
+        
+            do {
+                // not including boundary points
+                x = rand.nextInt(width - 2) + 1;
+                y = rand.nextInt(height - 2) + 1;
+                pixIdx1 = ph.toPixelIndex(x, y, width);
+            } while (pixelIdxs.contains(pixIdx1));
+             
+            //Set<PairInt> nearest = nn2d.findClosest(x, y);
+            KDTreeNode node = nn2d.findNearestNeighbor(x, y);
+            
+            if (node != null) {
+                int dx = x - node.getX();
+                int dy = y - node.getY();
+                int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
 
-                        if (d3 > d) {
-                            allAreLower = false;
-                            break;
-                        }
+                // check the 4 neighbors and if they are all lower
+                // (possibly == too), store this separation
+                boolean allAreLower = true;
+
+                for (int k = 0; k < dx4.length; ++k) {
+                    int x3 = x + dx4[k];
+                    int y3 = y + dy4[k];
+                    if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= height) {
+                        continue;
                     }
-                    
-                    if (allAreLower) {
-                        if (valueCounts.containsKey(d)) {
-                            valueCounts.put(d, valueCounts.size() + 1);
-                        } else {
-                            valueCounts.put(d, 1);
-                        }
+                    long pixIdx3 = ph.toPixelIndex(x3, y3, width);
+                    if (pixelIdxs.contains(pixIdx3)) {
+                        continue;
+                    }
+                    //Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
+                    KDTreeNode node3 = nn2d.findNearestNeighbor(x3, y3);
+                    if (node3 == null) {
+                        continue;
+                    }
+                    int dx3 = x3 - node3.getX();
+                    int dy3 = y3 - node3.getY();
+                    int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
+
+                    if (d3 > d) {
+                        allAreLower = false;
+                        break;
+                    }
+                }
+
+                if (allAreLower) {
+                    if (valueCounts.containsKey(d)) {
+                        valueCounts.put(d, valueCounts.size() + 1);
+                    } else {
+                        valueCounts.put(d, 1);
                     }
                 }
             }
