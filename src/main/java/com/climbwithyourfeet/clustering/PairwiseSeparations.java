@@ -7,11 +7,13 @@ import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
 import algorithms.search.KDTree;
 import algorithms.search.KDTreeNode;
+import algorithms.search.KNearestNeighbors;
 import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
 import algorithms.util.ObjectSpaceEstimator;
 import algorithms.util.OneDFloatArray;
+import algorithms.util.PairFloat;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
@@ -59,8 +61,24 @@ public class PairwiseSeparations {
     
     private final Logger log = Logger.getLogger(this.getClass().getName());
     
+    protected double eps = 1.e-17;
+    
     public void setToDebug() {
         debug = true;
+    }
+
+    private int findArrayWithNPoints(int nP, List<OneDFloatArray> arrays) {
+        int idx = 0;
+        int diff = Math.abs(arrays.get(0).a.length - nP);
+        for (int i = 1; i < arrays.size(); ++i) {
+            int lenI = arrays.get(i).a.length;
+            int diffI = Math.abs(lenI - nP);
+            if (diffI < diff) {
+                idx = i;
+                diff = diffI;
+            }
+        }
+        return idx;
     }
 
     public static class ScaledPoints {
@@ -122,6 +140,21 @@ public class PairwiseSeparations {
     protected BackgroundSeparationHolder extractWithNN2D(TLongSet pixelIdxs, 
         int width, int height) {
         
+        KNearestNeighbors knn = new KNearestNeighbors(pixelIdxs, width, height);
+        
+        //KDTree nn2d = new KDTree(pixelIdxs, width, height);
+         
+        //NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
+        //    width, height);
+        
+        PixelHelper ph = new PixelHelper();
+        
+        final int[] dx4 = new int[]{-1,  0, 1, 0};
+        final int[] dy4 = new int[]{ 0, -1, 0, 1};
+          
+        int x, y;
+        long pixIdx1;
+         
         /*
         NOTE: this method is in progress.
         random sampling of void points to find maxima in separation from nearest
@@ -131,11 +164,60 @@ public class PairwiseSeparations {
         with the random void sample to find the threshold separation.
         */
         
-        TIntIntMap valueCounts = new TIntIntHashMap();
+        int[] xy = new int[2];
         
-        KDTree nn2d = new KDTree(pixelIdxs, width, height);
-        //NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs, 
-        //    width, height);
+        TIntIntMap pointValueCounts = new TIntIntHashMap();
+        TLongIterator iter = pixelIdxs.iterator();
+        while (iter.hasNext()) {
+            pixIdx1 = iter.next();
+            ph.toPixelCoords(pixIdx1, width, xy);
+            
+            assert(xy[0] > -1);
+            assert(xy[1] > -1);
+            
+            List<PairFloat> nearest = knn.findNearest(2, xy[0], xy[1]);
+            //KDTreeNode node = nn2d.findNearestNeighborNotEquals(xy[0], xy[1]);
+            //if (node == null) {
+            //    continue;
+            //}
+            if (nearest == null || nearest.isEmpty()) {
+                continue;
+            }
+            PairFloat node = null;
+            for (PairFloat p0 : nearest) {
+                if ((Math.abs(p0.getX() - xy[0]) < eps) 
+                    && (Math.abs(p0.getY() - xy[1]) < eps)) {
+                    continue;
+                }
+                node = p0;
+                break;
+            }
+            assert(node != null);
+            
+            float dx = xy[0] - node.getX();
+            float dy = xy[1] - node.getY();
+            int d = (int) Math.round(Math.sqrt(dx * dx + dy * dy));
+
+            // default map value is 0 is no entry
+            int c = pointValueCounts.get(d);
+            pointValueCounts.put(d, c + 1);
+        }
+        // sort the values, make regular spacings, and use pyramidal smoothing
+        // plotting each tansformed result
+        
+        List<OneDFloatArray> outTransC = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffC = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outTransV = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffV = new ArrayList<OneDFloatArray>();
+    
+        float maxV = resampleAndSmooth(pointValueCounts, 
+            outTransC, outCoeffC, outTransV, outCoeffV);
+        
+        // ------ 
+        
+        int k = 4;
+        
+        TIntIntMap voidValueCounts = new TIntIntHashMap();
         
         long len = (long)width * height;
         
@@ -147,16 +229,8 @@ public class PairwiseSeparations {
         long seed = System.currentTimeMillis();
         System.out.println("SEED=" + seed);
         rand.setSeed(seed);
-        
-        PixelHelper ph = new PixelHelper();
-        
-        final int[] dx4 = new int[]{-1,  0, 1, 0};
-        final int[] dy4 = new int[]{ 0, -1, 0, 1};
-        
-        int nDraws = pixelIdxs.size();
-           
-        int x, y;
-        long pixIdx1;
+                
+        int nDraws = 3 * pixelIdxs.size();
         
         for (int i = 0; i < nDraws; ++i) {
         
@@ -167,48 +241,67 @@ public class PairwiseSeparations {
                 pixIdx1 = ph.toPixelIndex(x, y, width);
             } while (pixelIdxs.contains(pixIdx1));
              
-            //Set<PairInt> nearest = nn2d.findClosest(x, y);
-            KDTreeNode node = nn2d.findNearestNeighbor(x, y);
+            List<PairFloat> nearest = knn.findNearest(k, x, y);
             
-            if (node != null) {
-                int dx = x - node.getX();
-                int dy = y - node.getY();
-                int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
-
-                // check the 4 neighbors and if they are all lower
-                // (possibly == too), store this separation
-                boolean allAreLower = true;
-
-                for (int k = 0; k < dx4.length; ++k) {
-                    int x3 = x + dx4[k];
-                    int y3 = y + dy4[k];
-                    if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= height) {
+            if (nearest != null) {
+                for (PairFloat p : nearest) {
+                    
+                    if ((Math.abs(p.getX() - x) < eps)
+                        && (Math.abs(p.getY() - y) < eps)) {
                         continue;
                     }
-                    long pixIdx3 = ph.toPixelIndex(x3, y3, width);
-                    if (pixelIdxs.contains(pixIdx3)) {
-                        continue;
-                    }
-                    //Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
-                    KDTreeNode node3 = nn2d.findNearestNeighbor(x3, y3);
-                    if (node3 == null) {
-                        continue;
-                    }
-                    int dx3 = x3 - node3.getX();
-                    int dy3 = y3 - node3.getY();
-                    int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
+                    
+                    float dx = x - p.getX();
+                    float dy = y - p.getY();
+                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
 
-                    if (d3 > d) {
-                        allAreLower = false;
-                        break;
-                    }
-                }
+                    boolean allAreLower = true;
+                    for (int m = 0; m < dx4.length; ++m) {
+                        int x3 = x + dx4[m];
+                        int y3 = y + dy4[m];
+                        if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= height) {
+                            continue;
+                        }
+                        long pixIdx3 = ph.toPixelIndex(x3, y3, width);
+                        if (pixelIdxs.contains(pixIdx3)) {
+                            continue;
+                        }
+                        //Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
+                        //KDTreeNode node3 = nn2d.findNearestNeighbor(x3, y3);
+                        //if (node3 == null) {
+                        //    continue;
+                        //}
+                        List<PairFloat> nearest3 = knn.findNearest(k, x3, y3);
+                        PairFloat node3 = null;
+                        for (PairFloat p0 : nearest3) {
+                            if ((Math.abs(p0.getX() - x3) < eps)
+                                && (Math.abs(p0.getY() - y3) < eps)) {
+                                continue;
+                            }
+                            node3 = p0;
+                            break;
+                        }
+                        assert (node3 != null);
+                        
+                        float dx3 = x3 - node3.getX();
+                        float dy3 = y3 - node3.getY();
+                        int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
 
-                if (allAreLower) {
-                    if (valueCounts.containsKey(d)) {
-                        valueCounts.put(d, valueCounts.size() + 1);
-                    } else {
-                        valueCounts.put(d, 1);
+                        if (d3 > d) {
+                            allAreLower = false;
+                            break;
+                        }
+                    }
+                    
+                    //DEBUG: temporarily excluding points larger than
+                    // 3*maxV
+                    if (d < 3*maxV) {
+                        
+                        System.out.println("p=" + p + " d=" + d);
+                    
+                        // default for no_entry is 0
+                        int c = voidValueCounts.get(d);
+                        voidValueCounts.put(d, c + 1);
                     }
                 }
             }
@@ -216,8 +309,52 @@ public class PairwiseSeparations {
         
         long ts = System.currentTimeMillis();
         
-        BackgroundSeparationHolder h = findBackgroundOfRandom(valueCounts, ts);
+        List<OneDFloatArray> outTransC_void = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffC_void = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outTransV_void = new ArrayList<OneDFloatArray>();
+        List<OneDFloatArray> outCoeffV_void = new ArrayList<OneDFloatArray>();
+    
+        float maxV_void = resampleAndSmooth(voidValueCounts, 
+            outTransC_void, outCoeffC_void, outTransV_void, outCoeffV_void);
+      
+   //TODO: still editing everything below here     
         
+        // calc m2 as the background separation
+        //for the curves smoothed to about 15 to 20 points,
+        //  wanting the weighted peak
+        int nP = 14;
+        int voidIdx = findArrayWithNPoints(nP, outTransC_void);
+        int peakIdx = weightedPeak(outTransC_void.get(voidIdx));
+        
+        int m2 = (int)outTransV_void.get(voidIdx).a[peakIdx];
+        if (m2 < 1) {
+            m2 = 1;
+        }
+        
+        //TODO:
+        //BackgroundSeparationHolder will be populated with the last
+        //   smoothed points curve with number of points > 2
+        // and a separate entry will be added for the
+        // background separation.
+        
+        // find where the points flatten out to near zero or their minimum,
+        //   but past the background dist m2
+        int pointIdx = findArrayWithNPoints(nP, outTransC);
+        int minIdx = findMinBeyondValue(m2, outTransC.get(pointIdx));
+        
+        float z2 = outTransV.get(pointIdx).a[minIdx];
+        float z2C = outTransC.get(pointIdx).a[minIdx];
+        
+        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+                
+        h.setXYBackgroundSeparations(m2, m2);
+        
+        h.setTheThreeSeparations(new float[]{0, m2, z2});
+        
+        h.setAndNormalizeCounts(new float[]{
+            reprCounts, reprCounts, 
+            z2C});
+       
         return h;
     }
     
@@ -944,7 +1081,7 @@ public class PairwiseSeparations {
     }
 
     private BackgroundSeparationHolder findBackgroundOfRandom(TIntIntMap valueCounts,
-        long ts) {
+        long ts, float maxV) {
 
         if (valueCounts.size() == 0) {
             
@@ -979,7 +1116,7 @@ public class PairwiseSeparations {
             PolygonAndPointPlotter plotter;
             try {
                 plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
+                plotter.addPlot(0, maxV, yMin, yMax, x, y, x, y,
                     "max sep");
             plotter.writeFile("_separation_maxima_" + ts);
             } catch (IOException ex) {
@@ -1100,4 +1237,88 @@ public class PairwiseSeparations {
        
         return h;
     }
+    
+    private float resampleAndSmooth(TIntIntMap pointValueCounts, 
+        List<OneDFloatArray> outTransC, List<OneDFloatArray> outCoeffC,
+        List<OneDFloatArray> outTransV, List<OneDFloatArray> outCoeffV) {
+
+        int n = pointValueCounts.size();
+
+        TIntList outV = new TIntArrayList();
+        TFloatList outC = new TFloatArrayList();
+        integerResampling(pointValueCounts, outV, outC);
+        
+        float[] values = new float[outC.size()];
+        for (int i = 0; i < outV.size(); ++i) {
+            values[i] = outV.get(i);
+        }
+        float[] counts = outC.toArray(new float[outC.size()]);
+        
+        MedianTransform1D mt = new MedianTransform1D();
+        mt.multiscalePyramidalMedianTransform2(counts, outTransC, outCoeffC);
+        mt.multiscalePyramidalMedianTransform2(values, outTransV, outCoeffV);
+
+        assert(outTransC.size() == outTransV.size());
+        
+        {   
+            try {
+                
+                //DEBUG
+
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+                for (int i = 0; i < outTransC.size(); ++i) {
+                    float[] v = outTransV.get(i).a;
+                    float[] c = outTransC.get(i).a;
+                    float maxC = MiscMath0.findMax(c);
+                    plotter.addPlot(0, v[v.length - 1], 0, maxC, 
+                        v, c, v, c, " " + v.length);
+                }
+                plotter.writeFile("point_pairs_" + System.currentTimeMillis());
+
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            return values[values.length - 1];
+        }
+        
+    }
+
+    private void integerResampling(TIntIntMap pointValueCounts, 
+        TIntList outV, TFloatList outC) {
+                
+        // sort pointValueCounts by value
+        int[] values = new int[pointValueCounts.size()];
+        int[] counts = new int[values.length];
+        TIntIntIterator iter = pointValueCounts.iterator();
+        for (int i = 0; i < pointValueCounts.size(); ++i) {
+            iter.advance();
+            values[i] = iter.value();
+            counts[i] = iter.key();
+        }
+        MiscSorter.sortBy1stArg(values, counts);
+        
+        
+        Interp interp = new Interp();
+        float[] input = new float[2];
+        
+        for (int i = 0; i < values.length - 1; ++i) {
+            int a0 = values[i];
+            int a1 = values[i + 1];
+            if (a1 == (a0 + 1)) {
+                outV.add(a0);
+                outC.add(counts[i]);
+                continue;
+            }
+            input[0] = counts[i];
+            input[1] = counts[i + 1];
+            int n2 = a1 - a0 + 1;
+            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);
+            for (int j = 0; j < n2; ++j) {
+                outV.add(j + a0);
+                outC.add(Math.round(output[j]));
+            }
+        }        
+    }
+
 }
