@@ -1,7 +1,7 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.search.NearestNeighbor2DLong;
-import algorithms.util.PairInt;
+import algorithms.search.KDTree;
+import algorithms.search.KDTreeNode;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.iterator.TLongIterator;
@@ -9,7 +9,6 @@ import gnu.trove.map.TLongFloatMap;
 import gnu.trove.map.TLongIntMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.set.TLongSet;
-import java.util.Set;
 
 /**
  *
@@ -44,8 +43,8 @@ public class StatsHelper {
     private TLongIntMap calculatePixelSeparations(TLongSet pixIdxs, 
         int width, int height, int[] scales) {
         
-        NearestNeighbor2DLong nn = new NearestNeighbor2DLong(pixIdxs, width, height);
-        
+        KDTree nn = new KDTree(pixIdxs, width, height);
+               
         PixelHelper ph = new PixelHelper();
         int[] xy = new int[2];
         
@@ -59,15 +58,13 @@ public class StatsHelper {
         
             ph.toPixelCoords(pixIdx, width, xy);
             
-            Set<PairInt> nearest = nn.findClosestNotEqual(xy[0], xy[1]);
+            KDTreeNode nearest = nn.findNearestNeighborNotEquals(xy[0], xy[1]);
             
-            if (nearest != null && nearest.size() > 0) {
-                
-                PairInt p1 = nearest.iterator().next();
-                
-                float dx = p1.getX() - xy[0];
+            if (nearest != null && nearest.getX() != nearest.sentinel) {
+                                
+                float dx = nearest.getX() - xy[0];
                 dx /= (float)scales[0];
-                float dy = p1.getY() - xy[1];
+                float dy = nearest.getY() - xy[1];
                 dy /= (float)scales[1];
                 
                 int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
@@ -77,7 +74,7 @@ public class StatsHelper {
         }
         
         return dMap; 
-    } 
+    }
 
     private void setProbabilities(BackgroundSeparationHolder dh, 
         TLongIntMap pixSep, TLongFloatMap outputPointProbMap, 
