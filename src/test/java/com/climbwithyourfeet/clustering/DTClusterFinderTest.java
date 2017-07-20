@@ -8,16 +8,10 @@ import algorithms.util.ContourPlotter;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
-import gnu.trove.iterator.TIntFloatIterator;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
-import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.TLongFloatMap;
-import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.map.hash.TLongFloatHashMap;
-import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
-import gnu.trove.set.hash.TIntHashSet;
 import gnu.trove.set.hash.TLongHashSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -27,7 +21,6 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -249,11 +242,12 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             "Pathbased.txt" , 
             "Spiral.txt",
             "D31.txt", 
-           "R15.txt" , 
+            "R15.txt" , 
             "Jain.txt", 
             "Flame.txt",
-            //"a1.txt", 
-            //"a2.txt", "a3.txt"
+            "a1.txt", 
+            "a2.txt", 
+            //"a3.txt"
             /*,
             "s1.txt", "s2.txt", "s3.txt", "s4.txt",
             "birch1.txt", "birch2.txt", "birch3.txt" */
@@ -263,8 +257,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
         // instead of writing numbers in file
         ClusterPlotter plotter = new ClusterPlotter();
         
-        //for (int i = 0; i < fileNames.length; i++) {
-        for (int i = 8; i < fileNames.length; i++) {
+        for (int i = 0; i < fileNames.length; i++) {
+        //for (int i = 8; i < fileNames.length; i++) {
         //for (int i = 6; i < 7; i++) {
 
             String fileName = fileNames[i];
@@ -349,7 +343,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     break;
                 default:
                     break;
-            }            
+            }
             
             List<TLongSet> groupListPix = clusterFinder.getGroups();
 
