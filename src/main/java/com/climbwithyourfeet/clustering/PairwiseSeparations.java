@@ -1,12 +1,9 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.connected.*;
-import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
 import algorithms.search.KDTree;
-import algorithms.search.KDTreeNode;
 import algorithms.search.KNearestNeighbors;
 import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
@@ -14,42 +11,27 @@ import algorithms.signalProcessing.MedianTransform1D;
 import algorithms.util.ObjectSpaceEstimator;
 import algorithms.util.OneDFloatArray;
 import algorithms.util.PairFloat;
-import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.TLongIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.map.hash.TLongIntHashMap;
-import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
-import gnu.trove.set.hash.TIntHashSet;
 import gnu.trove.set.hash.TLongHashSet;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 
 /**
  *
@@ -66,19 +48,51 @@ public class PairwiseSeparations {
     public void setToDebug() {
         debug = true;
     }
-
-    private int findArrayWithNPoints(int nP, List<OneDFloatArray> arrays) {
-        int idx = 0;
-        int diff = Math.abs(arrays.get(0).a.length - nP);
-        for (int i = 1; i < arrays.size(); ++i) {
-            int lenI = arrays.get(i).a.length;
-            int diffI = Math.abs(lenI - nP);
-            if (diffI < diff) {
-                idx = i;
-                diff = diffI;
+    
+    private int weightedPeak(OneDFloatArray values, OneDFloatArray counts,
+        float maxV) {
+        
+        double total = 0;
+        for (int i = 0; i < counts.a.length; ++i) {
+            if (values.a[i] > maxV) {
+                break;
             }
+            total += counts.a[i]*counts.a[i];
         }
+        
+        double avg = 0;
+        for (int i = 0; i < counts.a.length; ++i) {
+            if (values.a[i] > maxV) {
+                break;
+            }
+            avg += (counts.a[i]*counts.a[i]/total) * values.a[i];
+        }
+        
+        int idx = Arrays.binarySearch(values.a, (int)Math.round(avg));
+        
+        if (idx < 0) {
+            idx *= -1;
+            idx--;
+        }
+        if (idx >= values.a.length) {
+            idx = values.a.length - 1;
+        }
+        
         return idx;
+    }
+
+    private boolean isMonotonicallyDecreasing(float[] v, float[] c, float maxV) {
+        float prev = c[0];
+        for (int i = 1; i < c.length; ++i) {
+            if (v[i] > (0.9*maxV)) {
+                break;
+            }
+            if (c[i] > prev) {
+                return false;
+            }
+            prev = c[i];
+        }
+        return true;
     }
 
     public static class ScaledPoints {
@@ -121,12 +135,7 @@ public class PairwiseSeparations {
             + " distTransMemory < 0.75*avail=" + useDT
         );
         
-        if (!useDT) {
-            // random sampling of points in the void and their nearest neighbor
-            return extractWithNN2D(pixelIdxs, width, height);
-        } else {
-            return extractWithDistTrans(pixelIdxs, width, height);
-        }
+        return extractWithNN2D(pixelIdxs, width, height);
     }
     
     /**
@@ -227,6 +236,7 @@ public class PairwiseSeparations {
         
         Random rand = Misc0.getSecureRandom();
         long seed = System.currentTimeMillis();
+        seed = 1500576002107L;
         System.out.println("SEED=" + seed);
         rand.setSeed(seed);
                 
@@ -255,6 +265,7 @@ public class PairwiseSeparations {
                     float dy = y - p.getY();
                     int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
 
+                    
                     boolean allAreLower = true;
                     for (int m = 0; m < dx4.length; ++m) {
                         int x3 = x + dx4[m];
@@ -295,9 +306,9 @@ public class PairwiseSeparations {
                     
                     //DEBUG: temporarily excluding points larger than
                     // 3*maxV
-                    if (d < 3*maxV) {
+                    if (allAreLower && d < 3*maxV) {
                         
-                        System.out.println("p=" + p + " d=" + d);
+                        System.out.println("void p=" + p + " d=" + d);
                     
                         // default for no_entry is 0
                         int c = voidValueCounts.get(d);
@@ -316,224 +327,41 @@ public class PairwiseSeparations {
     
         float maxV_void = resampleAndSmooth(voidValueCounts, 
             outTransC_void, outCoeffC_void, outTransV_void, outCoeffV_void);
-      
-   //TODO: still editing everything below here     
         
-        // calc m2 as the background separation
-        //for the curves smoothed to about 15 to 20 points,
-        //  wanting the weighted peak
-        int nP = 14;
-        int voidIdx = findArrayWithNPoints(nP, outTransC_void);
-        int peakIdx = weightedPeak(outTransC_void.get(voidIdx));
+        int peakIdx;
+        int voidIdx;
+        if (isMonotonicallyDecreasing(outTransV_void.get(0).a,
+            outTransC_void.get(0).a, maxV)) {
+            voidIdx = 0;
+            peakIdx = MiscMath0.findYMaxIndex(
+                outTransC_void.get(voidIdx).a);
+        } else {
+            // calc m2 as the background separation
+            // for the curves smoothed to about 15 to 20 points,
+            // wanting the weighted peak
+            int nP = 14;
+            voidIdx = findArrayWithNPoints(nP, outTransC_void);
+            peakIdx = weightedPeak(outTransV_void.get(voidIdx),
+                outTransC_void.get(voidIdx), maxV);
+        }
+        
+        int pdfIdx = findArrayWithGTNPoints(2, outTransC);
         
         int m2 = (int)outTransV_void.get(voidIdx).a[peakIdx];
         if (m2 < 1) {
             m2 = 1;
         }
-        
-        //TODO:
-        //BackgroundSeparationHolder will be populated with the last
-        //   smoothed points curve with number of points > 2
-        // and a separate entry will be added for the
-        // background separation.
-        
-        // find where the points flatten out to near zero or their minimum,
-        //   but past the background dist m2
-        int pointIdx = findArrayWithNPoints(nP, outTransC);
-        int minIdx = findMinBeyondValue(m2, outTransC.get(pointIdx));
-        
-        float z2 = outTransV.get(pointIdx).a[minIdx];
-        float z2C = outTransC.get(pointIdx).a[minIdx];
-        
+        System.out.println("m2=" + m2);
+         
         BackgroundSeparationHolder h = new BackgroundSeparationHolder();
                 
         h.setXYBackgroundSeparations(m2, m2);
         
-        h.setTheThreeSeparations(new float[]{0, m2, z2});
-        
-        h.setAndNormalizeCounts(new float[]{
-            reprCounts, reprCounts, 
-            z2C});
-       
-        return h;
-    }
-    
-    protected BackgroundSeparationHolder extractWithDistTrans(
-        TLongSet pixelIdxs, int width, int height) {
-        
-        // these are the non-point distances to the points        
-        int[][] dt = DistanceTransformUtil.transform(pixelIdxs, width, height);
-        
-        for (int i = 0; i < dt.length; ++i) {
-            for (int j = 0; j < dt[i].length; ++j) {
-                int d = dt[i][j];
-                if (d > 0) {
-                    if (d > 2) {
-                        dt[i][j] = (int)Math.round(Math.sqrt(d));
-                    }
-                }
-            }
-        }
-        
-        //printDT(dt);
-        
-        /*
-        within dt 
-           want to find the local maxima in which the surrounding points are
-           all smaller in value.
-        
-           need to use a connected value group finder to gather the adjacent
-              pixels w/ same values > 0
-        
-           need to make an adjacency map of those groups.
-        
-           then will find which groups, that is values, are the maxima.
-        
-           the critical separation is the smallest of the maxima, but will
-               want to look at the counts of that where possible.
-        
-        caveats:
-           single group of points in center will have no maxima found as 
-               described unless there are gaps in points in the cluster.
-               if there are gaps,
-                  that will be found.
-               else the background separation will be found to be 1
-        */
-               
-        PixelHelper ph = new PixelHelper();
-        int[] xy = new int[2];
-            
-        // need to look at amount of memory
-        // to decide between these two.
-        // use the later if many many objects and not enough
-        // memory
-        IConnectedValuesGroupFinder finder = null;
-        if (false) {
-            finder = new ConnectedValuesGroupFinder();
-        } else {
-            finder = new ConnectedValuesGroupFinder2();
-        }
-        finder.setMinimumNumberInCluster(1);
-        TIntSet exclude = new TIntHashSet();
-        exclude.add(0);
-        finder.setValuesToExclude(exclude);
-        List<TLongSet> valueGroups = finder.findGroups(dt);
-        finder = null;
-     
-        System.out.println("number of connected same value distants=" +
-            valueGroups.size());
-        
-        long ts = System.currentTimeMillis();
-        
-        if (debug) {
-            float[] x = new float[valueGroups.size()];
-            float[] y = new float[x.length];
-            for (int i = 0; i < valueGroups.size(); ++i) {
-                TLongSet group = valueGroups.get(i);
-                long tPix = group.iterator().next();
-                ph.toPixelCoords(tPix, width, xy);
-                int v = dt[xy[0]][xy[1]];
-                x[i] = v;
-                y[i] = group.size();
-            }
-            float xMax = MiscMath0.findMax(x);
-            float yMin = MiscMath0.findMin(y);
-            float yMax = MiscMath0.findMax(y);
-            PolygonAndPointPlotter plotter;
-            try {
-                plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
-                    "separation");
-                plotter.writeFile("_separation_" + ts);
-            } catch (IOException ex) {
-                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            Runtime.getRuntime().gc();
-        }
-        
-        // key = index of values Group, value = adjacent indexes of valuesGroup
-        TIntObjectMap<TIntSet> adjMap = createAdjacencyMap(
-            valueGroups, width, height);
-
-        // TODO: below here consider if aggregation of values within a tolerance
-        // of similar values is needed.  The tolerance should depend upon the 
-        // range of separations and on the value to be aggregated.
-        //  ...such a correction can be done with kernel smoothing using 
-        //     a kernel bandwidth fixed in the distance axis.
-        //     if implemented with fast wavelet transforms, 
-        //     the results are instead a K-Nearest Neighbors smoothing 
-        //     unless the input is resampled to fixed spacing.
-
-        // search for valueGroups which has value larger than all adj neighbors
-        // key = valueGroups index, value = dt value for the group
-        TIntIntMap groupMaximaIdxs = new TIntIntHashMap();
-        
-        // key = value, value = count
-        TIntIntMap valueCounts = new TIntIntHashMap();
-        
-        int minMaxima = Integer.MAX_VALUE;
-        
-        for (int i = 0; i < valueGroups.size(); ++i) {
-            
-            if (!adjMap.containsKey(i)) {
-                continue;
-            }
-            
-            TLongSet group = valueGroups.get(i);
-            
-            long tPix = group.iterator().next();
-            ph.toPixelCoords(tPix, width, xy);
-            int v = dt[xy[0]][xy[1]];
-            
-            if (v == 0) {
-                continue;
-            }
-            
-            // if this is a boundary pixel and v > 1, skip it
-            if (v > 1 && (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||
-                (xy[1] == (height - 1)))) {
-                continue;
-            }
-            
-            boolean allAreLower = true;
-            
-            TIntSet adj = adjMap.get(i);
-            
-            TIntIterator iter2 = adj.iterator();
-            while (iter2.hasNext()) {
-                int aIdx = iter2.next();
-                TLongSet group2 = valueGroups.get(aIdx);
-                long tPix2 = group2.iterator().next();
-                ph.toPixelCoords(tPix2, width, xy);
-                int v2 = dt[xy[0]][xy[1]];
-            
-                if (v2 > v) {
-                    allAreLower = false;
-                    break;
-                }
-            }
-            
-            if (allAreLower) {
-                groupMaximaIdxs.put(i, v);
-                int c = valueCounts.get(v);
-                valueCounts.put(v, c + group.size());
-                
-                if (v < minMaxima) {
-                    minMaxima = v;
-                }
-            }
-        }
-        
-        valueGroups = null;
-        adjMap = null;
-        
-        System.out.println("number of void distance maxima=" + valueCounts.size());
-        
-        BackgroundSeparationHolder h = findBackgroundOfMaxima(valueCounts, ts);
+        h.setThePDF(outTransV.get(pdfIdx).a, outTransC.get(pdfIdx).a);
         
         return h;
     }
-    
+   
     public ScaledPoints scaleThePoints(TLongSet pixelIdxs, int width, int height) {
         
         if (pixelIdxs.size() < 12) {
@@ -599,135 +427,6 @@ public class PairwiseSeparations {
         sp.yScale = xyScales[1];
     
         return sp;
-    }
-    
-    private TIntObjectMap<TIntSet> createAdjacencyMap(
-        List<TLongSet> groupList, int width, int height) {
-        
-        TLongIntMap pixGroupMap = new TLongIntHashMap();
-        for (int i = 0; i < groupList.size(); ++i) {
-            TLongSet group = groupList.get(i);
-            TLongIterator iter = group.iterator();
-            while (iter.hasNext()) {
-                long pixIdx = iter.next();
-                assert(!pixGroupMap.containsKey(pixIdx));
-                pixGroupMap.put(pixIdx, i);
-            }
-        }
-        
-        PixelHelper ph = new PixelHelper();
-        int[] dx8 = new int[]{-1, -1,  0,  1, 1, 1, 0, -1};
-        int[] dy8 = new int[]{ 0, -1, -1, -1, 0, 1, 1,  1};
-        
-        int[] xy = new int[2];
-        
-        int nBSLen = groupList.size();
-        
-        System.out.println("nBSLen=" + nBSLen);
-        
-        // key = index of group list, value = set of adjacent group indexes
-        TIntObjectMap<TIntSet> adjMap = new TIntObjectHashMap<TIntSet>();
-        
-        for (int i = 0; i < groupList.size(); ++i) {
-            TLongSet group = groupList.get(i);
-            TLongIterator iter = group.iterator();
-            TIntSet adj = adjMap.get(i);
-            
-            while (iter.hasNext()) {
-                long pixIdx = iter.next();
-                ph.toPixelCoords(pixIdx, width, xy);
-                
-                for (int k = 0; k < dx8.length; ++k) {
-                    int vX = xy[0] + dx8[k];
-                    int vY = xy[1] + dy8[k];
-                    if (vX < 0 || vY < 0 || vX >= width || vY >= height) {
-                        continue;
-                    }
-                    long pixIdx2 = ph.toPixelIndex(vX, vY, width);
-                    
-                    if (!pixGroupMap.containsKey(pixIdx2)) {
-                        continue;
-                    }
-                    
-                    int j = pixGroupMap.get(pixIdx2);
-                    
-                    if (i == j) {
-                        continue;
-                    }
-                    
-                    if (adj == null) {
-                        adj = new TIntHashSet();
-                        adjMap.put(i, adj);
-                    }
-                    adj.add(j);
-                }
-            }
-        }
-        
-        return adjMap;
-    }
-    
-    private void writeDebugImage(double[][] dt, String fileSuffix, int width, 
-        int height) throws IOException {
-
-        BufferedImage outputImage = new BufferedImage(width, height,
-            BufferedImage.TYPE_BYTE_GRAY);
-
-        WritableRaster raster = outputImage.getRaster();
-
-        for (int i = 0; i < dt.length; ++i) {
-            for (int j = 0; j < dt[0].length; ++j) {
-                int v = (int)Math.round(dt[i][j]);
-                raster.setSample(i, j, 0, v);
-            }
-        }
-
-        // write to an output directory.  we have user.dir from system properties
-        // but no other knowledge of users's directory structure
-        URL baseDirURL = this.getClass().getClassLoader().getResource(".");
-        String baseDir = null;
-        if (baseDirURL != null) {
-            baseDir = baseDirURL.getPath();
-        } else {
-            baseDir = System.getProperty("user.dir");
-        }
-        if (baseDir == null) {
-            return;
-        }
-        File t = new File(baseDir + "/bin");
-        if (t.exists()) {
-            baseDir = t.getPath();
-        } else if ((new File(baseDir + "/target")).exists()) {
-            baseDir = baseDir + "/target";
-        }
-
-        // no longer need to use file.separator
-        String outFilePath = baseDir + "/" + fileSuffix + ".png";
-
-        ImageIO.write(outputImage, "PNG", new File(outFilePath));
-
-        Logger.getLogger(this.getClass().getName()).info("wrote " + outFilePath);
-    }
-   
-    private static void printDT(int[][] dt) {
-        
-        int w = dt.length;
-        int h = dt[0].length;
-        
-        StringBuilder sb2 = new StringBuilder();
-        for (int j = 0; j < h; ++j) {
-            sb2.append("row ").append(j).append(": ");
-            for (int i = 0; i < w; ++i) {
-                int v = dt[i][j];
-                if (v > (Integer.MAX_VALUE - 3)) {
-                    sb2.append(String.format(" ---"));
-                } else {
-                    sb2.append(String.format(" %3d", v));
-                }
-            }
-            sb2.append("\n");
-        }
-        System.out.println(sb2.toString());
     }
     
     private int findPeakIfSingleProfile(float[] counts) {
@@ -921,323 +620,7 @@ public class PairwiseSeparations {
         }
         return idx;
     }
-
-    private BackgroundSeparationHolder findBackgroundOfMaxima(TIntIntMap valueCounts,
-        long ts) {
-
-        if (valueCounts.size() == 0) {
-            
-            // this can happen when a convex filled point set is centered
-            // in the range.  there will be no maxima in the "void"
-            
-            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-            h.setXYBackgroundSeparations(1, 1);
-            h.setTheThreeSeparations(new float[]{0, 1, 2});
-            h.setAndNormalizeCounts(new float[]{1, 1, 0});
-
-            return h;
-        }
-        
-        int[] maximaValues = new int[valueCounts.size()];
-        float[] maximaCounts = new float[valueCounts.size()];
-        TIntIntIterator iter = valueCounts.iterator();
-        for (int i = 0; i < valueCounts.size(); ++i) {
-            iter.advance();
-            maximaValues[i] = iter.key();
-            maximaCounts[i] = iter.value();
-        }
-        
-        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
-       
-        if (debug) {
-            int[] x = maximaValues;
-            float[] y = maximaCounts;
-            float xMax = MiscMath0.findMax(x);
-            float yMin = MiscMath0.findMin(y);
-            float yMax = MiscMath0.findMax(y);
-            PolygonAndPointPlotter plotter;
-            try {
-                plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,
-                    "max sep");
-            plotter.writeFile("_separation_maxima_" + ts);
-            } catch (IOException ex) {
-                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        
-        /*
-           if the density curve of (maximaValues, maximaCounts) has more than
-              one profile (peak) in it,
-              need to use smoothing and choose the first convolvolution which
-              produces a single profile
-        
-              then the best representative peak looks like the average,
-              but might need to follow the else block below this
-           else
-              the best representative peak is found as:
-                 if the peak is not the first point,
-                    the average of the peak and the point before it
-                 else if the peak is the first point and it is > 1,
-                    half it
-        */
-        int peakIdx = findPeakIfSingleProfile(maximaCounts);
-        
-        //NOTE: this section may need revision.
-        
-        float reprValue, reprCounts;
-        int firstZeroIdx = -1;
-        if (peakIdx > -1) {
-            if (peakIdx == 0) {
-                if (maximaValues[0] > 1) {
-                    reprValue = maximaValues[0] / 2.f;
-                    reprCounts = maximaCounts[0] / 2.f;
-                } else {
-                    reprValue = maximaValues[0];
-                    reprCounts = maximaCounts[0];
-                }
-                firstZeroIdx = 0;
-            } else {
-                assert(maximaValues.length > 1);
-                reprValue = 
-                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
-                reprCounts = 
-                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
-            }
-        } else {
-            //kernel smoothing over evenly spaced data
-            
-            int n2 = maximaValues[maximaValues.length - 1] -
-                maximaValues[0] + 1;
-            
-            System.out.println("resampling to " + n2 + " integers");
-            
-            TIntList outV = new TIntArrayList(n2);
-            TFloatList outC = new TFloatArrayList(n2);
-            integerResampling(maximaValues, maximaCounts, outV, outC);
-            maximaValues = outV.toArray(new int[outV.size()]);
-            maximaCounts = outC.toArray(new float[outC.size()]);
-            
-            float[][] smoothed = smooth(maximaValues, maximaCounts);
-            
-            maximaValues = new int[smoothed[0].length];
-            for (int j = 0; j < maximaValues.length; ++j) {
-                maximaValues[j] = Math.round(smoothed[0][j]);
-            }
-            maximaCounts = smoothed[1];
-            
-            peakIdx = averagePeak(maximaValues, maximaCounts);
-            
-            reprValue = maximaValues[peakIdx];
-            reprCounts = maximaCounts[peakIdx];            
-        }
-        
-        if (firstZeroIdx == -1) {
-            // calculate the firstZeroIdx after peak
-            float currentMinC = Float.POSITIVE_INFINITY;
-            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
-            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
-            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
-                int d = maximaValues[i];
-                if (firstZeroIdx == -1) {
-                    firstZeroIdx = i;
-                }
-                float c = maximaCounts[i];
-                if (c <= avgMin) {
-                    firstZeroIdx = i;
-                    break;
-                } else if (c < currentMinC) {
-                    firstZeroIdx = i;
-                    currentMinC = c;
-                }
-            }
-            if (firstZeroIdx == -1) {
-                firstZeroIdx = maximaCounts.length - 1;
-            }
-        }
-        
-        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        //System.out.println("qs=" + Arrays.toString(qs));
-               
-        System.out.println("found background separation=" + reprValue);
-        
-        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-                
-        int m2 = (int)reprValue;
-        if (m2 < 1) {
-            m2 = 1;
-        }
-        h.setXYBackgroundSeparations(m2, m2);
-        
-        h.setTheThreeSeparations(new float[]{
-            0, m2, 
-            maximaValues[firstZeroIdx]});
-        
-        h.setAndNormalizeCounts(new float[]{
-            reprCounts, reprCounts, 
-            maximaCounts[firstZeroIdx]});
-       
-        return h;
-    }
-
-    private BackgroundSeparationHolder findBackgroundOfRandom(TIntIntMap valueCounts,
-        long ts, float maxV) {
-
-        if (valueCounts.size() == 0) {
-            
-            // this can happen when a convex filled point set is centered
-            // in the range.  there will be no maxima in the "void"
-            
-            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-            h.setXYBackgroundSeparations(1, 1);
-            h.setTheThreeSeparations(new float[]{0, 1, 2});
-            h.setAndNormalizeCounts(new float[]{1, 1, 0});
-
-            return h;
-        }
-        
-        int[] maximaValues = new int[valueCounts.size()];
-        float[] maximaCounts = new float[valueCounts.size()];
-        TIntIntIterator iter = valueCounts.iterator();
-        for (int i = 0; i < valueCounts.size(); ++i) {
-            iter.advance();
-            maximaValues[i] = iter.key();
-            maximaCounts[i] = iter.value();
-        }
-        
-        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);
-       
-        if (debug) {
-            int[] x = maximaValues;
-            float[] y = maximaCounts;
-            float xMax = MiscMath0.findMax(x);
-            float yMin = MiscMath0.findMin(y);
-            float yMax = MiscMath0.findMax(y);
-            PolygonAndPointPlotter plotter;
-            try {
-                plotter = new PolygonAndPointPlotter();
-                plotter.addPlot(0, maxV, yMin, yMax, x, y, x, y,
-                    "max sep");
-            plotter.writeFile("_separation_maxima_" + ts);
-            } catch (IOException ex) {
-                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        
-        /*
-           if the density curve of (maximaValues, maximaCounts) has more than
-              one profile (peak) in it,
-              need to use smoothing and choose the first convolvolution which
-              produces a single profile
-        
-              then the best representative peak looks like the average,
-              but might need to follow the else block below this
-           else
-              the best representative peak is found as:
-                 if the peak is not the first point,
-                    the average of the peak and the point before it
-                 else if the peak is the first point and it is > 1,
-                    half it
-        */
-        int peakIdx = findPeakIfSingleProfile(maximaCounts);
-        
-        //NOTE: this section may need revision.
-        
-        float reprValue, reprCounts;
-        int firstZeroIdx = -1;
-        if (peakIdx > -1) {
-            if (peakIdx == 0) {
-                if (maximaValues[0] > 1) {
-                    reprValue = maximaValues[0] / 2.f;
-                    reprCounts = maximaCounts[0] / 2.f;
-                } else {
-                    reprValue = maximaValues[0];
-                    reprCounts = maximaCounts[0];
-                }
-                firstZeroIdx = 0;
-            } else {
-                assert(maximaValues.length > 1);
-                reprValue = 
-                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
-                reprCounts = 
-                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
-            }
-        } else {
-            //kernel smoothing over evenly spaced data
-            
-            int n2 = maximaValues[maximaValues.length - 1] -
-                maximaValues[0] + 1;
-            
-            System.out.println("resampling to " + n2 + " integers");
-            
-            TIntList outV = new TIntArrayList(n2);
-            TFloatList outC = new TFloatArrayList(n2);
-            integerResampling(maximaValues, maximaCounts, outV, outC);
-            maximaValues = outV.toArray(new int[outV.size()]);
-            maximaCounts = outC.toArray(new float[outC.size()]);
-            
-            float[][] smoothed = smooth2(maximaValues, maximaCounts);
-            
-            maximaValues = new int[smoothed[0].length];
-            for (int j = 0; j < maximaValues.length; ++j) {
-                maximaValues[j] = Math.round(smoothed[0][j]);
-            }
-            maximaCounts = smoothed[1];
-            
-            peakIdx = averagePeak(maximaValues, maximaCounts);
-            
-            reprValue = maximaValues[peakIdx];
-            reprCounts = maximaCounts[peakIdx];            
-        }
-        
-        if (firstZeroIdx == -1) {
-            // calculate the firstZeroIdx after peak
-            float currentMinC = Float.POSITIVE_INFINITY;
-            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();
-            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);
-            for (int i = (peakIdx + 1); i < maximaValues.length; ++i) {
-                int d = maximaValues[i];
-                if (firstZeroIdx == -1) {
-                    firstZeroIdx = i;
-                }
-                float c = maximaCounts[i];
-                if (c <= avgMin) {
-                    firstZeroIdx = i;
-                    break;
-                } else if (c < currentMinC) {
-                    firstZeroIdx = i;
-                    currentMinC = c;
-                }
-            }
-            if (firstZeroIdx == -1) {
-                firstZeroIdx = maximaCounts.length - 1;
-            }
-        }
-        
-        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        //System.out.println("qs=" + Arrays.toString(qs));
-               
-        System.out.println("found background separation=" + reprValue);
-        
-        BackgroundSeparationHolder h = new BackgroundSeparationHolder();
-                
-        int m2 = (int)reprValue;
-        if (m2 < 1) {
-            m2 = 1;
-        }
-        h.setXYBackgroundSeparations(m2, m2);
-        
-        h.setTheThreeSeparations(new float[]{
-            0, m2, 
-            maximaValues[firstZeroIdx]});
-        
-        h.setAndNormalizeCounts(new float[]{
-            reprCounts, reprCounts, 
-            maximaCounts[firstZeroIdx]});
-       
-        return h;
-    }
-    
+ 
     private float resampleAndSmooth(TIntIntMap pointValueCounts, 
         List<OneDFloatArray> outTransC, List<OneDFloatArray> outCoeffC,
         List<OneDFloatArray> outTransV, List<OneDFloatArray> outCoeffV) {
@@ -1269,6 +652,7 @@ public class PairwiseSeparations {
                 for (int i = 0; i < outTransC.size(); ++i) {
                     float[] v = outTransV.get(i).a;
                     float[] c = outTransC.get(i).a;
+                    assert(v.length == c.length);
                     float maxC = MiscMath0.findMax(c);
                     plotter.addPlot(0, v[v.length - 1], 0, maxC, 
                         v, c, v, c, " " + v.length);
@@ -1290,7 +674,9 @@ public class PairwiseSeparations {
         // sort pointValueCounts by value
         int[] values = new int[pointValueCounts.size()];
         int[] counts = new int[values.length];
+        
         TIntIntIterator iter = pointValueCounts.iterator();
+        
         for (int i = 0; i < pointValueCounts.size(); ++i) {
             iter.advance();
             values[i] = iter.value();
@@ -1319,6 +705,33 @@ public class PairwiseSeparations {
                 outC.add(Math.round(output[j]));
             }
         }        
+    }
+
+    
+    private int findArrayWithGTNPoints(int nP, List<OneDFloatArray> arrays) {
+        for (int i = arrays.size() - 1; i > -1; --i) {
+            int lenI = arrays.get(i).a.length;
+            if (lenI > nP) {
+                if (i > 0) {
+                    return i;
+                }
+            }
+        }
+        return arrays.size() - 1;
+    }
+
+    private int findArrayWithNPoints(int nP, List<OneDFloatArray> arrays) {
+        int idx = 0;
+        int diff = Math.abs(arrays.get(0).a.length - nP);
+        for (int i = 1; i < arrays.size(); ++i) {
+            int lenI = arrays.get(i).a.length;
+            int diffI = Math.abs(lenI - nP);
+            if (diffI < diff) {
+                idx = i;
+                diff = diffI;
+            }
+        }
+        return idx;
     }
 
 }

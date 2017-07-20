@@ -1,7 +1,5 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.search.NearestNeighbor2D;
-import algorithms.search.NearestNeighbor2DLong;
 import gnu.trove.set.TLongSet;
 import java.util.Arrays;
 import java.util.List;
@@ -170,9 +168,10 @@ public class DTClusterFinder {
         int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation 
             + ySeparation * ySeparation));
         
-        sepHolder.setTheThreeSeparations(
-            new float[]{0, separation, separation + 1});
-        sepHolder.setAndNormalizeCounts(new float[]{100, 100, 0});
+        sepHolder.setThePDF(
+            new float[]{100, 100, 0},
+            new float[]{0, separation, separation + 1}
+        );
         
         this.state = STATE.HAVE_BACKGROUND_SEPARATION;
     }

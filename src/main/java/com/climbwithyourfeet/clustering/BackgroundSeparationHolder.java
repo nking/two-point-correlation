@@ -16,14 +16,14 @@ public class BackgroundSeparationHolder {
     
         those variables are:
     
-        float[] threeS;
-        float[] threeSCounts;
-        float[] threeSErrors;
+        float[] dists;
+        float[] counts;
+        float[] errs;
     
     (2) the original axes data are:
         
-        int xScale is the amount to divide the x axis by to get the scaled axis.
-        int yScale is similar, but for y axis.
+        int[] scales is the x and y scales to divide the original axes by to
+            result in smaller scaled axes.
     
         float[] bckGndSep is the x separation and y separation in the
            original reference frame. they are used to define the
@@ -32,11 +32,8 @@ public class BackgroundSeparationHolder {
     
     /*
     <pre>
-    creating a PDF with x axis being point pairwise separation and 
-    the function being 3 non-uniform regions as inclined lines:
-       (1) x-axis: 0 to c.s.
-       (2) x-axis: c.s. to first x with count of 0 (or effectively zero)
-       (3) x-axis: first x w/ zero count to last x
+    creating a PDF with x axis being point pairwise separation and y axis being
+    normalized counts of those separations.
     
             |                   
      counts *                   |
@@ -63,51 +60,31 @@ public class BackgroundSeparationHolder {
     /**
       The x separation and y separation in the original reference frame that 
       are used to define the critical separation for association of 2 points
-   
-     <pre>
-     it's relationship to this.threeS[1] is:
-         xd = (bckGndSep[0]/scales[0])
-         xd *= xd;
-         yd = (bckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     </pre>
     */
     protected float[] bckGndSep = null;
    
     /**
-     * These are the 3 discrete points of the x-points of the PDF between which
-     * continuous lines are interpreted.
-     * 
-     * The three points are:
-     * threeS[0] is 0;
-     * threeS[1] is the representative background separation point. 
-     *    The threshold factor should be multiplied by it upon use.
-     * threeS[2] is a separation value larger than threeS[1] and is the
-     * last with a count or density above approximately 0.  The threshold factor
-     * should be multiplied by it upon use.
+     * the x axis of the PDF
      */
-    protected float[] threeS;
+    protected float[] dists;
     
     /**
-     * These are the normalized counts of the 3 discrete points in threeS.
-     * They are the y-points of the PDF between which continuous lines are 
-     * interpreted.
+     * These are the normalized counts of the dists
      */
-    protected float[] threeSCounts;
+    protected float[] counts;
     
     /**
      * the errors for the points in (threeSs, threeSCounts)
      */
-    protected float[] threeSErrors;
+    protected float[] errs;
       
-    public void setTheThreeSeparations(float[] s) {
-        if (s.length != 3) {
-            throw new IllegalArgumentException(
-                " the length should be 3.  see variable documentation");
+    public void setThePDF(float[] v, float[] c) {
+        if (v.length != c.length) {
+            throw new IllegalArgumentException(" the arrays must be same length");
         }
-        threeS = Arrays.copyOf(s, s.length);
+        dists = Arrays.copyOf(v, v.length);
+        counts = Arrays.copyOf(c, c.length);
+        setAndNormalizeCounts(counts);
     }
     
     public void setXYScales(int xScale, int yScale) {
@@ -128,15 +105,9 @@ public class BackgroundSeparationHolder {
      * pairwise distance representative of background, that is non-clustered,
      * point spacing.
      * 
-     * <pre>
-     * it's relationship to this.threeS[1] is:
-         xd = (xBackgroundSeparation/scales[0])
-         xd *= xd;
-         yd = (ybckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     * </pre>
+       <pre>
+        bckGndSep[0]/scales[0] puts the field into the reference frame of the PDF
+       </pre>
      * 
      * @return 
      */
@@ -149,16 +120,6 @@ public class BackgroundSeparationHolder {
      * pairwise distance representative of background, that is non-clustered,
      * point spacing.
      * 
-     * <pre>
-     * it's relationship to this.threeS[1] is:
-         xd = (xBackgroundSeparation/scales[0])
-         xd *= xd;
-         yd = (ybckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     * </pre>
-     * 
      * @return 
      */
     public float getYBackgroundSeparation() {
@@ -170,124 +131,26 @@ public class BackgroundSeparationHolder {
      * of calculating the errors too.
      * @param counts 
      */
-    public void setAndNormalizeCounts(float[] counts) {
+    protected void setAndNormalizeCounts(float[] counts) {
     
         if (counts.length != 3) {
             throw new IllegalArgumentException(
                 " the length of counts should be 3.  see variable documentation");
         }
         
-        //using area normalization
-        double area  = 0;
-        for (int i = 0; i < counts.length - 1; i++) {
-            float yTerm = counts[i + 1] + counts[i];
-            float xLen = threeS[i + 1] - threeS[i];
-            if (xLen < 0) {
-                xLen *= -1;
-            }
-            area += (yTerm * xLen);
+        errs = new float[counts.length];
+        
+        double totalC  = 0;
+        for (int i = 0; i < counts.length; i++) {
+            totalC += counts[i];
+            
+            // assuming sqrt of n errors
+            errs[i] = (float)Math.sqrt(counts[i]);
         }
-        area *= 0.5;
-        double area1 = 0.5 * ((threeS[2] - threeS[1]) * counts[1]);
-        double area0 = area - area1;
-        
-        double area0Norm = area0/area;
-        double area1Norm = area1/area;
-        
-        /*
-        cn0
-               cn1
-                   cn2
-        0      v1  v2  
-        
-        where cn2 is approx 0
-                
-        (v2-v1)*cn1*0.5 = area1Norm
-        cn1 = area1Norm / ((v2-v1)*0.5)
-        
-        v1*cn1 + (cn0-cn1)*v1*0.5 = area0Norm
-        (cn0-cn1) = (area0Norm - v1*cn1)/(v1*0.5)
-        cn0 = cn1 + (area0Norm - v1*cn1)/(v1*0.5)
-        */
-        
-        threeSCounts = new float[3];
-        
-        if (threeS[2] == threeS[1] && threeS[1] == threeS[0]) {
-            //TODO: revisit this
-            threeSCounts[0] = 0.333f;
-            threeSCounts[1] = 0.333f;
-            threeSCounts[2] = 0.333f;
-        } else if (threeS[2] == threeS[1]) {
-          
-            /*
-            cn0
-                   cn1
-                     
-            0      v1
-            */
-            double areaR = threeS[1] * counts[1];
-            double areaT = 0.5f * threeS[1] * Math.abs(counts[0] - counts[1]);
-            // areaR_Norm/area = areaR/(areaR + areaT)
-            double areaR_Norm = area * areaR/(areaR + areaT);
-            // v1*cn1 = areaR_Norm
-            // cn1 = areaR_Norm/v1
-            threeSCounts[1] = (float)areaR_Norm/threeS[1];
-            
-            double areaT_Norm = area * areaR/(areaR + areaT);
-            if (counts[0] > counts[1]) {
-                //(cn0-cn1)*v1 = areaT_Norm
-                threeSCounts[0] = threeSCounts[1] + (float)(areaT_Norm/threeS[1]);
-            } else {
-                //(cn1-cn0)*v1 = areaT_Norm
-                // (cn1-cn0) = areaT_Norm/v1
-                // cn0 = cn1 - (areaT_Norm/v1)
-                threeSCounts[0] = threeSCounts[1] - (float)(areaT_Norm/threeS[1]);
-            }
-            
-            // 2 and 1 share same value
-            threeSCounts[1] /= 2.f;
-            threeSCounts[2] = threeSCounts[1];
-            
-        } else if (threeS[1] == threeS[0]) {
-            /*
-            cn0
-                  
-                   cn2
-            0      v2
-            
-            where cn2 is approx 0
-            
-            v2 * cn0 = area
-            */
-            threeSCounts[0] = (float)(area)/threeS[2];
-            
-            // 1 and 0 share same value
-            threeSCounts[0] /= 2.f;
-            threeSCounts[1] = threeSCounts[0];
-            
-        } else {
-            threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));
-            threeSCounts[0] = threeSCounts[1] + 
-                (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
-        }
-        
-        /*
-        for errors, will approximate them as sqrt(counts):
-          v = counts
-          e = sqrt(counts)
-          vn = normalized counts
-          r = vn/counts
-          en = r * e
-        */
-        threeSErrors = new float[3];
-        for (int i = 0; i < 3; ++i) {
-            if (counts[i] == 0) {
-                threeSErrors[i] = Float.POSITIVE_INFINITY;
-                continue;
-            }
-            float e = (float)Math.sqrt(counts[i]);
-            float r = threeSCounts[i]/counts[i];
-            threeSErrors[i] = r * e;
+        float f = 1.f;
+        for (int i = 0; i < counts.length; i++) {
+            counts[i] /= totalC;
+            errs[i] /= totalC;
         }
     }
     
@@ -332,26 +195,18 @@ public class BackgroundSeparationHolder {
      */
     private float calcProbability(int separation) {
         
-        int idx0, idx1;
+        int idx1 = Arrays.binarySearch(dists, dists.length);
         
-        if (threeS[0] == threeS[1] && threeS[0] == threeS[2]) {
-            return threeSCounts[1];
-        } else if (threeS[0] == threeS[1]) {
-            idx0 = 1;
-            idx1 = 2;
-        } else if (threeS[1] == threeS[2]) {
-            idx0 = 0;
-            idx1 = 1;
-        } else {        
-            if (separation > threeS[2]) {
-                return 0;
-            } else if (separation < threeS[1]) {
-                idx0 = 0;
-                idx1 = 1;
-            } else {
-                idx0 = 1;
-                idx1 = 2;
-            }
+        if (idx1 >= 0) {
+            return counts[idx1];
+        }
+        
+        //(-(insertion point) - 1)
+        idx1 *= -1;
+        idx1--;
+        int idx0 = idx1 - 1;
+        if (idx0 < 0) {
+            return counts[0];
         }
         
         /*
@@ -366,7 +221,7 @@ public class BackgroundSeparationHolder {
         
         float r = calcCtoSD(idx0, idx1);
         
-        float p = threeSCounts[idx1] + r * (separation - threeS[idx1]);
+        float p = counts[idx1] + r * (separation - dists[idx1]);
         
         return p;
     }
@@ -375,8 +230,8 @@ public class BackgroundSeparationHolder {
         
         //r = (p(idx0) - p(idx1))/(sd(idx0) - sd(idx1))
         
-        float r = (threeSCounts[idx0] - threeSCounts[idx1])/
-            (threeS[idx0] - threeS[idx1]);
+        float r = (counts[idx0] - counts[idx1])/
+            (dists[idx0] - dists[idx1]);
         
         return r;
     }
@@ -385,8 +240,7 @@ public class BackgroundSeparationHolder {
         
         //r = (pE(idx0) - pE(idx1))/(sd(idx0) - sd(idx1))
         
-        float r = (threeSErrors[idx0] - threeSErrors[idx1])/
-            (threeS[idx0] - threeS[idx1]);
+        float r = (errs[idx0] - errs[idx1])/(dists[idx0] - dists[idx1]);
         
         return r;
     }
@@ -400,29 +254,22 @@ public class BackgroundSeparationHolder {
      */    
     protected void calcProbabilityAndError(int separation, float[] output) {
                 
-        int idx0, idx1;
+        int idx1 = Arrays.binarySearch(dists, dists.length);
         
-        if (threeS[0] == threeS[1] && threeS[0] == threeS[2]) {
-            output[0] = threeSCounts[1];
-            output[1] = threeSErrors[1];
+        if (idx1 >= 0) {
+            output[0] = counts[idx1];
+            output[1] = errs[idx1];
             return;
-        } else if (threeS[0] == threeS[1]) {
-            idx0 = 1;
-            idx1 = 2;
-        } else if (threeS[1] == threeS[2]) {
-            idx0 = 0;
-            idx1 = 1;
-        } else {        
-            if (separation > threeS[2]) {
-                Arrays.fill(output, 0);
-                return;
-            } else if (separation < threeS[1]) {
-                idx0 = 0;
-                idx1 = 1;
-            } else {
-                idx0 = 1;
-                idx1 = 2;
-            }
+        }
+        
+        //(-(insertion point) - 1)
+        idx1 *= -1;
+        idx1--;
+        int idx0 = idx1 - 1;
+        if (idx0 < 0) {
+            output[0] = counts[0];
+            output[1] = errs[0];
+            return;
         }
                 
         /*
@@ -435,16 +282,16 @@ public class BackgroundSeparationHolder {
         p(x) = p(idx1) + r * (sd(x) - sd(idx1))
         */
         
-        float sDiff = separation - threeS[idx1];
+        float sDiff = separation - dists[idx1];
                     
         float r = calcCtoSD(idx0, idx1);
         
-        float p = threeSCounts[idx1] + r * sDiff;
+        float p = counts[idx1] + r * sDiff;
         
         float rE = calcEtoSD(idx0, idx1);
         
         //using the same slopes for errors.
-        float pErr = threeSErrors[idx1] + rE * sDiff;
+        float pErr = errs[idx1] + rE * sDiff;
     
         output[0] = p;
         output[1] = pErr;
