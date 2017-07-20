@@ -211,6 +211,22 @@ public class PairwiseSeparations {
             int c = pointValueCounts.get(d);
             pointValueCounts.put(d, c + 1);
         }
+        
+        if (pointValueCounts.size() == 1) {
+            int m2 = pointValueCounts.keySet().iterator().next();
+            
+            System.out.println("m2=" + m2);
+
+            BackgroundSeparationHolder h = new BackgroundSeparationHolder();
+
+            h.setXYBackgroundSeparations(m2, m2);
+
+            //TODO: revise this:
+            h.setThePDF(new float[]{0, m2, 3*m2}, new float[]{0.5f, 0.5f, 0});
+
+            return h;
+        }
+        
         // sort the values, make regular spacings, and use pyramidal smoothing
         // plotting each tansformed result
         
@@ -655,6 +671,9 @@ public class PairwiseSeparations {
                 PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
                 for (int i = 0; i < outTransC.size(); ++i) {
                     float[] v = outTransV.get(i).a;
+                    if (v.length <= 1) {
+                        continue;
+                    }
                     float[] c = outTransC.get(i).a;
                     assert(v.length == c.length);
                     float maxC = MiscMath0.findMax(c);
