@@ -133,11 +133,6 @@ public class BackgroundSeparationHolder {
      */
     protected void setAndNormalizeCounts(float[] counts) {
     
-        if (counts.length != 3) {
-            throw new IllegalArgumentException(
-                " the length of counts should be 3.  see variable documentation");
-        }
-        
         errs = new float[counts.length];
         
         double totalC  = 0;

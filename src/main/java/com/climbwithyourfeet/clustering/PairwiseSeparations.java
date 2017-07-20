@@ -313,6 +313,8 @@ public class PairwiseSeparations {
                         // default for no_entry is 0
                         int c = voidValueCounts.get(d);
                         voidValueCounts.put(d, c + 1);
+                        
+                        assert(voidValueCounts.containsKey(d));
                     }
                 }
             }
@@ -621,15 +623,17 @@ public class PairwiseSeparations {
         return idx;
     }
  
-    private float resampleAndSmooth(TIntIntMap pointValueCounts, 
+    private float resampleAndSmooth(TIntIntMap valueCounts, 
         List<OneDFloatArray> outTransC, List<OneDFloatArray> outCoeffC,
         List<OneDFloatArray> outTransV, List<OneDFloatArray> outCoeffV) {
 
-        int n = pointValueCounts.size();
+        int n = valueCounts.size();
+        
+        System.out.println("freq map key size=" + n);
 
         TIntList outV = new TIntArrayList();
         TFloatList outC = new TFloatArrayList();
-        integerResampling(pointValueCounts, outV, outC);
+        integerResampling(valueCounts, outV, outC);
         
         float[] values = new float[outC.size()];
         for (int i = 0; i < outV.size(); ++i) {
@@ -668,22 +672,24 @@ public class PairwiseSeparations {
         
     }
 
-    private void integerResampling(TIntIntMap pointValueCounts, 
-        TIntList outV, TFloatList outC) {
+    private void integerResampling(TIntIntMap valueCounts, TIntList outV, 
+        TFloatList outC) {
                 
         // sort pointValueCounts by value
-        int[] values = new int[pointValueCounts.size()];
+        int[] values = new int[valueCounts.size()];
         int[] counts = new int[values.length];
         
-        TIntIntIterator iter = pointValueCounts.iterator();
+        TIntIntIterator iter = valueCounts.iterator();
         
-        for (int i = 0; i < pointValueCounts.size(); ++i) {
+        for (int i = 0; i < valueCounts.size(); ++i) {
             iter.advance();
-            values[i] = iter.value();
-            counts[i] = iter.key();
+            counts[i] = iter.value();
+            // distances:
+            values[i] = iter.key();
         }
         MiscSorter.sortBy1stArg(values, counts);
         
+        System.out.println("freq map smallest key=" + values[0]);
         
         Interp interp = new Interp();
         float[] input = new float[2];
@@ -699,7 +705,9 @@ public class PairwiseSeparations {
             input[0] = counts[i];
             input[1] = counts[i + 1];
             int n2 = a1 - a0 + 1;
+            
             float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);
+            
             for (int j = 0; j < n2; ++j) {
                 outV.add(j + a0);
                 outC.add(Math.round(output[j]));
