@@ -67,7 +67,7 @@ public class PairwiseSeparations {
             }
             avg += (counts.a[i]*counts.a[i]/total) * values.a[i];
         }
-        
+                
         int idx = Arrays.binarySearch(values.a, (int)Math.round(avg));
         
         if (idx < 0) {
@@ -281,48 +281,9 @@ public class PairwiseSeparations {
                     float dy = y - p.getY();
                     int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
 
-                    
-                    boolean allAreLower = true;
-                    for (int m = 0; m < dx4.length; ++m) {
-                        int x3 = x + dx4[m];
-                        int y3 = y + dy4[m];
-                        if (x3 < 0 || y3 < 0 || x3 >= width || y3 >= height) {
-                            continue;
-                        }
-                        long pixIdx3 = ph.toPixelIndex(x3, y3, width);
-                        if (pixelIdxs.contains(pixIdx3)) {
-                            continue;
-                        }
-                        //Set<PairInt> nearest3 = nn2d.findClosest(x3, y3);
-                        //KDTreeNode node3 = nn2d.findNearestNeighbor(x3, y3);
-                        //if (node3 == null) {
-                        //    continue;
-                        //}
-                        List<PairFloat> nearest3 = knn.findNearest(k, x3, y3);
-                        PairFloat node3 = null;
-                        for (PairFloat p0 : nearest3) {
-                            if ((Math.abs(p0.getX() - x3) < eps)
-                                && (Math.abs(p0.getY() - y3) < eps)) {
-                                continue;
-                            }
-                            node3 = p0;
-                            break;
-                        }
-                        assert (node3 != null);
-                        
-                        float dx3 = x3 - node3.getX();
-                        float dy3 = y3 - node3.getY();
-                        int d3 = (int) Math.round(Math.sqrt(dx3 * dx3 + dy3 * dy3));
-
-                        if (d3 > d) {
-                            allAreLower = false;
-                            break;
-                        }
-                    }
-                    
                     //DEBUG: temporarily excluding points larger than
                     // 3*maxV
-                    if (allAreLower && d < 3*maxV) {
+                    if (d < 3*maxV) {
                         
                         System.out.println("void p=" + p + " d=" + d);
                     
@@ -351,16 +312,31 @@ public class PairwiseSeparations {
         if (isMonotonicallyDecreasing(outTransV_void.get(0).a,
             outTransC_void.get(0).a, maxV)) {
             voidIdx = 0;
-            peakIdx = MiscMath0.findYMaxIndex(
-                outTransC_void.get(voidIdx).a);
+            peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);
         } else {
             // calc m2 as the background separation
-            // for the curves smoothed to about 15 to 20 points,
-            // wanting the weighted peak
+            // for the curves smoothed to about 15 to 20 points.
+            // calc m2 as the weighted peak
             int nP = 14;
             voidIdx = findArrayWithNPoints(nP, outTransC_void);
             peakIdx = weightedPeak(outTransV_void.get(voidIdx),
                 outTransC_void.get(voidIdx), maxV);
+            
+            int n = outTransV_void.get(voidIdx).a.length;
+            //System.out.println("peakIdx=" + peakIdx + " l=" + 
+            //    (outTransV_void.get(voidIdx).a.length - 1));
+            //System.out.println(" values=" + 
+            //    Arrays.toString(outTransV_void.get(voidIdx).a));
+            if ((((float)peakIdx/(float)n) < 0.2) && voidIdx > 0) {
+                // take peak of higher resolution curve
+                voidIdx--;
+                peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);
+                
+                System.out.println("peakIdx=" + peakIdx + " l=" + 
+                    (outTransV_void.get(voidIdx).a.length - 1));
+                System.out.println(" values=" + 
+                    Arrays.toString(outTransV_void.get(voidIdx).a));
+            }
         }
         
         int pdfIdx = findArrayWithGTNPoints(2, outTransC);
