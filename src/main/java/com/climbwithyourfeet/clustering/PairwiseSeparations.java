@@ -252,7 +252,7 @@ public class PairwiseSeparations {
         
         Random rand = Misc0.getSecureRandom();
         long seed = System.currentTimeMillis();
-        seed = 1500576002107L;
+        //seed = 1500576002107L;
         System.out.println("SEED=" + seed);
         rand.setSeed(seed);
                 
