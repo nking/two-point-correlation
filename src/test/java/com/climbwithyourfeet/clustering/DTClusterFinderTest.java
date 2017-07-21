@@ -37,7 +37,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
     boolean plotContours = false;
     boolean plotClusters = true;
-    boolean setDebug = true;
+    boolean setDebug = false;
     
     /**
      *
@@ -247,9 +247,9 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             "Flame.txt",
             "a1.txt", 
             "a2.txt", 
-            //"a3.txt"
-            /*,
-            "s1.txt", "s2.txt", "s3.txt", "s4.txt",
+            "a3.txt",
+            "s1.txt", "s2.txt", 
+            /*"s3.txt", "s4.txt",
             "birch1.txt", "birch2.txt", "birch3.txt" */
         };
         

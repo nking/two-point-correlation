@@ -255,7 +255,13 @@ public class PairwiseSeparations {
         //seed = 1500576002107L;
         System.out.println("SEED=" + seed);
         rand.setSeed(seed);
-                
+        
+        //TODO: once have a fixed manner of determining the background 
+        //  separation below, consider what number of nDraws can determine it
+        //  to a percent of error or percent of success...
+        //  depends upon the density of the data and the unknown
+        //  separation of clusters. quartiles may be helpful for this. 
+        
         int nDraws = 3 * pixelIdxs.size();
         
         for (int i = 0; i < nDraws; ++i) {
@@ -270,6 +276,7 @@ public class PairwiseSeparations {
             List<PairFloat> nearest = knn.findNearest(k, x, y);
             
             if (nearest != null) {
+                
                 for (PairFloat p : nearest) {
                     
                     if ((Math.abs(p.getX() - x) < eps)
@@ -285,7 +292,7 @@ public class PairwiseSeparations {
                     // 3*maxV
                     if (d < 3*maxV) {
                         
-                        System.out.println("void p=" + p + " d=" + d);
+                        //System.out.println("void p=" + p + " d=" + d);
                     
                         // default for no_entry is 0
                         int c = voidValueCounts.get(d);
@@ -323,16 +330,28 @@ public class PairwiseSeparations {
                 outTransC_void.get(voidIdx), maxV);
             
             int n = outTransV_void.get(voidIdx).a.length;
-            //System.out.println("peakIdx=" + peakIdx + " l=" + 
-            //    (outTransV_void.get(voidIdx).a.length - 1));
-            //System.out.println(" values=" + 
-            //    Arrays.toString(outTransV_void.get(voidIdx).a));
-            if ((((float)peakIdx/(float)n) < 0.2) && voidIdx > 0) {
-                // take peak of higher resolution curve
-                voidIdx--;
+            System.out.println("peakIdx=" + peakIdx + " l=" + 
+                (outTransV_void.get(voidIdx).a.length - 1));
+            System.out.println(" values=" + 
+                Arrays.toString(outTransV_void.get(voidIdx).a));
+            
+            float fraction = (float)peakIdx/(float)n;
+            if ((fraction < 0.2f) && voidIdx > 0) {
+                
+                // take peak of higher resolution curve.
+                // TODO: the number of indexes to ascend should probably be 
+                //   dependent upon the range of values and the current index
+                //   as fraction of total indexes
+                
+                if (fraction < 0.1 && (voidIdx > 2)) {
+                    voidIdx -= 2;
+                } else {
+                    voidIdx--;
+                }
+                
                 peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);
                 
-                System.out.println("peakIdx=" + peakIdx + " l=" + 
+                System.out.println(" peakIdx=" + peakIdx + " l=" + 
                     (outTransV_void.get(voidIdx).a.length - 1));
                 System.out.println(" values=" + 
                     Arrays.toString(outTransV_void.get(voidIdx).a));
@@ -532,89 +551,6 @@ public class PairwiseSeparations {
         }
     }
 
-    // result[0] is the array transformed values
-    // result[1] is the array of transformed counts
-    private float[][] smooth2(int[] maximaValues, float[] maximaCounts) {
-
-        System.out.println("smooth2 input length=" + maximaValues.length);
-        
-        MedianTransform1D mt = new MedianTransform1D();
-        
-        List<OneDFloatArray> outTrans = new ArrayList<OneDFloatArray>();
-        List<OneDFloatArray> outCoeff = new ArrayList<OneDFloatArray>();
-        
-        //using pyramidal means need to rescale maximaValues too
-        List<OneDFloatArray> outTransV = new ArrayList<OneDFloatArray>();
-        List<OneDFloatArray> outCoeffV = new ArrayList<OneDFloatArray>();
-
-        float[] input = maximaCounts;
-        float[] inputV = new float[maximaValues.length];
-        for (int i = 0; i < maximaValues.length; ++i) {
-            inputV[i] = maximaValues[i];
-        }
-        
-        mt.multiscalePyramidalMedianTransform2(input, outTrans, outCoeff);
-        mt.multiscalePyramidalMedianTransform2(inputV, outTransV, outCoeffV);
-
-        TIntList peakIdxs = new TIntArrayList();
-        float peakAvg = 0;
-        
-        // search for the first transformed which has only one pea in it
-        for (int i = 0; i < outTrans.size(); ++i) {
-            OneDFloatArray trC = outTrans.get(i);
-            OneDFloatArray trV = outTransV.get(i);
-            assert (trC.a.length == trV.a.length);
-            
-            int len = trV.a.length;
-            
-            int yMaxIdx = MiscMath0.findYMaxIndex(trC.a);
-            
-            System.out.format("len=%d  maxC=%f d=%f\n", len,
-                trC.a[yMaxIdx], trV.a[yMaxIdx]);
-            
-            if (len >= 10 && len < 500) {
-                peakAvg += trV.a[yMaxIdx];
-                peakIdxs.add(i);
-            } 
-        }
-        peakAvg /= (float)peakIdxs.size();
-        System.out.println("dMin=" + peakAvg);
-        if (peakIdxs.size() == 0) {
-            if (outTrans.size() > 1) {
-                peakIdxs.add(1);
-            } else {
-                peakIdxs.add(0);
-            }
-        }
-        int dIdx = peakIdxs.get(peakIdxs.size()/2);
-        float[][] a = new float[2][];
-        a[0] = outTransV.get(dIdx).a;
-        a[1] = outTrans.get(dIdx).a;
-        return a;
-    }
-    
-    private int averagePeak(int[] values, float[] counts) {
-
-        float avg = 0;
-        for (float c : counts) {
-            avg += c;
-        }
-        avg /= (float)counts.length;
-        
-        int idx = 0;
-        for (int i = 0; i < counts.length; ++i) {
-            if (counts[i] < avg) {
-                idx = i;
-            } else if (counts[i] == avg) {
-                idx = i;
-                break;
-            } else {
-                break;
-            }
-        }
-        return idx;
-    }
- 
     private float resampleAndSmooth(TIntIntMap valueCounts, 
         List<OneDFloatArray> outTransC, List<OneDFloatArray> outCoeffC,
         List<OneDFloatArray> outTransV, List<OneDFloatArray> outCoeffV) {
@@ -639,7 +575,7 @@ public class PairwiseSeparations {
 
         assert(outTransC.size() == outTransV.size());
         
-        {   
+        if (debug) {   
             try {
                 
                 //DEBUG
@@ -661,9 +597,9 @@ public class PairwiseSeparations {
             } catch (IOException ex) {
                 Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
-            return values[values.length - 1];
         }
+            
+        return values[values.length - 1];
         
     }
 
