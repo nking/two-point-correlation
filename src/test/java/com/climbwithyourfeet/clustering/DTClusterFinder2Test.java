@@ -48,7 +48,7 @@ public class DTClusterFinder2Test extends BaseTwoPointTest {
 
     boolean plotContours = false;
     boolean plotClusters = true;
-    boolean setDebug = true;
+    boolean setDebug = false;
     
     /**
      *

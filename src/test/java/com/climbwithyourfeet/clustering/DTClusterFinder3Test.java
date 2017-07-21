@@ -34,7 +34,7 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
     boolean setDebug = true;
     
     
-    public void testPrintMemoryComparison() {
+    public void estPrintMemoryComparison() {
         
         int[] x = new int[]{256, 512, 1024, 2048, 4096, 8196};
         
@@ -82,7 +82,7 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
      *
      * @throws Exception
      */
-    public void testFindSingleCenteredConvexCluster() throws Exception {
+    public void estFindSingleCenteredConvexCluster() throws Exception {
                 
         ClusterPlotter plotter = new ClusterPlotter();
         
