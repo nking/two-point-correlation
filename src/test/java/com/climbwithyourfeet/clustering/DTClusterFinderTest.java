@@ -47,7 +47,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
         float ymax = 300;
 
         long seed = System.currentTimeMillis();
-        seed = 1491310649097L;
+        //seed = 1491310649097L;
 
         SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 
@@ -470,7 +470,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
         SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
 
-        seed = 1387775326745l;
+        //seed = 1387775326745l;
 
         log.info("SEED=" + seed);
         

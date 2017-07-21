@@ -428,12 +428,12 @@ public class PairwiseSeparations {
             //    assumptions of filling factor and area
             int nP = 100;
             voidIdx = findArrayWithNPoints(nP, outTransC_void);
-            System.out.println("voidIdx=" + voidIdx);
+            //System.out.println("voidIdx=" + voidIdx);
             if (voidIdx < 2 && outTransC_void.size() > 4) {
                 // for small datasets
                 nP = 32;
                 voidIdx = findArrayWithNPoints(nP, outTransC_void);
-                System.out.println("voidIdx=" + voidIdx);
+                //System.out.println("voidIdx=" + voidIdx);
             }
 
             float snr = 5.f;//2.5f;
@@ -445,6 +445,7 @@ public class PairwiseSeparations {
             int[] peakIdxs = mmpf.findPeaks(
                 outTransC_void.get(voidIdx).a, snr, avgMin);
             
+            /*
             System.out.print("nP=" + nP + " peakIdxs="
                 + Arrays.toString(peakIdxs) + " values=");
             for (int p : peakIdxs) {
@@ -457,7 +458,8 @@ public class PairwiseSeparations {
                     + ",");
             }
             System.out.println("");
-                
+            */
+            
             // this section is where the a?.datasets arrive.
             // they are separated by same amount as they are clustered
             // and there are many of them distributed over a large
@@ -541,6 +543,7 @@ public class PairwiseSeparations {
                 peakIdxs = mmpf.findPeaks(
                     outTransC_voidT.get(voidIdx).a, snr, avgMin);
 
+                /*
                 System.out.print("nP=" + nP + " peakIdxs="
                     + Arrays.toString(peakIdxs) + " values=");
                 for (int p : peakIdxs) {
@@ -555,6 +558,7 @@ public class PairwiseSeparations {
                         + ",");
                 }
                 System.out.println("");
+                */
             }
             
             int n = outTransV_void.get(voidIdx).a.length;
