@@ -39,11 +39,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
     boolean plotClusters = true;
     boolean setDebug = false;
     
-    /**
-     *
-     * @throws Exception
-     */
-    public void estFindRanGenClusters() throws Exception {
+    public void testFindRanGenClusters() throws Exception {
         
         float xmin = 0;
         float xmax = 300;
@@ -239,7 +235,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
         String[] fileNames = {
             "Aggregation.txt", 
             "Compound.txt", 
-            "Pathbased.txt" , 
+            "Pathbased.txt", 
             "Spiral.txt",
             "D31.txt", 
             "R15.txt" , 
@@ -248,7 +244,9 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             "a1.txt", 
             "a2.txt", 
             "a3.txt",
-            "s1.txt", "s2.txt", 
+            "s1.txt", 
+            
+            "s2.txt", 
             /*"s3.txt", "s4.txt",
             "birch1.txt", "birch2.txt", "birch3.txt" */
         };

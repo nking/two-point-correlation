@@ -158,9 +158,6 @@ public class PairwiseSeparations {
         
         PixelHelper ph = new PixelHelper();
         
-        final int[] dx4 = new int[]{-1,  0, 1, 0};
-        final int[] dy4 = new int[]{ 0, -1, 0, 1};
-          
         int x, y;
         long pixIdx1;
          
@@ -252,7 +249,7 @@ public class PairwiseSeparations {
         
         Random rand = Misc0.getSecureRandom();
         long seed = System.currentTimeMillis();
-        //seed = 1500576002107L;
+        //seed = 1500602940797L;
         System.out.println("SEED=" + seed);
         rand.setSeed(seed);
         
@@ -263,6 +260,8 @@ public class PairwiseSeparations {
         //  separation of clusters. quartiles may be helpful for this. 
         
         int nDraws = 3 * pixelIdxs.size();
+        //int nDraws = pixelIdxs.size()/5;
+        System.out.println("pix.size=" + pixelIdxs.size() + " nDraws=" + nDraws);
         
         for (int i = 0; i < nDraws; ++i) {
         
@@ -330,31 +329,78 @@ public class PairwiseSeparations {
                 outTransC_void.get(voidIdx), maxV);
             
             int n = outTransV_void.get(voidIdx).a.length;
-            System.out.println("peakIdx=" + peakIdx + " l=" + 
+            System.out.println("voidIdx=" + voidIdx + " out of " +
+                outTransV_void.size()
+                + " peakIdx=" + peakIdx + " l=" + 
                 (outTransV_void.get(voidIdx).a.length - 1));
             System.out.println(" values=" + 
                 Arrays.toString(outTransV_void.get(voidIdx).a));
+            System.out.println(" counts=" + 
+                Arrays.toString(outTransC_void.get(voidIdx).a));
             
             float fraction = (float)peakIdx/(float)n;
-            if ((fraction < 0.2f) && voidIdx > 0) {
+            float fraction2 = outTransV_void.get(voidIdx).a[peakIdx] / maxV;
+            float fraction3 = outTransV_void.get(voidIdx).a[peakIdx] / 
+                outTransV_void.get(voidIdx)
+                .a[outTransV_void.get(voidIdx).a.length - 1];
+
+            System.out.println("fraction=" + fraction 
+                + " fraction2=" + fraction2
+                + " fraction3=" + fraction3
+            );
+            
+            if ((fraction < 0.2f || fraction2 > 0.35) && voidIdx > 0) {
                 
                 // take peak of higher resolution curve.
                 // TODO: the number of indexes to ascend should probably be 
                 //   dependent upon the range of values and the current index
                 //   as fraction of total indexes
                 
-                if (fraction < 0.1 && (voidIdx > 2)) {
-                    voidIdx -= 2;
+                int voidIdx2 = voidIdx - 1;
+                /*if (fraction2 > 0.4 && (voidIdx > 3)) {
+                    voidIdx2 -= 3;
+                } else if (fraction2 > 0.3 && (voidIdx > 2)) {
+                    voidIdx2 -= 2;
                 } else {
-                    voidIdx--;
+                    voidIdx2--;
+                }*/
+                
+                int peakIdx2 = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx2).a);
+                
+                //int peakIdx2 = weightedPeak(outTransV_void.get(voidIdx2),
+                //    outTransC_void.get(voidIdx2), maxV);
+                
+                if (outTransC_void.get(voidIdx2).a[peakIdx2] >=
+                    outTransC_void.get(voidIdx).a[peakIdx]) {
+                
+                    peakIdx = peakIdx2;
+                    voidIdx = voidIdx2;
+                    
+                    float rTo0 = outTransC_void.get(voidIdx).a[0]/
+                        outTransC_void.get(voidIdx).a[peakIdx];
+
+                    System.out.println("voidIdx=" + voidIdx + " out of " +
+                        outTransV_void.size()
+                        + " peakIdx=" + peakIdx + " l=" + 
+                        (outTransV_void.get(voidIdx).a.length - 1) + 
+                        " rTo0=" + rTo0);
+                    System.out.println("*values=" + 
+                        Arrays.toString(outTransV_void.get(voidIdx).a));
+                    System.out.println("*counts=" + 
+                        Arrays.toString(outTransC_void.get(voidIdx).a));
+
+                    if (rTo0 > 0.985) {
+                        peakIdx = 0;
+                    }
                 }
                 
-                peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);
-                
-                System.out.println(" peakIdx=" + peakIdx + " l=" + 
-                    (outTransV_void.get(voidIdx).a.length - 1));
-                System.out.println(" values=" + 
-                    Arrays.toString(outTransV_void.get(voidIdx).a));
+            } else {
+                float rTo0 = outTransC_void.get(voidIdx).a[0]
+                    / outTransC_void.get(voidIdx).a[peakIdx];
+                System.out.println(" rTo0=" + rTo0);
+                if (rTo0 > 0.8) {
+                    peakIdx /= 2;
+                }
             }
         }
         
