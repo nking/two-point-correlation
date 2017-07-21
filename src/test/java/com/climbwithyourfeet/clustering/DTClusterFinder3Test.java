@@ -1,39 +1,25 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBackgroundGenerator.CLUSTER_SEPARATION;
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
-import algorithms.misc.Frequency;
+import algorithms.search.KDTree;
+import algorithms.search.NearestNeighbor2DLong;
 import algorithms.util.ContourPlotter;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
-import algorithms.util.ResourceFinder;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.TLongFloatMap;
-import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.map.hash.TLongFloatHashMap;
-import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
-import gnu.trove.set.hash.TIntHashSet;
 import gnu.trove.set.hash.TLongHashSet;
 import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 
 /**
  *
@@ -46,6 +32,51 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
     boolean plotContours = false;
     boolean plotClusters = true;
     boolean setDebug = true;
+    
+    
+    public void testPrintMemoryComparison() {
+        
+        int[] x = new int[]{256, 512, 1024, 2048, 4096, 8196};
+        
+        long MB = 1024 * 1024;        
+        
+        for (int wIdx = 0; wIdx < x.length; ++wIdx) {
+            
+            float f = 1.f;
+            
+            for (int i = 0; i < 2; ++i) {
+            
+                if (i == 1) {
+                    f = 0.1f;
+                }
+                
+                int w = 62;
+                
+                int n = Math.round(f * x[wIdx] * x[wIdx]);
+                
+                long mem = NearestNeighbor2DLong.estimateSizeOnHeap(n, w);
+                                
+                System.out.format(
+                    "NN2D   width=%4d, height=%4d n=%10d mem=%10d: w=%2d\n",
+                    x[wIdx], x[wIdx], n, mem/MB, w);
+            
+                w = (int)Math.round(Math.log(x[wIdx] * x[wIdx])/Math.log(2));
+                
+                mem = NearestNeighbor2DLong.estimateSizeOnHeap(n, w);
+                                
+                System.out.format(
+                    "NN2D   width=%4d, height=%4d n=%10d mem=%10d: w=%2d\n",
+                    x[wIdx], x[wIdx], n, mem/MB, w);
+                
+                mem = KDTree.estimateSizeOnHeap(n);
+                                
+                System.out.format(
+                    "KDTree width=%4d, height=%4d n=%10d mem=%10d\n",
+                    x[wIdx], x[wIdx], n, mem/MB);
+            }
+        }
+
+    }
     
     /**
      *

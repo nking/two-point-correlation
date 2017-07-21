@@ -41,6 +41,9 @@ import javax.imageio.ImageIO;
  */
 public class DTClusterFinder2Test extends BaseTwoPointTest {
     
+    //NOTE: these tests multiply the points by a scale factor to test that the
+    // cluster finder still works at other scales.
+    
     private Logger log = Logger.getLogger(this.getClass().getName());
 
     boolean plotContours = false;
