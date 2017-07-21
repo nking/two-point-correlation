@@ -37,7 +37,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
     boolean plotContours = false;
     boolean plotClusters = true;
-    boolean setDebug = false;
+    boolean setDebug = true;
     
     public void testFindRanGenClusters() throws Exception {
         
@@ -186,6 +186,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                     plotter.writeFile("random_");
                 }
 
+                /*
                 BackgroundSeparationHolder sh
                     = clusterFinder.getBackgroundSeparationHolder();
 
@@ -195,7 +196,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
                 kdsh.calculateProbabilities(
                     sh, allClusters, width, height, probMap, probEMap);
-
+                */
+                
                 /*
                 float[] allProbs = new float[width * height];
                 TIntFloatIterator iter2 = probMap.iterator();
@@ -211,12 +213,13 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 }
                 */
 
+                /*
                 if (plotContours) {
                 ContourPlotter plotter2 = new ContourPlotter();
                 plotter2.writeFile(probMap, width, height,
                     "other_contour_" + i);
                 }
-                
+                */
                 count++;
             }
         }
@@ -244,11 +247,11 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             "a1.txt", 
             "a2.txt", 
             "a3.txt",
-            "s1.txt", 
+            //"s1.txt", 
             
-            "s2.txt", 
-            /*"s3.txt", "s4.txt",
-            "birch1.txt", "birch2.txt", "birch3.txt" */
+            //"s2.txt", 
+            //"s3.txt", "s4.txt",
+            //"birch1.txt", "birch2.txt", "birch3.txt"
         };
         
         //TODO: rewrite plotter to read from a file
@@ -377,6 +380,7 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
                 plotter.writeFile("other_");
             }
 
+            /*
             BackgroundSeparationHolder sh
                 = clusterFinder.getBackgroundSeparationHolder();
 
@@ -386,7 +390,8 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
 
             kdsh.calculateProbabilities(
                 sh, allClusters, width, height, probMap, probEMap);
-
+            */
+            
             /*
             float[] allProbs = new float[width*height];
             TIntFloatIterator iter2 = probMap.iterator();
@@ -402,11 +407,12 @@ public class DTClusterFinderTest extends BaseTwoPointTest {
             }
             */
             
+            /*
             if (plotContours) {
             ContourPlotter plotter2 = new ContourPlotter();
             plotter2.writeFile(probMap, width, height, 
                 "other_contour_" + i);
-            }
+            }*/
         }
         
         plotter.writeFile("other_");

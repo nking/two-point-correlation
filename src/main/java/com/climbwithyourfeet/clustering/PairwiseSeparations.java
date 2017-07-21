@@ -1,5 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
+import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
@@ -82,17 +83,76 @@ public class PairwiseSeparations {
     }
 
     private boolean isMonotonicallyDecreasing(float[] v, float[] c, float maxV) {
-        float prev = c[0];
+        int prev = Math.round(c[0]);
         for (int i = 1; i < c.length; ++i) {
             if (v[i] > (0.9*maxV)) {
                 break;
             }
-            if (c[i] > prev) {
+            int ci = Math.round(c[i]);
+            if (ci > prev) {
                 return false;
             }
-            prev = c[i];
+            prev = ci;
         }
         return true;
+    }
+    
+    private int[] indexesWithinFractionOfPeak(OneDFloatArray c, 
+            int peakIdx, float fractionOfPeak) {
+        float hp = fractionOfPeak*c.a[peakIdx];
+        int[] idxs = new int[]{peakIdx, peakIdx};
+        for (int i = peakIdx - 1; i >= peakIdx; --i) {
+            float ci = c.a[i];
+            if (ci <= hp) {
+                break;
+            }
+            idxs[0] = i;
+        }
+        for (int i = peakIdx + 1; i < c.a.length; ++i) {
+            float ci = c.a[i];
+            if (ci <= hp) {
+                break;
+            }
+            idxs[1] = i;
+        }
+        return idxs;
+    }
+
+    private int weightedPeakAround(OneDFloatArray v, OneDFloatArray c, 
+        int peakIdx, float fracOfPeak) {
+        
+        int[] idxs = indexesWithinFractionOfPeak(c, peakIdx, fracOfPeak);
+    
+        // weighted averge between and including indexes
+        double total = 0;
+        for (int i = idxs[0]; i <= idxs[1]; ++i) {
+            total += c.a[i];
+        }
+        
+        double avg = 0;
+        for (int i = 0; i < c.a.length; ++i) {
+            avg += (c.a[i]/total) * v.a[i];
+        }
+                
+        int idx = Arrays.binarySearch(v.a, (int)Math.round(avg));
+        
+        if (idx < 0) {
+            idx *= -1;
+            idx--;
+        }
+        // scan forward to earliest sequential same value
+        for (int i = idx - 1; i > -1; --i) {
+            if (Math.abs(v.a[i] - avg) < 1.e-17) {
+                idx = i;
+            } else {
+                break;
+            }
+        }
+        if (idx >= v.a.length) {
+            idx = v.a.length - 1;
+        }
+        
+        return idx;
     }
 
     public static class ScaledPoints {
@@ -237,7 +297,7 @@ public class PairwiseSeparations {
         
         // ------ 
         
-        int k = 4;
+        int k = 2;//4;
         
         TIntIntMap voidValueCounts = new TIntIntHashMap();
         
@@ -259,7 +319,7 @@ public class PairwiseSeparations {
         //  depends upon the density of the data and the unknown
         //  separation of clusters. quartiles may be helpful for this. 
         
-        int nDraws = 3 * pixelIdxs.size();
+        int nDraws = pixelIdxs.size();
         //int nDraws = pixelIdxs.size()/5;
         System.out.println("pix.size=" + pixelIdxs.size() + " nDraws=" + nDraws);
         
@@ -312,6 +372,33 @@ public class PairwiseSeparations {
     
         float maxV_void = resampleAndSmooth(voidValueCounts, 
             outTransC_void, outCoeffC_void, outTransV_void, outCoeffV_void);
+             
+        // overplot the point sep w/ void separation
+        int idxP0 = findArrayWithNPoints(100, outTransC);
+        int idxV0 = findArrayWithNPoints(100, outTransC_void);
+        if (debug) {
+            try {
+                /*
+                (float minX, float maxX, float minY, float maxY, 
+                float[] xPoints, float[] yPoints, 
+                float[] xPolygon, float[] yPolygon, String plotLabel)
+                */
+                float[] xp = outTransV.get(idxP0).a;
+                float[] yp = outTransC.get(idxP0).a;
+                float[] xv = outTransV_void.get(idxV0).a;
+                float[] yv = outTransC_void.get(idxV0).a;
+                float maxCP = MiscMath0.findMax(yp);
+                float maxCV = MiscMath0.findMax(yv);
+                float maxC = Math.max(maxCP, maxCV);
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, width/3, 0, maxC, 
+                   xp, yp, xp, yp, "pt sep");
+                plotter.addPlot(0, width/3, 0, maxC, 
+                   xv, yv, xv, yv, "void sep");
+                plotter.writeFile("_pts_and_void_" + System.currentTimeMillis());
+            } catch (Exception e) {
+            }
+        }
         
         int peakIdx;
         int voidIdx;
@@ -323,84 +410,53 @@ public class PairwiseSeparations {
             // calc m2 as the background separation
             // for the curves smoothed to about 15 to 20 points.
             // calc m2 as the weighted peak
-            int nP = 14;
+            int nP = 100;
             voidIdx = findArrayWithNPoints(nP, outTransC_void);
-            peakIdx = weightedPeak(outTransV_void.get(voidIdx),
-                outTransC_void.get(voidIdx), maxV);
             
-            int n = outTransV_void.get(voidIdx).a.length;
-            System.out.println("voidIdx=" + voidIdx + " out of " +
-                outTransV_void.size()
-                + " peakIdx=" + peakIdx + " l=" + 
-                (outTransV_void.get(voidIdx).a.length - 1));
-            System.out.println(" values=" + 
-                Arrays.toString(outTransV_void.get(voidIdx).a));
-            System.out.println(" counts=" + 
-                Arrays.toString(outTransC_void.get(voidIdx).a));
+            MinMaxPeakFinder mmpf = new MinMaxPeakFinder();
+            float avgMin = mmpf.calculateMeanOfSmallest(
+                outTransC_void.get(voidIdx).a, 0.03f);
             
-            float fraction = (float)peakIdx/(float)n;
-            float fraction2 = outTransV_void.get(voidIdx).a[peakIdx] / maxV;
-            float fraction3 = outTransV_void.get(voidIdx).a[peakIdx] / 
-                outTransV_void.get(voidIdx)
-                .a[outTransV_void.get(voidIdx).a.length - 1];
-
-            System.out.println("fraction=" + fraction 
-                + " fraction2=" + fraction2
-                + " fraction3=" + fraction3
-            );
+            int[] peakIdxs = mmpf.findPeaks(
+                outTransC_void.get(voidIdx).a, 2.5f, avgMin);
             
-            if ((fraction < 0.2f || fraction2 > 0.35) && voidIdx > 0) {
+            if (peakIdxs == null || peakIdxs.length == 0) {
                 
-                // take peak of higher resolution curve.
-                // TODO: the number of indexes to ascend should probably be 
-                //   dependent upon the range of values and the current index
-                //   as fraction of total indexes
-                
-                int voidIdx2 = voidIdx - 1;
-                /*if (fraction2 > 0.4 && (voidIdx > 3)) {
-                    voidIdx2 -= 3;
-                } else if (fraction2 > 0.3 && (voidIdx > 2)) {
-                    voidIdx2 -= 2;
-                } else {
-                    voidIdx2--;
-                }*/
-                
-                int peakIdx2 = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx2).a);
-                
-                //int peakIdx2 = weightedPeak(outTransV_void.get(voidIdx2),
-                //    outTransC_void.get(voidIdx2), maxV);
-                
-                if (outTransC_void.get(voidIdx2).a[peakIdx2] >=
-                    outTransC_void.get(voidIdx).a[peakIdx]) {
-                
-                    peakIdx = peakIdx2;
-                    voidIdx = voidIdx2;
-                    
-                    float rTo0 = outTransC_void.get(voidIdx).a[0]/
-                        outTransC_void.get(voidIdx).a[peakIdx];
-
-                    System.out.println("voidIdx=" + voidIdx + " out of " +
-                        outTransV_void.size()
-                        + " peakIdx=" + peakIdx + " l=" + 
-                        (outTransV_void.get(voidIdx).a.length - 1) + 
-                        " rTo0=" + rTo0);
-                    System.out.println("*values=" + 
-                        Arrays.toString(outTransV_void.get(voidIdx).a));
-                    System.out.println("*counts=" + 
-                        Arrays.toString(outTransC_void.get(voidIdx).a));
-
-                    if (rTo0 > 0.985) {
-                        peakIdx = 0;
-                    }
-                }
+                peakIdx = 0;
                 
             } else {
-                float rTo0 = outTransC_void.get(voidIdx).a[0]
-                    / outTransC_void.get(voidIdx).a[peakIdx];
-                System.out.println(" rTo0=" + rTo0);
-                if (rTo0 > 0.8) {
-                    peakIdx /= 2;
-                }
+                
+                peakIdx = peakIdxs[0];
+
+  //TODO: needs refinement here.
+  //      for curves with large numbers and 
+  //      large number spacing, may need
+  //      to use a wieghted peak then
+  //      average that wtih peakIdx
+                
+                //peakIdx = weightedPeakAround(outTransV_void.get(voidIdx),
+                //    outTransC_void.get(voidIdx), peakIdx, 0.99f);
+
+                int n = outTransV_void.get(voidIdx).a.length;
+                System.out.println("voidIdx=" + voidIdx + " out of " +
+                    outTransV_void.size()
+                    + " peakIdx=" + peakIdx + " l=" + 
+                    (outTransV_void.get(voidIdx).a.length - 1));
+                System.out.println(" values=" + 
+                    Arrays.toString(outTransV_void.get(voidIdx).a));
+                System.out.println(" counts=" + 
+                    Arrays.toString(outTransC_void.get(voidIdx).a));
+
+                float fraction = (float)peakIdx/(float)n;
+                float fraction2 = outTransV_void.get(voidIdx).a[peakIdx] / maxV;
+                float fraction3 = outTransV_void.get(voidIdx).a[peakIdx] / 
+                    outTransV_void.get(voidIdx)
+                    .a[outTransV_void.get(voidIdx).a.length - 1];
+
+                System.out.println("fraction=" + fraction 
+                    + " fraction2=" + fraction2
+                    + " fraction3=" + fraction3
+                );
             }
         }
         
