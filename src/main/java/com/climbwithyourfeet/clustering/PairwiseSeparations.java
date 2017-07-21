@@ -155,6 +155,57 @@ public class PairwiseSeparations {
         return idx;
     }
 
+    private void randomDrawSeparations(
+        Random rand, int nDraws, int k, TIntIntMap voidValueCounts, 
+        KNearestNeighbors knn, TLongSet pixelIdxs, int width, int height,
+        float maxV) {
+        
+        PixelHelper ph = new PixelHelper();
+        
+        long pixIdx1;
+        int x, y;
+        
+        for (int i = 0; i < nDraws; ++i) {
+        
+            do {
+                // not including boundary points
+                x = rand.nextInt(width - 2) + 1;
+                y = rand.nextInt(height - 2) + 1;
+                pixIdx1 = ph.toPixelIndex(x, y, width);
+            } while (pixelIdxs.contains(pixIdx1));
+             
+            List<PairFloat> nearest = knn.findNearest(k, x, y);
+            
+            if (nearest != null) {
+                
+                for (PairFloat p : nearest) {
+                    
+                    if ((Math.abs(p.getX() - x) < eps)
+                        && (Math.abs(p.getY() - y) < eps)) {
+                        continue;
+                    }
+                    
+                    float dx = x - p.getX();
+                    float dy = y - p.getY();
+                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
+
+                    //DEBUG: temporarily excluding points larger than
+                    // 3*maxV
+                    if (d < 3*maxV) {
+                        
+                        //System.out.println("void p=" + p + " d=" + d);
+                    
+                        // default for no_entry is 0
+                        int c = voidValueCounts.get(d);
+                        voidValueCounts.put(d, c + 1);
+                        
+                        assert(voidValueCounts.containsKey(d));
+                    }
+                }
+            }
+        }        
+    }
+
     public static class ScaledPoints {
         public TLongSet pixelIdxs;
         int width;
@@ -319,49 +370,11 @@ public class PairwiseSeparations {
         //  depends upon the density of the data and the unknown
         //  separation of clusters. quartiles may be helpful for this. 
         
-        int nDraws = pixelIdxs.size();
-        //int nDraws = pixelIdxs.size()/5;
+        final int nDraws = pixelIdxs.size();
         System.out.println("pix.size=" + pixelIdxs.size() + " nDraws=" + nDraws);
         
-        for (int i = 0; i < nDraws; ++i) {
-        
-            do {
-                // not including boundary points
-                x = rand.nextInt(width - 2) + 1;
-                y = rand.nextInt(height - 2) + 1;
-                pixIdx1 = ph.toPixelIndex(x, y, width);
-            } while (pixelIdxs.contains(pixIdx1));
-             
-            List<PairFloat> nearest = knn.findNearest(k, x, y);
-            
-            if (nearest != null) {
-                
-                for (PairFloat p : nearest) {
-                    
-                    if ((Math.abs(p.getX() - x) < eps)
-                        && (Math.abs(p.getY() - y) < eps)) {
-                        continue;
-                    }
-                    
-                    float dx = x - p.getX();
-                    float dy = y - p.getY();
-                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));
-
-                    //DEBUG: temporarily excluding points larger than
-                    // 3*maxV
-                    if (d < 3*maxV) {
-                        
-                        //System.out.println("void p=" + p + " d=" + d);
-                    
-                        // default for no_entry is 0
-                        int c = voidValueCounts.get(d);
-                        voidValueCounts.put(d, c + 1);
-                        
-                        assert(voidValueCounts.containsKey(d));
-                    }
-                }
-            }
-        }
+        randomDrawSeparations(rand, nDraws, k, voidValueCounts, 
+            knn, pixelIdxs, width, height, maxV);
         
         long ts = System.currentTimeMillis();
         
@@ -377,12 +390,7 @@ public class PairwiseSeparations {
         int idxP0 = findArrayWithNPoints(100, outTransC);
         int idxV0 = findArrayWithNPoints(100, outTransC_void);
         if (debug) {
-            try {
-                /*
-                (float minX, float maxX, float minY, float maxY, 
-                float[] xPoints, float[] yPoints, 
-                float[] xPolygon, float[] yPolygon, String plotLabel)
-                */
+            try {    
                 float[] xp = outTransV.get(idxP0).a;
                 float[] yp = outTransC.get(idxP0).a;
                 float[] xv = outTransV_void.get(idxV0).a;
@@ -400,17 +408,23 @@ public class PairwiseSeparations {
             }
         }
         
+        //int peakIdxP = MiscMath0.findYMaxIndex(outTransC.get(0).a);
+        //System.out.println("points peak in unsmoothed data="
+        //    + " peak=" + outTransV.get(0).a[peakIdxP]);
+        
         int peakIdx;
         int voidIdx;
         if (isMonotonicallyDecreasing(outTransV_void.get(0).a,
             outTransC_void.get(0).a, maxV)) {
             voidIdx = 0;
             peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);
+            System.out.println("choosing void peak=" +
+                outTransV_void.get(voidIdx).a[0]);
+        
         } else {
             // calc m2 as the background separation
-            // for the curves smoothed to about 15 to 20 points.
-            // calc m2 as the weighted peak
-            int nP = 100;
+            // for the curves smoothed to about 100 points.
+            final int nP = 100;
             voidIdx = findArrayWithNPoints(nP, outTransC_void);
             
             MinMaxPeakFinder mmpf = new MinMaxPeakFinder();
@@ -419,45 +433,81 @@ public class PairwiseSeparations {
             
             int[] peakIdxs = mmpf.findPeaks(
                 outTransC_void.get(voidIdx).a, 2.5f, avgMin);
-            
-            if (peakIdxs == null || peakIdxs.length == 0) {
-                
-                peakIdx = 0;
-                
-            } else {
-                
-                peakIdx = peakIdxs[0];
+                            
+            // this section is where the a?.datasets arrive.
+            // they are separated by same amount as they are clustered
+            // and there are many of them distributed over a large 
+            // width and height.
 
-  //TODO: needs refinement here.
-  //      for curves with large numbers and 
-  //      large number spacing, may need
-  //      to use a wieghted peak then
-  //      average that wtih peakIdx
-                
-                //peakIdx = weightedPeakAround(outTransV_void.get(voidIdx),
-                //    outTransC_void.get(voidIdx), peakIdx, 0.99f);
+            // using more than one randomw draw and taking the best
+            // results from that.
 
-                int n = outTransV_void.get(voidIdx).a.length;
-                System.out.println("voidIdx=" + voidIdx + " out of " +
-                    outTransV_void.size()
-                    + " peakIdx=" + peakIdx + " l=" + 
-                    (outTransV_void.get(voidIdx).a.length - 1));
-                System.out.println(" values=" + 
-                    Arrays.toString(outTransV_void.get(voidIdx).a));
-                System.out.println(" counts=" + 
-                    Arrays.toString(outTransC_void.get(voidIdx).a));
+            // NOTE: this is a work in progress.
+            // need to determine the number of iterations statistically
+            final int nIterMax = 4;
+            int nIter = 0;
 
-                float fraction = (float)peakIdx/(float)n;
-                float fraction2 = outTransV_void.get(voidIdx).a[peakIdx] / maxV;
-                float fraction3 = outTransV_void.get(voidIdx).a[peakIdx] / 
-                    outTransV_void.get(voidIdx)
-                    .a[outTransV_void.get(voidIdx).a.length - 1];
+            int maxPeakIdx = Integer.MAX_VALUE;
+            int maxVoidIdx = Integer.MAX_VALUE;
+            float maxPeakValue = Float.NEGATIVE_INFINITY;
 
-                System.out.println("fraction=" + fraction 
-                    + " fraction2=" + fraction2
-                    + " fraction3=" + fraction3
-                );
+            while (true) {
+                int tmpIdx;
+                float tmpV;
+                if (peakIdxs == null || peakIdxs.length == 0) {
+                    tmpIdx = 0;
+                    tmpV = outTransV_void.get(voidIdx).a[tmpIdx];
+                } else {
+                    tmpIdx = peakIdxs[0];
+                    tmpV = outTransV_void.get(voidIdx).a[tmpIdx];
+                }
+                if (tmpV > maxPeakValue) {
+                    maxPeakValue = tmpV;
+                    maxPeakIdx = tmpIdx;
+                    maxVoidIdx = voidIdx;
+                    System.out.println("==> v=" + tmpV);
+                }
+
+                nIter++;
+
+                if (nIter >= nIterMax) {
+                    break;
+                }
+
+                //--- redraw points
+                voidValueCounts.clear();
+                randomDrawSeparations(rand, nDraws, k, voidValueCounts, 
+                    knn, pixelIdxs, width, height, maxV);
+                outTransC_void.clear();
+                outCoeffC_void.clear();
+                outTransV_void.clear();
+                outCoeffV_void.clear();
+
+                maxV_void = resampleAndSmooth(voidValueCounts, 
+                    outTransC_void, outCoeffC_void, outTransV_void, 
+                    outCoeffV_void);
+
+                voidIdx = findArrayWithNPoints(nP, outTransC_void);
+
+                avgMin = mmpf.calculateMeanOfSmallest(
+                    outTransC_void.get(voidIdx).a, 0.03f);
+
+                peakIdxs = mmpf.findPeaks(
+                    outTransC_void.get(voidIdx).a, 2.5f, avgMin);
             }
+                
+            voidIdx = maxVoidIdx;
+            peakIdx = maxPeakIdx;
+
+            int n = outTransV_void.get(voidIdx).a.length;
+            System.out.println("*voidIdx=" + voidIdx + " out of " +
+                outTransV_void.size()
+                + " peakIdx=" + peakIdx + " l=" + 
+                (outTransV_void.get(voidIdx).a.length - 1));
+            //System.out.println("*values=" + 
+            //    Arrays.toString(outTransV_void.get(voidIdx).a));
+            //System.out.println(" counts=" + 
+            //    Arrays.toString(outTransC_void.get(voidIdx).a));                
         }
         
         int pdfIdx = findArrayWithGTNPoints(2, outTransC);
@@ -677,6 +727,7 @@ public class PairwiseSeparations {
 
         assert(outTransC.size() == outTransV.size());
         
+        /*
         if (debug) {   
             try {
                 
@@ -700,9 +751,9 @@ public class PairwiseSeparations {
                 Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-            
-        return values[values.length - 1];
+        */
         
+        return values[values.length - 1];
     }
 
     private void integerResampling(TIntIntMap valueCounts, TIntList outV, 
