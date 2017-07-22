@@ -60,7 +60,7 @@ public class StatsHelper {
             
             KDTreeNode nearest = nn.findNearestNeighborNotEquals(xy[0], xy[1]);
             
-            if (nearest != null && nearest.getX() != nearest.sentinel) {
+            if (nearest != null && nearest.getX() != KDTreeNode.sentinel) {
                                 
                 float dx = nearest.getX() - xy[0];
                 dx /= (float)scales[0];
