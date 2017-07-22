@@ -53,9 +53,14 @@ Usage as an API:
 -----
 Build
 -----
-Requires java to run the code and ant to build it.
-The project build file also contains a dependency on jacoco.
-The other libraries are contained in the project.
+The project requires java 1.7 or greater.
+The ant version should be 1.9.6 or greater.
+The jacoco version should be jacoco-0.7.5.201505241946 or greater.
+    http://www.jacoco.org/jacoco/
+    Then set an environment variable called JACOCO_HOME
+    to the path of the base direcotry of jacoco.
+    The build scripts looks for $JACOCO_HOME/lib/jacocoant.jar
+The other libraries are contained in the project lib directory.
 
 To list the targets:
   ant
