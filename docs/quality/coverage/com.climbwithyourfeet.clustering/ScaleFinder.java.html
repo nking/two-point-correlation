@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ScaleFinder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">ScaleFinder.java</span></div><h1>ScaleFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ScaleFinder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">ScaleFinder.java</span></div><h1>ScaleFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
 
 import algorithms.imageProcessing.FFTUtil;
 import algorithms.imageProcessing.Filters;
@@ -7,11 +7,13 @@ import algorithms.misc.MiscSorter;
 import algorithms.util.PixelHelper;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
+import gnu.trove.set.TLongSet;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
@@ -25,142 +27,151 @@ import javax.imageio.ImageIO;
  *
  * @author nichole
  */
-<span class="fc" id="L28">public class ScaleFinder {</span>
+<span class="fc" id="L30">public class ScaleFinder {</span>
     
-<span class="fc" id="L30">    private boolean debug = false;</span>
+<span class="fc" id="L32">    private boolean debug = false;</span>
     
-<span class="fc" id="L32">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
+<span class="fc" id="L34">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
     
     public void setToDebug() {
-<span class="nc" id="L35">        debug = true;</span>
-<span class="nc" id="L36">    }</span>
+<span class="nc" id="L37">        debug = true;</span>
+<span class="nc" id="L38">    }</span>
     
-    public int[] find(TIntSet pixelIdxs, int width, int height) {
+    public int[] find(TLongSet pixelIdxs, final int width, final int height) {
         
-<span class="pc bpc" id="L40" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
-<span class="nc" id="L41">            throw new IllegalArgumentException(</span>
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L43">            throw new IllegalArgumentException(</span>
                 &quot;pixelIdxs.size must be 12 or more&quot;);
         }
 
-<span class="fc" id="L45">        double[] xA = new double[width];</span>
-<span class="fc" id="L46">        double[] yA = new double[height];</span>
+<span class="fc" id="L47">        double[] xA = new double[width];</span>
+<span class="fc" id="L48">        double[] yA = new double[height];</span>
 
-<span class="fc" id="L48">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L49">        int[] xy = new int[2];</span>
+<span class="fc" id="L50">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L51">        int[] xy = new int[2];</span>
         
-<span class="fc" id="L51">        TIntIterator iter = pixelIdxs.iterator();</span>
-<span class="fc bfc" id="L52" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
-<span class="fc" id="L53">            int pixIdx = iter.next();</span>
-<span class="fc" id="L54">            ph.toPixelCoords(pixIdx, width, xy);</span>
-<span class="fc" id="L55">            xA[xy[0]]++;</span>
-<span class="fc" id="L56">            yA[xy[1]]++;</span>
-<span class="fc" id="L57">        }</span>
+<span class="fc" id="L53">        TLongIterator iter = pixelIdxs.iterator();</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L55">            long pixIdx = iter.next();</span>
+<span class="fc" id="L56">            ph.toPixelCoords(pixIdx, width, xy);</span>
+            
+            //DEBUG
+<span class="pc bpc" id="L59" title="2 of 4 branches missed.">            if (xy[0] &gt;= xA.length || xy[0] &lt; 0) {</span>
+<span class="nc" id="L60">                int z = 0;</span>
+            }
+<span class="pc bpc" id="L62" title="2 of 4 branches missed.">            if (xy[1] &gt;= yA.length || xy[1] &lt; 0) {</span>
+<span class="nc" id="L63">                int z = 0;</span>
+            }
+            
+<span class="fc" id="L66">            xA[xy[0]]++;</span>
+<span class="fc" id="L67">            yA[xy[1]]++;</span>
+<span class="fc" id="L68">        }</span>
                 
-<span class="fc" id="L59">        FFTUtil fftUtil = new FFTUtil();</span>
+<span class="fc" id="L70">        FFTUtil fftUtil = new FFTUtil();</span>
         
         // forward, normalize
-<span class="fc" id="L62">        Complex[] fftX = fftUtil.create1DFFT(xA, true);</span>
-<span class="fc" id="L63">        Complex[] fftY = fftUtil.create1DFFT(yA, true);</span>
+<span class="fc" id="L73">        Complex[] fftX = fftUtil.create1DFFT(xA, true);</span>
+<span class="fc" id="L74">        Complex[] fftY = fftUtil.create1DFFT(yA, true);</span>
     
-<span class="fc" id="L65">        float minVX = Float.POSITIVE_INFINITY;</span>
-<span class="fc" id="L66">        float maxVX = Float.NEGATIVE_INFINITY;</span>
-<span class="fc" id="L67">        float[] fftX2 = new float[width];</span>
-<span class="fc bfc" id="L68" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
-<span class="fc" id="L69">            fftX2[i] = (float)fftX[i].abs();</span>
-<span class="fc bfc" id="L70" title="All 2 branches covered.">            if (fftX2[i] &lt; minVX) {</span>
-<span class="fc" id="L71">                minVX = fftX2[i];</span>
+<span class="fc" id="L76">        float minVX = Float.POSITIVE_INFINITY;</span>
+<span class="fc" id="L77">        float maxVX = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L78">        float[] fftX2 = new float[width];</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="fc" id="L80">            fftX2[i] = (float)fftX[i].abs();</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if (fftX2[i] &lt; minVX) {</span>
+<span class="fc" id="L82">                minVX = fftX2[i];</span>
             }
-<span class="fc bfc" id="L73" title="All 2 branches covered.">            if (fftX2[i] &gt; maxVX) {</span>
-<span class="fc" id="L74">                maxVX = fftX2[i];</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            if (fftX2[i] &gt; maxVX) {</span>
+<span class="fc" id="L85">                maxVX = fftX2[i];</span>
             }
         }
         
-<span class="fc" id="L78">        float minVY = Float.POSITIVE_INFINITY;</span>
-<span class="fc" id="L79">        float maxVY = Float.NEGATIVE_INFINITY;</span>
-<span class="fc" id="L80">        float[] fftY2 = new float[height];</span>
-<span class="fc bfc" id="L81" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
-<span class="fc" id="L82">            fftY2[i] = (float)fftY[i].abs();</span>
-<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (fftY2[i] &lt; minVY) {</span>
-<span class="fc" id="L84">                minVY = fftY2[i];</span>
+<span class="fc" id="L89">        float minVY = Float.POSITIVE_INFINITY;</span>
+<span class="fc" id="L90">        float maxVY = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L91">        float[] fftY2 = new float[height];</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
+<span class="fc" id="L93">            fftY2[i] = (float)fftY[i].abs();</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">            if (fftY2[i] &lt; minVY) {</span>
+<span class="fc" id="L95">                minVY = fftY2[i];</span>
             }
-<span class="fc bfc" id="L86" title="All 2 branches covered.">            if (fftY2[i] &gt; maxVY) {</span>
-<span class="fc" id="L87">                maxVY = fftY2[i];</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">            if (fftY2[i] &gt; maxVY) {</span>
+<span class="fc" id="L98">                maxVY = fftY2[i];</span>
             }
         }
         
         // scale to range 0:255
-<span class="fc" id="L92">        float rangeX = maxVX - minVX;</span>
-<span class="fc" id="L93">        float rangeFactorX = 255.f/rangeX;</span>
-<span class="fc bfc" id="L94" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
-<span class="fc" id="L95">            fftX2[i] -= minVX;</span>
-<span class="fc" id="L96">            fftX2[i] *= rangeFactorX;</span>
+<span class="fc" id="L103">        float rangeX = maxVX - minVX;</span>
+<span class="fc" id="L104">        float rangeFactorX = 255.f/rangeX;</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        for (int i = 0; i &lt; width; ++i) {</span>
+<span class="fc" id="L106">            fftX2[i] -= minVX;</span>
+<span class="fc" id="L107">            fftX2[i] *= rangeFactorX;</span>
         }
         
-<span class="fc" id="L99">        float rangeY = maxVY - minVY;</span>
-<span class="fc" id="L100">        float rangeFactorY = 255.f/rangeY;</span>
-<span class="fc bfc" id="L101" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
-<span class="fc" id="L102">            fftY2[i] -= minVY;</span>
-<span class="fc" id="L103">            fftY2[i] *= rangeFactorY;</span>
+<span class="fc" id="L110">        float rangeY = maxVY - minVY;</span>
+<span class="fc" id="L111">        float rangeFactorY = 255.f/rangeY;</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (int i = 0; i &lt; height; ++i) {</span>
+<span class="fc" id="L113">            fftY2[i] -= minVY;</span>
+<span class="fc" id="L114">            fftY2[i] *= rangeFactorY;</span>
         }
         
-<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (debug) {</span>
-<span class="nc" id="L107">            float[][] img = new float[1][];</span>
-<span class="nc" id="L108">            img[0] = fftX2;</span>
-<span class="nc" id="L109">            long ts = System.currentTimeMillis();</span>
+<span class="pc bpc" id="L117" title="1 of 2 branches missed.">        if (debug) {</span>
+<span class="nc" id="L118">            float[][] img = new float[1][];</span>
+<span class="nc" id="L119">            img[0] = fftX2;</span>
+<span class="nc" id="L120">            long ts = System.currentTimeMillis();</span>
             try {
-<span class="nc" id="L111">                writeDebugImage(img, &quot;fft_X&quot; + ts, 1, img[0].length);</span>
-<span class="nc" id="L112">                img[0] = fftY2;</span>
-<span class="nc" id="L113">                writeDebugImage(img, &quot;fft_Y&quot; + ts, 1, img[0].length);</span>
-<span class="nc" id="L114">            } catch (IOException ex) {</span>
-<span class="nc" id="L115">                Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, </span>
+<span class="nc" id="L122">                writeDebugImage(img, &quot;fft_X&quot; + ts, 1, img[0].length);</span>
+<span class="nc" id="L123">                img[0] = fftY2;</span>
+<span class="nc" id="L124">                writeDebugImage(img, &quot;fft_Y&quot; + ts, 1, img[0].length);</span>
+<span class="nc" id="L125">            } catch (IOException ex) {</span>
+<span class="nc" id="L126">                Logger.getLogger(ScaleFinder.class.getName()).log(Level.SEVERE, </span>
                     null, ex);
-<span class="nc" id="L117">            }</span>
+<span class="nc" id="L128">            }</span>
         }
           
-<span class="fc" id="L120">        Filters filters = new Filters();</span>
+<span class="fc" id="L131">        Filters filters = new Filters();</span>
         
-<span class="fc" id="L122">        TIntList outputMaximaX = new TIntArrayList();</span>
+<span class="fc" id="L133">        TIntList outputMaximaX = new TIntArrayList();</span>
         
-<span class="fc" id="L124">        TIntList outputMaximaY = new TIntArrayList();</span>
+<span class="fc" id="L135">        TIntList outputMaximaY = new TIntArrayList();</span>
         
-<span class="fc" id="L126">        float thresholdRel = 0.85f;//0.1f;</span>
+<span class="fc" id="L137">        float thresholdRel = 0.85f;//0.1f;</span>
        
         //outputMaximaX are the indexes of fftX2
         
-<span class="fc" id="L130">        filters.peakLocalMax(fftX2, 0, thresholdRel, outputMaximaX);</span>
+<span class="fc" id="L141">        filters.peakLocalMax(fftX2, 0, thresholdRel, outputMaximaX);</span>
         
-<span class="fc" id="L132">        filters.peakLocalMax(fftY2, 0, thresholdRel, outputMaximaY);</span>
+<span class="fc" id="L143">        filters.peakLocalMax(fftY2, 0, thresholdRel, outputMaximaY);</span>
 
         // when the points are separated by a larger scale than 1 regularly,
         // that pattern is apparent at
         // xScale = width/(spacing of brightest peaks)
         // and same for the y axis.
         
-<span class="fc" id="L139">        int xSpacing = determineSpacing(outputMaximaX);</span>
+<span class="fc" id="L150">        int xSpacing = determineSpacing(outputMaximaX);</span>
         
-<span class="fc" id="L141">        int ySpacing = determineSpacing(outputMaximaY);</span>
+<span class="fc" id="L152">        int ySpacing = determineSpacing(outputMaximaY);</span>
         
-<span class="fc" id="L143">        int[] out = new int[2];</span>
+<span class="fc" id="L154">        int[] out = new int[2];</span>
         
-<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (xSpacing &gt; 1) {</span>
-<span class="fc" id="L146">            out[0] = width/xSpacing;</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (xSpacing &gt; 1) {</span>
+<span class="fc" id="L157">            out[0] = width/xSpacing;</span>
         } else {
-<span class="fc" id="L148">            out[0] = 1;</span>
+<span class="fc" id="L159">            out[0] = 1;</span>
         }
         
-<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (ySpacing &gt; 1) {</span>
-<span class="fc" id="L152">            out[1] = height/ySpacing;</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (ySpacing &gt; 1) {</span>
+<span class="fc" id="L163">            out[1] = height/ySpacing;</span>
         } else {
-<span class="fc" id="L154">            out[1] = 1;</span>
+<span class="fc" id="L165">            out[1] = 1;</span>
         }
         
-<span class="fc" id="L157">        return out;</span>
+<span class="fc" id="L168">        return out;</span>
     }
     
     private int determineSpacing(TIntList maxima) {
         
-<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (maxima.size() &lt; 2) {</span>
-<span class="fc" id="L163">            return -1;</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">        if (maxima.size() &lt; 2) {</span>
+<span class="fc" id="L174">            return -1;</span>
         }
         
         // a brute force calculation of minimum separation between the
@@ -171,110 +182,110 @@ import javax.imageio.ImageIO;
         //  of similar values is needed.  the tolerance should depend
         //  upon the range of separations and on the value to be aggregated
         
-<span class="fc" id="L174">        TIntIntMap freqMap = new TIntIntHashMap();</span>
-<span class="fc bfc" id="L175" title="All 2 branches covered.">        for (int i = 0; i &lt; maxima.size(); ++i) {</span>
-<span class="fc" id="L176">            int v = maxima.get(i);</span>
-<span class="fc" id="L177">            int c = freqMap.get(v);</span>
-<span class="fc" id="L178">            freqMap.put(v, c + 1);</span>
+<span class="fc" id="L185">        TIntIntMap freqMap = new TIntIntHashMap();</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        for (int i = 0; i &lt; maxima.size(); ++i) {</span>
+<span class="fc" id="L187">            int v = maxima.get(i);</span>
+<span class="fc" id="L188">            int c = freqMap.get(v);</span>
+<span class="fc" id="L189">            freqMap.put(v, c + 1);</span>
         }
         
-<span class="pc bpc" id="L181" title="1 of 2 branches missed.">        if (freqMap.size() &lt;= 1) {</span>
-<span class="nc" id="L182">            return -1;</span>
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">        if (freqMap.size() &lt;= 1) {</span>
+<span class="nc" id="L193">            return -1;</span>
         }
         
-<span class="fc" id="L185">        int[] vs = new int[freqMap.size()];</span>
-<span class="fc" id="L186">        int[] vsc = new int[vs.length];</span>
-<span class="fc" id="L187">        TIntIntIterator iter = freqMap.iterator();</span>
-<span class="fc bfc" id="L188" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
-<span class="fc" id="L189">            iter.advance();</span>
-<span class="fc" id="L190">            vs[i] = iter.key();</span>
-<span class="fc" id="L191">            vsc[i] = iter.value();</span>
+<span class="fc" id="L196">        int[] vs = new int[freqMap.size()];</span>
+<span class="fc" id="L197">        int[] vsc = new int[vs.length];</span>
+<span class="fc" id="L198">        TIntIntIterator iter = freqMap.iterator();</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
+<span class="fc" id="L200">            iter.advance();</span>
+<span class="fc" id="L201">            vs[i] = iter.key();</span>
+<span class="fc" id="L202">            vsc[i] = iter.value();</span>
         }
-<span class="fc" id="L193">        MiscSorter.sortBy1stArg(vsc, vs);</span>
+<span class="fc" id="L204">        MiscSorter.sortBy1stArg(vsc, vs);</span>
         
-<span class="fc" id="L195">        int maxCount = vsc[vsc.length - 1];</span>
+<span class="fc" id="L206">        int maxCount = vsc[vsc.length - 1];</span>
         /*int limit = Math.round(0.8f * maxCount);
         if (limit &lt; 1) {
             limit = 1;
         }*/
         
-<span class="fc" id="L201">        freqMap.clear();</span>
-<span class="fc bfc" id="L202" title="All 2 branches covered.">        for (int i = vsc.length - 1; i &gt; -1; --i) {</span>
+<span class="fc" id="L212">        freqMap.clear();</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        for (int i = vsc.length - 1; i &gt; -1; --i) {</span>
             //if (vsc[i] &lt; limit) {
             //    break;
             //}
-<span class="fc bfc" id="L206" title="All 2 branches covered.">            for (int j = i - 1; j &gt; -1; --j) {</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">            for (int j = i - 1; j &gt; -1; --j) {</span>
                 //if (vsc[j] &lt; limit) {
                 //    break;
                 //}
-<span class="fc" id="L210">                int d = Math.abs(vs[i] - vs[j]);</span>
-<span class="fc" id="L211">                int c = freqMap.get(d);</span>
-<span class="fc" id="L212">                freqMap.put(d, c + 1);</span>
+<span class="fc" id="L221">                int d = Math.abs(vs[i] - vs[j]);</span>
+<span class="fc" id="L222">                int c = freqMap.get(d);</span>
+<span class="fc" id="L223">                freqMap.put(d, c + 1);</span>
             }
         }
         
-<span class="pc bpc" id="L216" title="1 of 2 branches missed.">        if (freqMap.size() == 0) {</span>
-<span class="nc" id="L217">            return -1;</span>
+<span class="pc bpc" id="L227" title="1 of 2 branches missed.">        if (freqMap.size() == 0) {</span>
+<span class="nc" id="L228">            return -1;</span>
         }
         
         // sort by highest frequency and smallest separation
-<span class="fc" id="L221">        vs = new int[freqMap.size()];</span>
-<span class="fc" id="L222">        vsc = new int[vs.length];</span>
-<span class="fc" id="L223">        iter = freqMap.iterator();</span>
-<span class="fc bfc" id="L224" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
-<span class="fc" id="L225">            iter.advance();</span>
-<span class="fc" id="L226">            vs[i] = iter.key();</span>
-<span class="fc" id="L227">            vsc[i] = iter.value();</span>
+<span class="fc" id="L232">        vs = new int[freqMap.size()];</span>
+<span class="fc" id="L233">        vsc = new int[vs.length];</span>
+<span class="fc" id="L234">        iter = freqMap.iterator();</span>
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        for (int i = 0; i &lt; freqMap.size(); ++i) {</span>
+<span class="fc" id="L236">            iter.advance();</span>
+<span class="fc" id="L237">            vs[i] = iter.key();</span>
+<span class="fc" id="L238">            vsc[i] = iter.value();</span>
         }
         
         //order by devreasing frequency vsc
         //    and increasing value vs
-<span class="fc" id="L232">        MiscSorter.sortBy1stArgDecrThen2ndIncr(vsc, vs);</span>
+<span class="fc" id="L243">        MiscSorter.sortBy1stArgDecrThen2ndIncr(vsc, vs);</span>
                 
-<span class="fc" id="L234">        return vs[0];</span>
+<span class="fc" id="L245">        return vs[0];</span>
     }
     
      private void writeDebugImage(float[][] dt, String fileSuffix, int width, 
         int height) throws IOException {
 
-<span class="nc" id="L240">        BufferedImage outputImage = new BufferedImage(width, height,</span>
+<span class="nc" id="L251">        BufferedImage outputImage = new BufferedImage(width, height,</span>
             BufferedImage.TYPE_BYTE_GRAY);
 
-<span class="nc" id="L243">        WritableRaster raster = outputImage.getRaster();</span>
+<span class="nc" id="L254">        WritableRaster raster = outputImage.getRaster();</span>
 
-<span class="nc bnc" id="L245" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
-<span class="nc bnc" id="L246" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
-<span class="nc" id="L247">                int v = Math.round(dt[i][j]);</span>
-<span class="nc" id="L248">                raster.setSample(i, j, 0, v);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
+<span class="nc" id="L258">                int v = Math.round(dt[i][j]);</span>
+<span class="nc" id="L259">                raster.setSample(i, j, 0, v);</span>
             }
         }
 
         // write to an output directory.  we have user.dir from system properties
         // but no other knowledge of users's directory structure
-<span class="nc" id="L254">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
-<span class="nc" id="L255">        String baseDir = null;</span>
-<span class="nc bnc" id="L256" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
-<span class="nc" id="L257">            baseDir = baseDirURL.getPath();</span>
+<span class="nc" id="L265">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
+<span class="nc" id="L266">        String baseDir = null;</span>
+<span class="nc bnc" id="L267" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
+<span class="nc" id="L268">            baseDir = baseDirURL.getPath();</span>
         } else {
-<span class="nc" id="L259">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
+<span class="nc" id="L270">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
         }
-<span class="nc bnc" id="L261" title="All 2 branches missed.">        if (baseDir == null) {</span>
-<span class="nc" id="L262">            return;</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">        if (baseDir == null) {</span>
+<span class="nc" id="L273">            return;</span>
         }
-<span class="nc" id="L264">        File t = new File(baseDir + &quot;/bin&quot;);</span>
-<span class="nc bnc" id="L265" title="All 2 branches missed.">        if (t.exists()) {</span>
-<span class="nc" id="L266">            baseDir = t.getPath();</span>
-<span class="nc bnc" id="L267" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
-<span class="nc" id="L268">            baseDir = baseDir + &quot;/target&quot;;</span>
+<span class="nc" id="L275">        File t = new File(baseDir + &quot;/bin&quot;);</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        if (t.exists()) {</span>
+<span class="nc" id="L277">            baseDir = t.getPath();</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
+<span class="nc" id="L279">            baseDir = baseDir + &quot;/target&quot;;</span>
         }
 
         // no longer need to use file.separator
-<span class="nc" id="L272">        String outFilePath = baseDir + &quot;/&quot; + fileSuffix + &quot;.png&quot;;</span>
+<span class="nc" id="L283">        String outFilePath = baseDir + &quot;/&quot; + fileSuffix + &quot;.png&quot;;</span>
 
-<span class="nc" id="L274">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
+<span class="nc" id="L285">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
 
-<span class="nc" id="L276">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
-<span class="nc" id="L277">    }</span>
+<span class="nc" id="L287">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
+<span class="nc" id="L288">    }</span>
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

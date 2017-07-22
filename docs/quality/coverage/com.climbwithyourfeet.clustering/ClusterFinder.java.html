@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClusterFinder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">ClusterFinder.java</span></div><h1>ClusterFinder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+
+import gnu.trove.set.TLongSet;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Logger;
+
+/**
+ * main class to cluster finder whose logic is based upon distance transform,
+ * density threshold, and a signal to noise argument of ~ 2.5 as a factor.
+ * 
+ * The critical separation can be estimated or provided.
+ * 
+ * If estimated, the default is to find the leading edge of the first peak 
+ * of the maxima of point separations with knowledge that the surface densities 
+ * represent a generalized extreme value curve (due to the nature of the
+ * background points being poisson).
+ * The found peak has a relationship to the background density.
+ * 
+ * The runtime complexity:
+ * TODO: add details
+ * 
+ * @author nichole
+ */
+public class ClusterFinder {
+    
+    /**
+     * pixel indexes
+     */
+    private final TLongSet points;
+    private final int width;
+    private final int height;
+    
+<span class="fc" id="L34">    private BackgroundSeparationHolder sepHolder = null;</span>
+    
+<span class="fc" id="L36">    private List&lt;TLongSet&gt; groups = null;</span>
+
+    private enum STATE {
+        INIT, HAVE_BACKGROUND_SEPARATION, HAVE_GROUPS
+    }
+    
+<span class="fc" id="L42">    private STATE state = null;</span>
+        
+<span class="fc" id="L44">    public static float denseThreshholdFactor = 5f;</span>
+    
+<span class="fc" id="L46">    public static float defaultThreshholdFactor = 2.5f;</span>
+    
+<span class="fc" id="L48">    protected boolean userSetThreshold = false;</span>
+   
+<span class="fc" id="L50">    private float threshholdFactor = defaultThreshholdFactor;</span>
+    
+<span class="fc" id="L52">    private int minimumNumberInCluster = 3;</span>
+    
+<span class="fc" id="L54">    private boolean debug = false;</span>
+
+<span class="fc" id="L56">    private Logger log = Logger.getLogger(this.getClass().getName());</span>
+    
+<span class="fc" id="L58">    private boolean rescaleAxes = true;</span>
+    
+    /**
+     *
+     * @param thePoints
+     * @param width
+     * @param height
+     */
+<span class="fc" id="L66">    public ClusterFinder(TLongSet thePoints, int width, int height) {</span>
+        
+<span class="fc" id="L68">        this.points = thePoints;</span>
+<span class="fc" id="L69">        this.width = width;</span>
+<span class="fc" id="L70">        this.height = height;</span>
+        
+<span class="fc" id="L72">        state = STATE.INIT;</span>
+<span class="fc" id="L73">    }</span>
+    
+    public void setToNotRescaleAxes() {
+<span class="nc" id="L76">        rescaleAxes = false;</span>
+<span class="nc" id="L77">    }</span>
+    
+    /**
+     *
+     */
+    public void setToDebug() {
+<span class="fc" id="L83">        debug = true;</span>
+<span class="fc" id="L84">    }</span>
+   
+    /**
+     *
+     * @param factor
+     */
+    public void setThreshholdFactor(float factor) {
+<span class="fc" id="L91">        this.threshholdFactor = factor;</span>
+<span class="fc" id="L92">        userSetThreshold = true;</span>
+<span class="fc" id="L93">    }</span>
+    
+    /**
+     *
+     * @param n
+     */
+    public void setMinimumNumberInCluster(int n) {
+<span class="nc" id="L100">        this.minimumNumberInCluster = n;</span>
+<span class="nc" id="L101">    }</span>
+
+    /**
+     *
+     */
+    public void calculateBackgroundSeparation() {
+        
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
+<span class="nc" id="L109">            return;</span>
+        }
+        
+<span class="fc" id="L112">        PairwiseSeparations ps = new PairwiseSeparations();</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (debug) {</span>
+<span class="fc" id="L114">            ps.setToDebug();</span>
+        }
+        
+        /*
+        TODO:
+        for background density calculation, 
+        need to look at data size and available memory to learn whether
+        may need to partition the data and process each section, then combine
+        results.
+        */
+            
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (rescaleAxes) {</span>
+                        
+<span class="fc" id="L127">            PairwiseSeparations.ScaledPoints sp = ps.scaleThePoints(</span>
+                points, width, height);
+            
+<span class="fc" id="L130">            System.out.println(&quot;scales=&quot; + sp.xScale + &quot; , &quot; + sp.yScale);</span>
+        
+<span class="fc" id="L132">            sepHolder = ps.extract(sp.pixelIdxs, sp.width, sp.height);</span>
+            
+<span class="fc" id="L134">            sepHolder.setXYScales(sp.xScale, sp.yScale);</span>
+        
+<span class="fc" id="L136">            correctForScales(sepHolder, sp);</span>
+            
+<span class="fc" id="L138">        } else {</span>
+<span class="nc" id="L139">            sepHolder = ps.extract(points, width, height);</span>
+        }
+         
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L143">            throw new IllegalStateException(&quot;Error in algorithm: &quot;</span>
+                + &quot; background separation did not get set&quot;);
+        }
+        
+<span class="fc" id="L147">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="fc" id="L148">    }</span>
+    
+    /**
+     * set the pairwise distances for x and y that characterize the background
+     * pairwise distances instead of calculating them.
+     * The critical distance that is the maximum for association in a cluster
+     * is thresholdFactor times these background separations.
+     * @param xSeparation
+     * @param ySeparation
+     */
+    public void setBackgroundSeparation(int xSeparation, int ySeparation) {
+        
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &gt; -1) {</span>
+<span class="nc" id="L161">            throw new IllegalStateException(&quot;separation is already set&quot;);</span>
+        }
+                
+<span class="nc" id="L164">        this.sepHolder = new BackgroundSeparationHolder();</span>
+        
+<span class="nc" id="L166">        sepHolder.setXYBackgroundSeparations(xSeparation, ySeparation);</span>
+        
+<span class="nc" id="L168">        int separation = (int)Math.round(Math.sqrt(xSeparation * xSeparation </span>
+            + ySeparation * ySeparation));
+        
+<span class="nc" id="L171">        sepHolder.setThePDF(</span>
+            new float[]{100, 100, 0},
+            new float[]{0, separation, separation + 1}
+        );
+        
+<span class="nc" id="L176">        this.state = STATE.HAVE_BACKGROUND_SEPARATION;</span>
+<span class="nc" id="L177">    }</span>
+    
+    /**
+     *
+     */
+    public void findClusters() {
+        
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        if (state.compareTo(STATE.HAVE_BACKGROUND_SEPARATION) &lt; 0) {</span>
+<span class="nc" id="L185">            calculateBackgroundSeparation();</span>
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        } else if (state.compareTo(STATE.HAVE_GROUPS) &gt;= 0) {</span>
+<span class="nc" id="L187">            return;</span>
+        }
+        
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L191">            throw new IllegalStateException(&quot;background separation must be &quot;</span>
+                + &quot; calculated first&quot;);
+        }
+    
+<span class="fc" id="L195">        System.out.println(&quot;findGroups: &quot; + </span>
+<span class="fc" id="L196">            &quot; bckGndSep=&quot; + Arrays.toString(sepHolder.bckGndSep) + </span>
+            &quot; thresholdFactor=&quot; + threshholdFactor);
+        
+<span class="fc" id="L199">        GroupFinder groupFinder = new GroupFinder(width, height);</span>
+        
+<span class="fc" id="L201">        groupFinder.setThreshholdFactor(threshholdFactor);</span>
+        
+<span class="fc" id="L203">        groupFinder.setMinimumNumberInCluster(minimumNumberInCluster);</span>
+        
+<span class="fc" id="L205">        groups = groupFinder.calculateGroupsUsingSepartion(</span>
+<span class="fc" id="L206">            sepHolder.getXBackgroundSeparation(), </span>
+<span class="fc" id="L207">            sepHolder.getYBackgroundSeparation(), points);        </span>
+<span class="fc" id="L208">    }</span>
+    
+    /**
+     * applies the scale factors in sp to the fields sepHolder.bckGndSep
+     * to put sepHolder.bckGndSep into the original axes reference frame.
+     * 
+     * @param sepHolder
+     * @param sp 
+     */
+    private void correctForScales(BackgroundSeparationHolder sepHolder, 
+        PairwiseSeparations.ScaledPoints sp) {
+        
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">        if (sepHolder.bckGndSep == null) {</span>
+<span class="nc" id="L221">            throw new IllegalStateException(&quot;sepHolder.bckGndSep cannot be null&quot;);</span>
+        }
+        
+<span class="fc" id="L224">        sepHolder.bckGndSep[0] *= sp.xScale;</span>
+<span class="fc" id="L225">        sepHolder.bckGndSep[1] *= sp.yScale;</span>
+<span class="fc" id="L226">    }</span>
+    
+    /**
+     *
+     * @return
+     */
+    public int getNumberOfClusters() {
+        
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L235">            return 0;</span>
+        }
+        
+<span class="fc" id="L238">        return groups.size();</span>
+    }
+    
+    /**
+     *
+     * @param idx
+     * @return
+     */
+    public TLongSet getCluster(int idx) {
+        
+<span class="nc bnc" id="L248" title="All 2 branches missed.">        if (groups == null) {</span>
+<span class="nc" id="L249">            throw new IllegalArgumentException(</span>
+                &quot;findClusters was not successfully invoked&quot;);
+        }
+        
+<span class="nc bnc" id="L253" title="All 4 branches missed.">        if ((idx &lt; 0) || (idx &gt; (groups.size() - 1))) {</span>
+<span class="nc" id="L254">            throw new IllegalArgumentException(&quot;idx is out of bounds&quot;);</span>
+        }
+        
+<span class="nc" id="L257">        return groups.get(idx);</span>
+    }
+    
+    public List&lt;TLongSet&gt; getGroups() {
+<span class="fc" id="L261">        return groups;</span>
+    }
+    
+    /**
+     *
+     * @return
+     */
+    public BackgroundSeparationHolder getBackgroundSeparationHolder() {
+<span class="fc" id="L269">        return sepHolder;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

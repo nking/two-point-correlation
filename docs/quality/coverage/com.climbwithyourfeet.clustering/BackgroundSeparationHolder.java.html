@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BackgroundSeparationHolder.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">BackgroundSeparationHolder.java</span></div><h1>BackgroundSeparationHolder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BackgroundSeparationHolder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">BackgroundSeparationHolder.java</span></div><h1>BackgroundSeparationHolder.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
 
 import java.util.Arrays;
 
@@ -16,14 +16,14 @@ import java.util.Arrays;
     
         those variables are:
     
-        float[] threeS;
-        float[] threeSCounts;
-        float[] threeSErrors;
+        float[] dists;
+        float[] counts;
+        float[] errs;
     
     (2) the original axes data are:
         
-        int xScale is the amount to divide the x axis by to get the scaled axis.
-        int yScale is similar, but for y axis.
+        int[] scales is the x and y scales to divide the original axes by to
+            result in smaller scaled axes.
     
         float[] bckGndSep is the x separation and y separation in the
            original reference frame. they are used to define the
@@ -32,11 +32,8 @@ import java.util.Arrays;
     
     /*
     &lt;pre&gt;
-    creating a PDF with x axis being point pairwise separation and 
-    the function being 3 non-uniform regions as inclined lines:
-       (1) x-axis: 0 to c.s.
-       (2) x-axis: c.s. to first x with count of 0 (or effectively zero)
-       (3) x-axis: first x w/ zero count to last x
+    creating a PDF with x axis being point pairwise separation and y axis being
+    normalized counts of those separations.
     
             |                   
      counts *                   |
@@ -58,90 +55,64 @@ import java.util.Arrays;
      * They are each &quot;1&quot; by default.
      * The first dimension is for the x axis and the 2nd is for the y axis.
      */
-<span class="fc" id="L61">    protected int[] scales = new int[]{1, 1};</span>
+<span class="fc" id="L58">    protected int[] scales = new int[]{1, 1};</span>
     
     /**
       The x separation and y separation in the original reference frame that 
       are used to define the critical separation for association of 2 points
-   
-     &lt;pre&gt;
-     it's relationship to this.threeS[1] is:
-         xd = (bckGndSep[0]/scales[0])
-         xd *= xd;
-         yd = (bckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     &lt;/pre&gt;
     */
-<span class="fc" id="L77">    protected float[] bckGndSep = null;</span>
+<span class="fc" id="L64">    protected float[] bckGndSep = null;</span>
    
     /**
-     * These are the 3 discrete points of the x-points of the PDF between which
-     * continuous lines are interpreted.
-     * 
-     * The three points are:
-     * threeS[0] is 0;
-     * threeS[1] is the representative background separation point. 
-     *    The threshold factor should be multiplied by it upon use.
-     * threeS[2] is a separation value larger than threeS[1] and is the
-     * last with a count or density above approximately 0.  The threshold factor
-     * should be multiplied by it upon use.
+     * the x axis of the PDF
      */
-    protected float[] threeS;
+    protected float[] dists;
     
     /**
-     * These are the normalized counts of the 3 discrete points in threeS.
-     * They are the y-points of the PDF between which continuous lines are 
-     * interpreted.
+     * These are the normalized counts of the dists
      */
-    protected float[] threeSCounts;
+    protected float[] counts;
     
     /**
      * the errors for the points in (threeSs, threeSCounts)
      */
-    protected float[] threeSErrors;
+    protected float[] errs;
       
-    public void setTheThreeSeparations(float[] s) {
-<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (s.length != 3) {</span>
-<span class="nc" id="L107">            throw new IllegalArgumentException(</span>
-                &quot; the length should be 3.  see variable documentation&quot;);
+    public void setThePDF(float[] v, float[] c) {
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        if (v.length != c.length) {</span>
+<span class="nc" id="L83">            throw new IllegalArgumentException(&quot; the arrays must be same length&quot;);</span>
         }
-<span class="fc" id="L110">        threeS = Arrays.copyOf(s, s.length);</span>
-<span class="fc" id="L111">    }</span>
+<span class="fc" id="L85">        dists = Arrays.copyOf(v, v.length);</span>
+<span class="fc" id="L86">        counts = Arrays.copyOf(c, c.length);</span>
+<span class="fc" id="L87">        setAndNormalizeCounts(counts);</span>
+<span class="fc" id="L88">    }</span>
     
     public void setXYScales(int xScale, int yScale) {
-<span class="fc" id="L114">        this.scales[0] = xScale;</span>
-<span class="fc" id="L115">        this.scales[1] = yScale;</span>
-<span class="fc" id="L116">    }</span>
+<span class="fc" id="L91">        this.scales[0] = xScale;</span>
+<span class="fc" id="L92">        this.scales[1] = yScale;</span>
+<span class="fc" id="L93">    }</span>
     
     public void setXYBackgroundSeparations(int xSep, int ySep) {
-<span class="pc bpc" id="L119" title="1 of 2 branches missed.">        if (bckGndSep == null) {</span>
-<span class="fc" id="L120">            bckGndSep = new float[2];</span>
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">        if (bckGndSep == null) {</span>
+<span class="fc" id="L97">            bckGndSep = new float[2];</span>
         }
-<span class="fc" id="L122">        bckGndSep[0] = xSep;</span>
-<span class="fc" id="L123">        bckGndSep[1] = ySep;</span>
-<span class="fc" id="L124">    }</span>
+<span class="fc" id="L99">        bckGndSep[0] = xSep;</span>
+<span class="fc" id="L100">        bckGndSep[1] = ySep;</span>
+<span class="fc" id="L101">    }</span>
         
     /**
      * this is in the original x axis reference frame and represents a 
      * pairwise distance representative of background, that is non-clustered,
      * point spacing.
      * 
-     * &lt;pre&gt;
-     * it's relationship to this.threeS[1] is:
-         xd = (xBackgroundSeparation/scales[0])
-         xd *= xd;
-         yd = (ybckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     * &lt;/pre&gt;
+       &lt;pre&gt;
+        bckGndSep[0]/scales[0] puts the field into the reference frame of the PDF
+       &lt;/pre&gt;
      * 
      * @return 
      */
     public float getXBackgroundSeparation() {
-<span class="fc" id="L144">        return bckGndSep[0];</span>
+<span class="fc" id="L115">        return bckGndSep[0];</span>
     }
     
     /**
@@ -149,20 +120,10 @@ import java.util.Arrays;
      * pairwise distance representative of background, that is non-clustered,
      * point spacing.
      * 
-     * &lt;pre&gt;
-     * it's relationship to this.threeS[1] is:
-         xd = (xBackgroundSeparation/scales[0])
-         xd *= xd;
-         yd = (ybckGndSep[1]/scales[1])
-         yd *= yd;
-         
-         this.threeS[1] should == sqrt(xd + yd)
-     * &lt;/pre&gt;
-     * 
      * @return 
      */
     public float getYBackgroundSeparation() {
-<span class="fc" id="L165">        return bckGndSep[1];</span>
+<span class="fc" id="L126">        return bckGndSep[1];</span>
     }
     
     /**
@@ -170,126 +131,23 @@ import java.util.Arrays;
      * of calculating the errors too.
      * @param counts 
      */
-    public void setAndNormalizeCounts(float[] counts) {
+    protected void setAndNormalizeCounts(float[] counts) {
     
-<span class="pc bpc" id="L175" title="1 of 2 branches missed.">        if (counts.length != 3) {</span>
-<span class="nc" id="L176">            throw new IllegalArgumentException(</span>
-                &quot; the length of counts should be 3.  see variable documentation&quot;);
+<span class="fc" id="L136">        errs = new float[counts.length];</span>
+        
+<span class="fc" id="L138">        double totalC  = 0;</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        for (int i = 0; i &lt; counts.length; i++) {</span>
+<span class="fc" id="L140">            totalC += counts[i];</span>
+            
+            // assuming sqrt of n errors
+<span class="fc" id="L143">            errs[i] = (float)Math.sqrt(counts[i]);</span>
         }
-        
-        //using area normalization
-<span class="fc" id="L181">        double area  = 0;</span>
-<span class="fc bfc" id="L182" title="All 2 branches covered.">        for (int i = 0; i &lt; counts.length - 1; i++) {</span>
-<span class="fc" id="L183">            float yTerm = counts[i + 1] + counts[i];</span>
-<span class="fc" id="L184">            float xLen = threeS[i + 1] - threeS[i];</span>
-<span class="pc bpc" id="L185" title="1 of 2 branches missed.">            if (xLen &lt; 0) {</span>
-<span class="nc" id="L186">                xLen *= -1;</span>
-            }
-<span class="fc" id="L188">            area += (yTerm * xLen);</span>
+<span class="fc" id="L145">        float f = 1.f;</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        for (int i = 0; i &lt; counts.length; i++) {</span>
+<span class="fc" id="L147">            counts[i] /= totalC;</span>
+<span class="fc" id="L148">            errs[i] /= totalC;</span>
         }
-<span class="fc" id="L190">        area *= 0.5;</span>
-<span class="fc" id="L191">        double area1 = 0.5 * ((threeS[2] - threeS[1]) * counts[1]);</span>
-<span class="fc" id="L192">        double area0 = area - area1;</span>
-        
-<span class="fc" id="L194">        double area0Norm = area0/area;</span>
-<span class="fc" id="L195">        double area1Norm = area1/area;</span>
-        
-        /*
-        cn0
-               cn1
-                   cn2
-        0      v1  v2  
-        
-        where cn2 is approx 0
-                
-        (v2-v1)*cn1*0.5 = area1Norm
-        cn1 = area1Norm / ((v2-v1)*0.5)
-        
-        v1*cn1 + (cn0-cn1)*v1*0.5 = area0Norm
-        (cn0-cn1) = (area0Norm - v1*cn1)/(v1*0.5)
-        cn0 = cn1 + (area0Norm - v1*cn1)/(v1*0.5)
-        */
-        
-<span class="fc" id="L213">        threeSCounts = new float[3];</span>
-        
-<span class="pc bpc" id="L215" title="1 of 4 branches missed.">        if (threeS[2] == threeS[1] &amp;&amp; threeS[1] == threeS[0]) {</span>
-            //TODO: revisit this
-<span class="nc" id="L217">            threeSCounts[0] = 0.333f;</span>
-<span class="nc" id="L218">            threeSCounts[1] = 0.333f;</span>
-<span class="nc" id="L219">            threeSCounts[2] = 0.333f;</span>
-<span class="fc bfc" id="L220" title="All 2 branches covered.">        } else if (threeS[2] == threeS[1]) {</span>
-          
-            /*
-            cn0
-                   cn1
-                     
-            0      v1
-            */
-<span class="fc" id="L228">            double areaR = threeS[1] * counts[1];</span>
-<span class="fc" id="L229">            double areaT = 0.5f * threeS[1] * Math.abs(counts[0] - counts[1]);</span>
-            // areaR_Norm/area = areaR/(areaR + areaT)
-<span class="fc" id="L231">            double areaR_Norm = area * areaR/(areaR + areaT);</span>
-            // v1*cn1 = areaR_Norm
-            // cn1 = areaR_Norm/v1
-<span class="fc" id="L234">            threeSCounts[1] = (float)areaR_Norm/threeS[1];</span>
-            
-<span class="fc" id="L236">            double areaT_Norm = area * areaR/(areaR + areaT);</span>
-<span class="pc bpc" id="L237" title="1 of 2 branches missed.">            if (counts[0] &gt; counts[1]) {</span>
-                //(cn0-cn1)*v1 = areaT_Norm
-<span class="nc" id="L239">                threeSCounts[0] = threeSCounts[1] + (float)(areaT_Norm/threeS[1]);</span>
-            } else {
-                //(cn1-cn0)*v1 = areaT_Norm
-                // (cn1-cn0) = areaT_Norm/v1
-                // cn0 = cn1 - (areaT_Norm/v1)
-<span class="fc" id="L244">                threeSCounts[0] = threeSCounts[1] - (float)(areaT_Norm/threeS[1]);</span>
-            }
-            
-            // 2 and 1 share same value
-<span class="fc" id="L248">            threeSCounts[1] /= 2.f;</span>
-<span class="fc" id="L249">            threeSCounts[2] = threeSCounts[1];</span>
-            
-<span class="pc bpc" id="L251" title="1 of 2 branches missed.">        } else if (threeS[1] == threeS[0]) {</span>
-            /*
-            cn0
-                  
-                   cn2
-            0      v2
-            
-            where cn2 is approx 0
-            
-            v2 * cn0 = area
-            */
-<span class="nc" id="L262">            threeSCounts[0] = (float)(area)/threeS[2];</span>
-            
-            // 1 and 0 share same value
-<span class="nc" id="L265">            threeSCounts[0] /= 2.f;</span>
-<span class="nc" id="L266">            threeSCounts[1] = threeSCounts[0];</span>
-            
-        } else {
-<span class="fc" id="L269">            threeSCounts[1] = (float)(area1Norm / ((threeS[2] - threeS[1])*0.5));</span>
-<span class="fc" id="L270">            threeSCounts[0] = threeSCounts[1] + </span>
-                (float)((area0Norm - threeS[1]*threeSCounts[1])/(threeS[1] * 0.5));
-        }
-        
-        /*
-        for errors, will approximate them as sqrt(counts):
-          v = counts
-          e = sqrt(counts)
-          vn = normalized counts
-          r = vn/counts
-          en = r * e
-        */
-<span class="fc" id="L282">        threeSErrors = new float[3];</span>
-<span class="fc bfc" id="L283" title="All 2 branches covered.">        for (int i = 0; i &lt; 3; ++i) {</span>
-<span class="fc bfc" id="L284" title="All 2 branches covered.">            if (counts[i] == 0) {</span>
-<span class="fc" id="L285">                threeSErrors[i] = Float.POSITIVE_INFINITY;</span>
-<span class="fc" id="L286">                continue;</span>
-            }
-<span class="fc" id="L288">            float e = (float)Math.sqrt(counts[i]);</span>
-<span class="fc" id="L289">            float r = threeSCounts[i]/counts[i];</span>
-<span class="fc" id="L290">            threeSErrors[i] = r * e;</span>
-        }
-<span class="fc" id="L292">    }</span>
+<span class="fc" id="L150">    }</span>
     
     /**
      * given x and y separations of a pixel (presumably from its nearest 
@@ -304,24 +162,24 @@ import java.util.Arrays;
      */
     public float calcProbability(int xSeparation, int ySeparation) {
         
-<span class="nc" id="L307">        int xSep0 = xSeparation/scales[0];</span>
-<span class="nc" id="L308">        int ySep0 = ySeparation/scales[1];</span>
+<span class="nc" id="L165">        int xSep0 = xSeparation/scales[0];</span>
+<span class="nc" id="L166">        int ySep0 = ySeparation/scales[1];</span>
         
-<span class="nc" id="L310">        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);</span>
+<span class="nc" id="L168">        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);</span>
         
-<span class="nc" id="L312">        return calcProbability(sep0);</span>
+<span class="nc" id="L170">        return calcProbability(sep0);</span>
     }
     
     protected void calcProbabilityAndError(int xSeparation, int ySeparation,
         float[] output) {
         
-<span class="nc" id="L318">        int xSep0 = xSeparation/scales[0];</span>
-<span class="nc" id="L319">        int ySep0 = ySeparation/scales[1];</span>
+<span class="nc" id="L176">        int xSep0 = xSeparation/scales[0];</span>
+<span class="nc" id="L177">        int ySep0 = ySeparation/scales[1];</span>
         
-<span class="nc" id="L321">        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);</span>
+<span class="nc" id="L179">        int sep0 = Math.round(xSep0*xSep0 + ySep0*ySep0);</span>
         
-<span class="nc" id="L323">        calcProbabilityAndError(sep0, output);</span>
-<span class="nc" id="L324">    }</span>
+<span class="nc" id="L181">        calcProbabilityAndError(sep0, output);</span>
+<span class="nc" id="L182">    }</span>
     
     /**
      * infer the probability of the given separation.
@@ -332,26 +190,18 @@ import java.util.Arrays;
      */
     private float calcProbability(int separation) {
         
-        int idx0, idx1;
+<span class="nc" id="L193">        int idx1 = Arrays.binarySearch(dists, dists.length);</span>
         
-<span class="nc bnc" id="L337" title="All 4 branches missed.">        if (threeS[0] == threeS[1] &amp;&amp; threeS[0] == threeS[2]) {</span>
-<span class="nc" id="L338">            return threeSCounts[1];</span>
-<span class="nc bnc" id="L339" title="All 2 branches missed.">        } else if (threeS[0] == threeS[1]) {</span>
-<span class="nc" id="L340">            idx0 = 1;</span>
-<span class="nc" id="L341">            idx1 = 2;</span>
-<span class="nc bnc" id="L342" title="All 2 branches missed.">        } else if (threeS[1] == threeS[2]) {</span>
-<span class="nc" id="L343">            idx0 = 0;</span>
-<span class="nc" id="L344">            idx1 = 1;</span>
-        } else {        
-<span class="nc bnc" id="L346" title="All 2 branches missed.">            if (separation &gt; threeS[2]) {</span>
-<span class="nc" id="L347">                return 0;</span>
-<span class="nc bnc" id="L348" title="All 2 branches missed.">            } else if (separation &lt; threeS[1]) {</span>
-<span class="nc" id="L349">                idx0 = 0;</span>
-<span class="nc" id="L350">                idx1 = 1;</span>
-            } else {
-<span class="nc" id="L352">                idx0 = 1;</span>
-<span class="nc" id="L353">                idx1 = 2;</span>
-            }
+<span class="nc bnc" id="L195" title="All 2 branches missed.">        if (idx1 &gt;= 0) {</span>
+<span class="nc" id="L196">            return counts[idx1];</span>
+        }
+        
+        //(-(insertion point) - 1)
+<span class="nc" id="L200">        idx1 *= -1;</span>
+<span class="nc" id="L201">        idx1--;</span>
+<span class="nc" id="L202">        int idx0 = idx1 - 1;</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">        if (idx0 &lt; 0) {</span>
+<span class="nc" id="L204">            return counts[0];</span>
         }
         
         /*
@@ -364,31 +214,30 @@ import java.util.Arrays;
         p(x) = p(idx1) + r * (sd(x) - sd(idx1))
         */
         
-<span class="nc" id="L367">        float r = calcCtoSD(idx0, idx1);</span>
+<span class="nc" id="L217">        float r = calcCtoSD(idx0, idx1);</span>
         
-<span class="nc" id="L369">        float p = threeSCounts[idx1] + r * (separation - threeS[idx1]);</span>
+<span class="nc" id="L219">        float p = counts[idx1] + r * (separation - dists[idx1]);</span>
         
-<span class="nc" id="L371">        return p;</span>
+<span class="nc" id="L221">        return p;</span>
     }
     
     private float calcCtoSD(int idx0, int idx1) {
         
         //r = (p(idx0) - p(idx1))/(sd(idx0) - sd(idx1))
         
-<span class="fc" id="L378">        float r = (threeSCounts[idx0] - threeSCounts[idx1])/</span>
-            (threeS[idx0] - threeS[idx1]);
+<span class="fc" id="L228">        float r = (counts[idx0] - counts[idx1])/</span>
+            (dists[idx0] - dists[idx1]);
         
-<span class="fc" id="L381">        return r;</span>
+<span class="fc" id="L231">        return r;</span>
     }
     
     private float calcEtoSD(int idx0, int idx1) {
         
         //r = (pE(idx0) - pE(idx1))/(sd(idx0) - sd(idx1))
         
-<span class="fc" id="L388">        float r = (threeSErrors[idx0] - threeSErrors[idx1])/</span>
-            (threeS[idx0] - threeS[idx1]);
+<span class="fc" id="L238">        float r = (errs[idx0] - errs[idx1])/(dists[idx0] - dists[idx1]);</span>
         
-<span class="fc" id="L391">        return r;</span>
+<span class="fc" id="L240">        return r;</span>
     }
 
     /**
@@ -400,29 +249,22 @@ import java.util.Arrays;
      */    
     protected void calcProbabilityAndError(int separation, float[] output) {
                 
-        int idx0, idx1;
+<span class="fc" id="L252">        int idx1 = Arrays.binarySearch(dists, dists.length);</span>
         
-<span class="pc bpc" id="L405" title="3 of 4 branches missed.">        if (threeS[0] == threeS[1] &amp;&amp; threeS[0] == threeS[2]) {</span>
-<span class="nc" id="L406">            output[0] = threeSCounts[1];</span>
-<span class="nc" id="L407">            output[1] = threeSErrors[1];</span>
-<span class="nc" id="L408">            return;</span>
-<span class="pc bpc" id="L409" title="1 of 2 branches missed.">        } else if (threeS[0] == threeS[1]) {</span>
-<span class="nc" id="L410">            idx0 = 1;</span>
-<span class="nc" id="L411">            idx1 = 2;</span>
-<span class="fc bfc" id="L412" title="All 2 branches covered.">        } else if (threeS[1] == threeS[2]) {</span>
-<span class="fc" id="L413">            idx0 = 0;</span>
-<span class="fc" id="L414">            idx1 = 1;</span>
-        } else {        
-<span class="fc bfc" id="L416" title="All 2 branches covered.">            if (separation &gt; threeS[2]) {</span>
-<span class="fc" id="L417">                Arrays.fill(output, 0);</span>
-<span class="fc" id="L418">                return;</span>
-<span class="fc bfc" id="L419" title="All 2 branches covered.">            } else if (separation &lt; threeS[1]) {</span>
-<span class="fc" id="L420">                idx0 = 0;</span>
-<span class="fc" id="L421">                idx1 = 1;</span>
-            } else {
-<span class="fc" id="L423">                idx0 = 1;</span>
-<span class="fc" id="L424">                idx1 = 2;</span>
-            }
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        if (idx1 &gt;= 0) {</span>
+<span class="fc" id="L255">            output[0] = counts[idx1];</span>
+<span class="fc" id="L256">            output[1] = errs[idx1];</span>
+<span class="fc" id="L257">            return;</span>
+        }
+        
+        //(-(insertion point) - 1)
+<span class="fc" id="L261">        idx1 *= -1;</span>
+<span class="fc" id="L262">        idx1--;</span>
+<span class="fc" id="L263">        int idx0 = idx1 - 1;</span>
+<span class="fc bfc" id="L264" title="All 2 branches covered.">        if (idx0 &lt; 0) {</span>
+<span class="fc" id="L265">            output[0] = counts[0];</span>
+<span class="fc" id="L266">            output[1] = errs[0];</span>
+<span class="fc" id="L267">            return;</span>
         }
                 
         /*
@@ -435,32 +277,32 @@ import java.util.Arrays;
         p(x) = p(idx1) + r * (sd(x) - sd(idx1))
         */
         
-<span class="fc" id="L438">        float sDiff = separation - threeS[idx1];</span>
+<span class="fc" id="L280">        float sDiff = separation - dists[idx1];</span>
                     
-<span class="fc" id="L440">        float r = calcCtoSD(idx0, idx1);</span>
+<span class="fc" id="L282">        float r = calcCtoSD(idx0, idx1);</span>
         
-<span class="fc" id="L442">        float p = threeSCounts[idx1] + r * sDiff;</span>
+<span class="fc" id="L284">        float p = counts[idx1] + r * sDiff;</span>
         
-<span class="fc" id="L444">        float rE = calcEtoSD(idx0, idx1);</span>
+<span class="fc" id="L286">        float rE = calcEtoSD(idx0, idx1);</span>
         
         //using the same slopes for errors.
-<span class="fc" id="L447">        float pErr = threeSErrors[idx1] + rE * sDiff;</span>
+<span class="fc" id="L289">        float pErr = errs[idx1] + rE * sDiff;</span>
     
-<span class="fc" id="L449">        output[0] = p;</span>
-<span class="fc" id="L450">        output[1] = pErr;</span>
-<span class="fc" id="L451">    }</span>
+<span class="fc" id="L291">        output[0] = p;</span>
+<span class="fc" id="L292">        output[1] = pErr;</span>
+<span class="fc" id="L293">    }</span>
     
     float calcError(float prob, float separation, float xerr) {
 
         //sigma^2  =  xError^2*(Y^2)  +  yError^2*(X^2)
         
-<span class="nc" id="L457">        float xerrsq = xerr * xerr;</span>
-<span class="nc" id="L458">        float t1 = xerrsq * (prob * prob);</span>
+<span class="nc" id="L299">        float xerrsq = xerr * xerr;</span>
+<span class="nc" id="L300">        float t1 = xerrsq * (prob * prob);</span>
 
-<span class="nc" id="L460">        float count = prob;</span>
-<span class="nc" id="L461">        float t2 = count * separation * separation;</span>
+<span class="nc" id="L302">        float count = prob;</span>
+<span class="nc" id="L303">        float t2 = count * separation * separation;</span>
 
-<span class="nc" id="L463">        float pErr = (float)Math.sqrt(t1 + t2);</span>
+<span class="nc" id="L305">        float pErr = (float)Math.sqrt(t1 + t2);</span>
 
         /*
         NOTE: if add kernel smoothing,
@@ -480,8 +322,8 @@ import java.util.Arrays;
             + &quot; sqrt(t1)=&quot; + Math.sqrt(t1) +
             &quot; sqrt(t2_=&quot; + Math.sqrt(t2));
         */
-<span class="nc" id="L483">        return pErr;</span>
+<span class="nc" id="L325">        return pErr;</span>
     }
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

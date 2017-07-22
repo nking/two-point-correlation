@@ -1,34 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>StatsHelper.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">StatsHelper.java</span></div><h1>StatsHelper.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatsHelper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">StatsHelper.java</span></div><h1>StatsHelper.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
 
-import algorithms.search.NearestNeighbor2D;
-import algorithms.util.PairInt;
+import algorithms.search.KDTree;
+import algorithms.search.KDTreeNode;
 import algorithms.util.PixelHelper;
-import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntIterator;
-import gnu.trove.map.TIntFloatMap;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.set.TIntSet;
-import java.util.Set;
+import gnu.trove.iterator.TLongIntIterator;
+import gnu.trove.iterator.TLongIterator;
+import gnu.trove.map.TLongFloatMap;
+import gnu.trove.map.TLongIntMap;
+import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.set.TLongSet;
 
 /**
  *
  * @author nichole
  */
-<span class="fc" id="L18">public class StatsHelper {</span>
+<span class="fc" id="L17">public class StatsHelper {</span>
     
     public void calculateProbabilities(BackgroundSeparationHolder dh, 
-        TIntSet pixIdxs, 
+        TLongSet pixIdxs, 
         int width, int height,
-        TIntFloatMap outputPointProbMap,
-        TIntFloatMap outputPointProbErrMap) {
+        TLongFloatMap outputPointProbMap,
+        TLongFloatMap outputPointProbErrMap) {
         
-<span class="fc" id="L26">        TIntIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height,</span>
+<span class="fc" id="L25">        TLongIntMap pixSep = calculatePixelSeparations(pixIdxs, width, height,</span>
             dh.scales);
                             
-<span class="fc" id="L29">        setProbabilities(dh, pixSep, outputPointProbMap, </span>
+<span class="fc" id="L28">        setProbabilities(dh, pixSep, outputPointProbMap, </span>
             outputPointProbErrMap);        
-<span class="fc" id="L31">    }</span>
+<span class="fc" id="L30">    }</span>
 
     /**
      * given pixel indexes, scale factors for the PDF in dh, and the data widht
@@ -41,64 +40,62 @@ import java.util.Set;
      * @param scales
      * @return 
      */
-    private TIntIntMap calculatePixelSeparations(TIntSet pixIdxs, 
+    private TLongIntMap calculatePixelSeparations(TLongSet pixIdxs, 
         int width, int height, int[] scales) {
         
-<span class="fc" id="L47">        NearestNeighbor2D nn = new NearestNeighbor2D(pixIdxs, width, height);</span>
-        
-<span class="fc" id="L49">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L50">        int[] xy = new int[2];</span>
+<span class="fc" id="L46">        KDTree nn = new KDTree(pixIdxs, width, height);</span>
+               
+<span class="fc" id="L48">        PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L49">        int[] xy = new int[2];</span>
         
         // key = pixIdx, value = separation
-<span class="fc" id="L53">        TIntIntMap dMap = new TIntIntHashMap();</span>
+<span class="fc" id="L52">        TLongIntMap dMap = new TLongIntHashMap();</span>
         
-<span class="fc" id="L55">        TIntIterator iter = pixIdxs.iterator();</span>
-<span class="fc bfc" id="L56" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L54">        TLongIterator iter = pixIdxs.iterator();</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
         
-<span class="fc" id="L58">            int pixIdx = iter.next();</span>
+<span class="fc" id="L57">            long pixIdx = iter.next();</span>
         
-<span class="fc" id="L60">            ph.toPixelCoords(pixIdx, width, xy);</span>
+<span class="fc" id="L59">            ph.toPixelCoords(pixIdx, width, xy);</span>
             
-<span class="fc" id="L62">            Set&lt;PairInt&gt; nearest = nn.findClosestNotEqual(xy[0], xy[1]);</span>
+<span class="fc" id="L61">            KDTreeNode nearest = nn.findNearestNeighborNotEquals(xy[0], xy[1]);</span>
             
-<span class="pc bpc" id="L64" title="2 of 4 branches missed.">            if (nearest != null &amp;&amp; nearest.size() &gt; 0) {</span>
+<span class="pc bpc" id="L63" title="2 of 4 branches missed.">            if (nearest != null &amp;&amp; nearest.getX() != KDTreeNode.sentinel) {</span>
+                                
+<span class="fc" id="L65">                float dx = nearest.getX() - xy[0];</span>
+<span class="fc" id="L66">                dx /= (float)scales[0];</span>
+<span class="fc" id="L67">                float dy = nearest.getY() - xy[1];</span>
+<span class="fc" id="L68">                dy /= (float)scales[1];</span>
                 
-<span class="fc" id="L66">                PairInt p1 = nearest.iterator().next();</span>
-                
-<span class="fc" id="L68">                float dx = p1.getX() - xy[0];</span>
-<span class="fc" id="L69">                dx /= (float)scales[0];</span>
-<span class="fc" id="L70">                float dy = p1.getY() - xy[1];</span>
-<span class="fc" id="L71">                dy /= (float)scales[1];</span>
-                
-<span class="fc" id="L73">                int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));</span>
+<span class="fc" id="L70">                int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));</span>
                                             
-<span class="fc" id="L75">                dMap.put(pixIdx, d);</span>
+<span class="fc" id="L72">                dMap.put(pixIdx, d);</span>
             }
-<span class="fc" id="L77">        }</span>
+<span class="fc" id="L74">        }</span>
         
-<span class="fc" id="L79">        return dMap; </span>
-    } 
+<span class="fc" id="L76">        return dMap; </span>
+    }
 
     private void setProbabilities(BackgroundSeparationHolder dh, 
-        TIntIntMap pixSep, TIntFloatMap outputPointProbMap, 
-        TIntFloatMap outputPointProbErrMap) {
+        TLongIntMap pixSep, TLongFloatMap outputPointProbMap, 
+        TLongFloatMap outputPointProbErrMap) {
 
-<span class="fc" id="L86">        float[] pp = new float[2];</span>
+<span class="fc" id="L83">        float[] pp = new float[2];</span>
         
-<span class="fc" id="L88">        TIntIntIterator iter = pixSep.iterator();</span>
-<span class="fc bfc" id="L89" title="All 2 branches covered.">        for (int i = 0; i &lt; pixSep.size(); ++i) {</span>
-<span class="fc" id="L90">            iter.advance();</span>
+<span class="fc" id="L85">        TLongIntIterator iter = pixSep.iterator();</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        for (int i = 0; i &lt; pixSep.size(); ++i) {</span>
+<span class="fc" id="L87">            iter.advance();</span>
             
-<span class="fc" id="L92">            int pixIdx = iter.key();</span>
-<span class="fc" id="L93">            int d = iter.value();</span>
+<span class="fc" id="L89">            long pixIdx = iter.key();</span>
+<span class="fc" id="L90">            int d = iter.value();</span>
             
-<span class="fc" id="L95">            dh.calcProbabilityAndError(d, pp);</span>
+<span class="fc" id="L92">            dh.calcProbabilityAndError(d, pp);</span>
             
-<span class="fc" id="L97">            outputPointProbMap.put(pixIdx, pp[0]);</span>
+<span class="fc" id="L94">            outputPointProbMap.put(pixIdx, pp[0]);</span>
             
-<span class="fc" id="L99">            outputPointProbErrMap.put(pixIdx, pp[1]);</span>
+<span class="fc" id="L96">            outputPointProbErrMap.put(pixIdx, pp[1]);</span>
         }
-<span class="fc" id="L101">    }</span>
+<span class="fc" id="L98">    }</span>
     
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

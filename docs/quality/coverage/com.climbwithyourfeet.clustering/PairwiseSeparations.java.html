@@ -1,696 +1,896 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>PairwiseSeparations.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">PairwiseSeparations.java</span></div><h1>PairwiseSeparations.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PairwiseSeparations.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Jacoco Report</a> &gt; <a href="index.source.html" class="el_package">com.climbwithyourfeet.clustering</a> &gt; <span class="el_source">PairwiseSeparations.java</span></div><h1>PairwiseSeparations.java</h1><pre class="source lang-java linenums">package com.climbwithyourfeet.clustering;
 
-import algorithms.connected.ConnectedValuesGroupFinder;
 import algorithms.misc.MinMaxPeakFinder;
+import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
 import algorithms.misc.MiscSorter;
+import algorithms.search.KDTree;
+import algorithms.search.KNearestNeighbors;
+import algorithms.search.NearestNeighbor2DLong;
 import algorithms.signalProcessing.Interp;
 import algorithms.signalProcessing.MedianTransform1D;
+import algorithms.util.ObjectSpaceEstimator;
 import algorithms.util.OneDFloatArray;
+import algorithms.util.PairFloat;
 import algorithms.util.PixelHelper;
 import algorithms.util.PolygonAndPointPlotter;
 import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntIterator;
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
-import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
-import java.io.File;
+import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.TLongHashSet;
 import java.io.IOException;
-import java.net.URL;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
 
 /**
  *
  * @author nichole
  */
-<span class="pc bpc" id="L40" title="1 of 2 branches missed.">public class PairwiseSeparations {</span>
-    
-<span class="fc" id="L42">    private boolean debug = false;</span>
-    
-<span class="fc" id="L44">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
-    
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">public class PairwiseSeparations {</span>
+
+<span class="fc" id="L43">    private boolean debug = false;</span>
+
+<span class="fc" id="L45">    private final Logger log = Logger.getLogger(this.getClass().getName());</span>
+
+<span class="fc" id="L47">    protected double eps = 1.e-17;</span>
+
     public void setToDebug() {
-<span class="fc" id="L47">        debug = true;</span>
-<span class="fc" id="L48">    }</span>
+<span class="fc" id="L50">        debug = true;</span>
+<span class="fc" id="L51">    }</span>
+
+    private int weightedPeak(OneDFloatArray values, OneDFloatArray counts,
+        float maxV) {
+
+<span class="nc" id="L56">        double total = 0;</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        for (int i = 0; i &lt; counts.a.length; ++i) {</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (values.a[i] &gt; maxV) {</span>
+<span class="nc" id="L59">                break;</span>
+            }
+<span class="nc" id="L61">            total += counts.a[i]*counts.a[i];</span>
+        }
+
+<span class="nc" id="L64">        double avg = 0;</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        for (int i = 0; i &lt; counts.a.length; ++i) {</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (values.a[i] &gt; maxV) {</span>
+<span class="nc" id="L67">                break;</span>
+            }
+<span class="nc" id="L69">            avg += (counts.a[i]*counts.a[i]/total) * values.a[i];</span>
+        }
+
+<span class="nc" id="L72">        int idx = Arrays.binarySearch(values.a, (int)Math.round(avg));</span>
+
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (idx &lt; 0) {</span>
+<span class="nc" id="L75">            idx *= -1;</span>
+<span class="nc" id="L76">            idx--;</span>
+        }
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (idx &gt;= values.a.length) {</span>
+<span class="nc" id="L79">            idx = values.a.length - 1;</span>
+        }
+
+<span class="nc" id="L82">        return idx;</span>
+    }
+
+    private boolean isMonotonicallyDecreasing(float[] v, float[] c, float maxV) {
+<span class="fc" id="L86">        int prev = Math.round(c[0]);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        for (int i = 1; i &lt; c.length; ++i) {</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">            if (v[i] &gt; (0.9*maxV)) {</span>
+<span class="fc" id="L89">                break;</span>
+            }
+<span class="fc" id="L91">            int ci = Math.round(c[i]);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">            if (ci &gt; prev) {</span>
+<span class="fc" id="L93">                return false;</span>
+            }
+<span class="fc" id="L95">            prev = ci;</span>
+        }
+<span class="fc" id="L97">        return true;</span>
+    }
+
+    private int[] indexesWithinFractionOfPeak(OneDFloatArray c,
+            int peakIdx, float fractionOfPeak) {
+<span class="nc" id="L102">        float hp = fractionOfPeak*c.a[peakIdx];</span>
+<span class="nc" id="L103">        int[] idxs = new int[]{peakIdx, peakIdx};</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        for (int i = peakIdx - 1; i &gt;= peakIdx; --i) {</span>
+<span class="nc" id="L105">            float ci = c.a[i];</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if (ci &lt;= hp) {</span>
+<span class="nc" id="L107">                break;</span>
+            }
+<span class="nc" id="L109">            idxs[0] = i;</span>
+        }
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        for (int i = peakIdx + 1; i &lt; c.a.length; ++i) {</span>
+<span class="nc" id="L112">            float ci = c.a[i];</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (ci &lt;= hp) {</span>
+<span class="nc" id="L114">                break;</span>
+            }
+<span class="nc" id="L116">            idxs[1] = i;</span>
+        }
+<span class="nc" id="L118">        return idxs;</span>
+    }
+
+    private int weightedPeakAround(OneDFloatArray v, OneDFloatArray c,
+        int peakIdx, float fracOfPeak) {
+
+<span class="nc" id="L124">        int[] idxs = indexesWithinFractionOfPeak(c, peakIdx, fracOfPeak);</span>
+
+        // weighted averge between and including indexes
+<span class="nc" id="L127">        double total = 0;</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        for (int i = idxs[0]; i &lt;= idxs[1]; ++i) {</span>
+<span class="nc" id="L129">            total += c.a[i];</span>
+        }
+
+<span class="nc" id="L132">        double avg = 0;</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        for (int i = 0; i &lt; c.a.length; ++i) {</span>
+<span class="nc" id="L134">            avg += (c.a[i]/total) * v.a[i];</span>
+        }
+
+<span class="nc" id="L137">        int idx = Arrays.binarySearch(v.a, (int)Math.round(avg));</span>
+
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        if (idx &lt; 0) {</span>
+<span class="nc" id="L140">            idx *= -1;</span>
+<span class="nc" id="L141">            idx--;</span>
+        }
+        // scan forward to earliest sequential same value
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        for (int i = idx - 1; i &gt; -1; --i) {</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (Math.abs(v.a[i] - avg) &lt; 1.e-17) {</span>
+<span class="nc" id="L146">                idx = i;</span>
+            } else {
+                break;
+            }
+        }
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if (idx &gt;= v.a.length) {</span>
+<span class="nc" id="L152">            idx = v.a.length - 1;</span>
+        }
+
+<span class="nc" id="L155">        return idx;</span>
+    }
+
+    private void randomDrawSeparations(
+        Random rand, int nDraws, int k, TIntIntMap voidValueCounts,
+        KNearestNeighbors knn, TLongSet pixelIdxs, int width, int height,
+        float maxV) {
+
+<span class="fc" id="L163">        PixelHelper ph = new PixelHelper();</span>
+
+        long pixIdx1;
+        int x, y;
+
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        for (int i = 0; i &lt; nDraws; ++i) {</span>
+
+            do {
+                // not including boundary points
+<span class="fc" id="L172">                x = rand.nextInt(width - 2) + 1;</span>
+<span class="fc" id="L173">                y = rand.nextInt(height - 2) + 1;</span>
+<span class="fc" id="L174">                pixIdx1 = ph.toPixelIndex(x, y, width);</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">            } while (pixelIdxs.contains(pixIdx1));</span>
+
+<span class="fc" id="L177">            List&lt;PairFloat&gt; nearest = knn.findNearest(k, x, y);</span>
+
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">            if (nearest != null) {</span>
+
+<span class="fc bfc" id="L181" title="All 2 branches covered.">                for (PairFloat p : nearest) {</span>
+
+<span class="fc bfc" id="L183" title="All 2 branches covered.">                    if ((Math.abs(p.getX() - x) &lt; eps)</span>
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">                        &amp;&amp; (Math.abs(p.getY() - y) &lt; eps)) {</span>
+<span class="nc" id="L185">                        continue;</span>
+                    }
+
+<span class="fc" id="L188">                    float dx = x - p.getX();</span>
+<span class="fc" id="L189">                    float dy = y - p.getY();</span>
+<span class="fc" id="L190">                    int d = (int)Math.round(Math.sqrt(dx*dx + dy*dy));</span>
+
+                    //DEBUG: temporarily excluding points larger than
+                    // 3*maxV
+<span class="fc bfc" id="L194" title="All 2 branches covered.">                    if (d &lt; 3*maxV) {</span>
+
+                        //System.out.println(&quot;void p=&quot; + p + &quot; d=&quot; + d);
+
+                        // default for no_entry is 0
+<span class="fc" id="L199">                        int c = voidValueCounts.get(d);</span>
+<span class="fc" id="L200">                        voidValueCounts.put(d, c + 1);</span>
+
+<span class="pc bpc" id="L202" title="3 of 4 branches missed.">                        assert(voidValueCounts.containsKey(d));</span>
+                    }
+<span class="fc" id="L204">                }</span>
+            }
+        }
+<span class="fc" id="L207">    }</span>
 
     public static class ScaledPoints {
-        public TIntSet pixelIdxs;
+        public TLongSet pixelIdxs;
         int width;
         int height;
         int xScale;
         int yScale;
     }
-    
-    public BackgroundSeparationHolder extract(TIntSet pixelIdxs, int width, 
+
+    public BackgroundSeparationHolder extract(TLongSet pixelIdxs, int width,
         int height) {
-        
-<span class="pc bpc" id="L61" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
-<span class="nc" id="L62">            throw new IllegalArgumentException(</span>
+
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L221">            throw new IllegalArgumentException(</span>
                 &quot;pixelIdxs.size must be 12 or more&quot;);
         }
-        
-        // these are the non-point distances to the points        
-<span class="fc" id="L67">        int[][] dt = DistanceTransformUtil.transform(pixelIdxs, width, height);</span>
-        
-<span class="fc bfc" id="L69" title="All 2 branches covered.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
-<span class="fc bfc" id="L70" title="All 2 branches covered.">            for (int j = 0; j &lt; dt[i].length; ++j) {</span>
-<span class="fc" id="L71">                int d = dt[i][j];</span>
-<span class="fc bfc" id="L72" title="All 2 branches covered.">                if (d &gt; 0) {</span>
-<span class="fc bfc" id="L73" title="All 2 branches covered.">                    if (d &gt; 2) {</span>
-<span class="fc" id="L74">                        dt[i][j] = (int)Math.round(Math.sqrt(d));</span>
-                    }
-                }
-            }
-        }
-        
-        //printDT(dt);
-        
-        /*
-        within dt 
-           want to find the local maxima in which the surrounding points are
-           all smaller in value.
-        
-           need to use a connected value group finder to gather the adjacent
-              pixels w/ same values &gt; 0
-        
-           need to make an adjacency map of those groups.
-        
-           then will find which groups, that is values, are the maxima.
-        
-           the critical separation is the smallest of the maxima, but will
-               want to look at the counts of that where possible.
-        
-        caveats:
-           single group of points in center will have no maxima found as 
-               described unless there are gaps in points in the cluster.
-               if there are gaps,
-                  that will be found.
-               else the background separation will be found to be 1
-        */
-               
-<span class="fc" id="L105">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L106">        int[] xy = new int[2];</span>
-                
-<span class="fc" id="L108">        ConnectedValuesGroupFinder finder = new ConnectedValuesGroupFinder();</span>
-<span class="fc" id="L109">        finder.setMinimumNumberInCluster(1);</span>
-<span class="fc" id="L110">        List&lt;TIntSet&gt; valueGroups = finder.findGroups(dt);</span>
-     
-<span class="fc" id="L112">        long ts = System.currentTimeMillis();</span>
-        
-<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (debug) {</span>
-<span class="fc" id="L115">            float[] x = new float[valueGroups.size()];</span>
-<span class="fc" id="L116">            float[] y = new float[x.length];</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">            for (int i = 0; i &lt; valueGroups.size(); ++i) {</span>
-<span class="fc" id="L118">                TIntSet group = valueGroups.get(i);</span>
-<span class="fc" id="L119">                int tPix = group.iterator().next();</span>
-<span class="fc" id="L120">                ph.toPixelCoords(tPix, width, xy);</span>
-<span class="fc" id="L121">                int v = dt[xy[0]][xy[1]];</span>
-<span class="fc" id="L122">                x[i] = v;</span>
-<span class="fc" id="L123">                y[i] = group.size();</span>
-            }
-<span class="fc" id="L125">            float xMax = MiscMath0.findMax(x);</span>
-<span class="fc" id="L126">            float yMin = MiscMath0.findMin(y);</span>
-<span class="fc" id="L127">            float yMax = MiscMath0.findMax(y);</span>
-            PolygonAndPointPlotter plotter;
-            try {
-<span class="fc" id="L130">                plotter = new PolygonAndPointPlotter();</span>
-<span class="fc" id="L131">                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,</span>
-                    &quot;separation&quot;);
-<span class="fc" id="L133">                plotter.writeFile(&quot;_separation_&quot; + ts);</span>
-<span class="nc" id="L134">            } catch (IOException ex) {</span>
-<span class="nc" id="L135">                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);</span>
-<span class="fc" id="L136">            }</span>
-<span class="fc" id="L137">            Runtime.getRuntime().gc();</span>
-        }
-        
-        // key = index of values Group, value = adjacent indexes of valuesGroup
-<span class="fc" id="L141">        TIntObjectMap&lt;TIntSet&gt; adjMap = createAdjacencyMap(</span>
-            valueGroups, width, height);
 
-        // TODO: below here consider if aggregation of values within a tolerance
-        // of similar values is needed.  The tolerance should depend upon the 
-        // range of separations and on the value to be aggregated.
-        //  ...such a correction can be done with kernel smoothing using 
-        //     a kernel bandwidth fixed in the distance axis.
-        //     if implemented with fast wavelet transforms, 
-        //     the results are instead a K-Nearest Neighbors smoothing 
-        //     unless the input is resampled to fixed spacing.
+<span class="fc" id="L225">        long maxC = (long)width * height;</span>
+<span class="fc" id="L226">        int maxW = 1 + (int) Math.ceil(Math.log(maxC) / Math.log(2));</span>
+<span class="fc" id="L227">        long nn2dMemory = NearestNeighbor2DLong.estimateSizeOnHeap(</span>
+<span class="fc" id="L228">            pixelIdxs.size(), maxW)/(1024*1024);</span>
+<span class="fc" id="L229">        long kdtreeMemory =</span>
+<span class="fc" id="L230">            KDTree.estimateSizeOnHeap(pixelIdxs.size())/(1024*1024);</span>
+<span class="fc" id="L231">        long totalMemory = Runtime.getRuntime().totalMemory();</span>
+<span class="fc" id="L232">        MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();</span>
+<span class="fc" id="L233">        long heapUsage = mbean.getHeapMemoryUsage().getUsed();</span>
+<span class="fc" id="L234">        long avail = (totalMemory - heapUsage)/(1024*1024);</span>
+<span class="fc" id="L235">        long distTransMemory =</span>
+<span class="fc" id="L236">            ((long)width*ObjectSpaceEstimator.getArrayReferenceSize()</span>
+            /(1024*1024))
+            + ((((long)width * height)/(1024*1024))
+<span class="fc" id="L239">            * ObjectSpaceEstimator.estimateIntSize());</span>
 
-        // search for valueGroups which has value larger than all adj neighbors
-        // key = valueGroups index, value = dt value for the group
-<span class="fc" id="L155">        TIntIntMap groupMaximaIdxs = new TIntIntHashMap();</span>
-        
-        // key = value, value = count
-<span class="fc" id="L158">        TIntIntMap valueCounts = new TIntIntHashMap();</span>
-        
-<span class="fc" id="L160">        int minMaxima = Integer.MAX_VALUE;</span>
-        
-<span class="fc bfc" id="L162" title="All 2 branches covered.">        for (int i = 0; i &lt; valueGroups.size(); ++i) {</span>
-            
-<span class="pc bpc" id="L164" title="1 of 2 branches missed.">            if (!adjMap.containsKey(i)) {</span>
-<span class="nc" id="L165">                continue;</span>
-            }
-            
-<span class="fc" id="L168">            TIntSet group = valueGroups.get(i);</span>
-            
-<span class="fc" id="L170">            int tPix = group.iterator().next();</span>
-<span class="fc" id="L171">            ph.toPixelCoords(tPix, width, xy);</span>
-<span class="fc" id="L172">            int v = dt[xy[0]][xy[1]];</span>
-            
-<span class="fc bfc" id="L174" title="All 2 branches covered.">            if (v == 0) {</span>
-<span class="fc" id="L175">                continue;</span>
-            }
-            
-            // if this is a boundary pixel and v &gt; 1, skip it
-<span class="fc bfc" id="L179" title="All 10 branches covered.">            if (v &gt; 1 &amp;&amp; (xy[0] == 0 || xy[1] == 0 || (xy[0] == (width - 1)) ||</span>
-                (xy[1] == (height - 1)))) {
-<span class="fc" id="L181">                continue;</span>
-            }
-            
-<span class="fc" id="L184">            boolean allAreLower = true;</span>
-            
-<span class="fc" id="L186">            TIntSet adj = adjMap.get(i);</span>
-            
-<span class="fc" id="L188">            TIntIterator iter2 = adj.iterator();</span>
-<span class="fc bfc" id="L189" title="All 2 branches covered.">            while (iter2.hasNext()) {</span>
-<span class="fc" id="L190">                int aIdx = iter2.next();</span>
-<span class="fc" id="L191">                TIntSet group2 = valueGroups.get(aIdx);</span>
-<span class="fc" id="L192">                int tPix2 = group2.iterator().next();</span>
-<span class="fc" id="L193">                ph.toPixelCoords(tPix2, width, xy);</span>
-<span class="fc" id="L194">                int v2 = dt[xy[0]][xy[1]];</span>
-            
-<span class="fc bfc" id="L196" title="All 2 branches covered.">                if (v2 &gt; v) {</span>
-<span class="fc" id="L197">                    allAreLower = false;</span>
-<span class="fc" id="L198">                    break;</span>
-                }
-<span class="fc" id="L200">            }</span>
-            
-<span class="fc bfc" id="L202" title="All 2 branches covered.">            if (allAreLower) {</span>
-<span class="fc" id="L203">                groupMaximaIdxs.put(i, v);</span>
-<span class="fc" id="L204">                int c = valueCounts.get(v);</span>
-<span class="fc" id="L205">                valueCounts.put(v, c + group.size());</span>
-                
-<span class="fc bfc" id="L207" title="All 2 branches covered.">                if (v &lt; minMaxima) {</span>
-<span class="fc" id="L208">                    minMaxima = v;</span>
-                }
-            }
-        }
-        
-<span class="fc" id="L213">        adjMap = null;</span>
-        
-<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (valueCounts.size() == 0) {</span>
-            
-            // this can happen when a convex filled point set is centered
-            // in the range.  there will be no maxima in the &quot;void&quot;
-            
-<span class="fc" id="L220">            BackgroundSeparationHolder h = new BackgroundSeparationHolder();</span>
-<span class="fc" id="L221">            h.setXYBackgroundSeparations(1, 1);</span>
-<span class="fc" id="L222">            h.setTheThreeSeparations(new float[]{0, 1, 2});</span>
-<span class="fc" id="L223">            h.setAndNormalizeCounts(new float[]{1, 1, 0});</span>
+<span class="fc bfc" id="L241" title="All 2 branches covered.">        boolean useDT = distTransMemory &lt; (0.75*avail);</span>
+<span class="fc" id="L242">        System.out.println(&quot;MB avail=&quot; + avail</span>
+            + &quot; nn2dMem=&quot; + nn2dMemory
+            + &quot; kdtreeMem=&quot; + kdtreeMemory
+            + &quot; distTransMem=&quot; + distTransMemory
+            + &quot; distTransMemory &lt; 0.75*avail=&quot; + useDT
+        );
 
-<span class="fc" id="L225">            return h;</span>
-        }
-        
-        // look at frequency of groupMaximaIdxs values
-<span class="fc" id="L229">        int[] maximaValues = new int[valueCounts.size()];</span>
-<span class="fc" id="L230">        float[] maximaCounts = new float[valueCounts.size()];</span>
-<span class="fc" id="L231">        TIntIntIterator iter = valueCounts.iterator();</span>
-<span class="fc bfc" id="L232" title="All 2 branches covered.">        for (int i = 0; i &lt; valueCounts.size(); ++i) {</span>
-<span class="fc" id="L233">            iter.advance();</span>
-<span class="fc" id="L234">            maximaValues[i] = iter.key();</span>
-<span class="fc" id="L235">            maximaCounts[i] = iter.value();</span>
-        }
-        
-<span class="fc" id="L238">        MiscSorter.sortBy1stArg(maximaValues, maximaCounts);</span>
-       
-<span class="pc bpc" id="L240" title="1 of 2 branches missed.">        if (debug) {</span>
-<span class="fc" id="L241">            int[] x = maximaValues;</span>
-<span class="fc" id="L242">            float[] y = maximaCounts;</span>
-<span class="fc" id="L243">            float xMax = MiscMath0.findMax(x);</span>
-<span class="fc" id="L244">            float yMin = MiscMath0.findMin(y);</span>
-<span class="fc" id="L245">            float yMax = MiscMath0.findMax(y);</span>
-            PolygonAndPointPlotter plotter;
-            try {
-<span class="fc" id="L248">                plotter = new PolygonAndPointPlotter();</span>
-<span class="fc" id="L249">                plotter.addPlot(0, xMax, yMin, yMax, x, y, x, y,</span>
-                    &quot;max sep&quot;);
-<span class="fc" id="L251">            plotter.writeFile(&quot;_separation_maxima_&quot; + ts);</span>
-<span class="nc" id="L252">            } catch (IOException ex) {</span>
-<span class="nc" id="L253">                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);</span>
-<span class="fc" id="L254">            }</span>
-        }
-        
-        /*
-        TODO:
-           if the density curve of (maximaValues, maximaCounts) has more than
-              one profile (peak) in it,
-              need to use smoothing and choose the first convolvolution which
-              produces a single profile
-        
-              then the best representative peak looks like the average,
-              but might need to follow the else block below this
-           else
-              the best representative peak is found as:
-                 if the peak is not the first point,
-                    the average of the peak and the point before it
-                 else if the peak is the first point and it is &gt; 1,
-                    half it
-        */
-<span class="fc" id="L273">        int peakIdx = findPeakIfSingleProfile(maximaCounts);</span>
-        
-        //NOTE: this section may need revision.
-        
-        float reprValue, reprCounts;
-<span class="fc" id="L278">        int firstZeroIdx = -1;</span>
-<span class="fc bfc" id="L279" title="All 2 branches covered.">        if (peakIdx &gt; -1) {</span>
-<span class="fc bfc" id="L280" title="All 2 branches covered.">            if (peakIdx == 0) {</span>
-<span class="fc bfc" id="L281" title="All 2 branches covered.">                if (maximaValues[0] &gt; 1) {</span>
-<span class="fc" id="L282">                    reprValue = maximaValues[0] / 2.f;</span>
-<span class="fc" id="L283">                    reprCounts = maximaCounts[0] / 2.f;</span>
-                } else {
-<span class="fc" id="L285">                    reprValue = maximaValues[0];</span>
-<span class="fc" id="L286">                    reprCounts = maximaCounts[0];</span>
-                }
-<span class="fc" id="L288">                firstZeroIdx = 0;</span>
-            } else {
-<span class="pc bpc" id="L290" title="3 of 4 branches missed.">                assert(maximaValues.length &gt; 1);</span>
-<span class="fc" id="L291">                reprValue = </span>
-                    (maximaValues[peakIdx] + maximaValues[peakIdx - 1])/ 2.f;
-<span class="fc" id="L293">                reprCounts = </span>
-                    (maximaCounts[peakIdx] + maximaCounts[peakIdx - 1])/ 2.f;                 
-            }
-        } else {
-            //kernel smoothing over evenly spaced data
-            
-<span class="fc" id="L299">            int n2 = maximaValues[maximaValues.length - 1] -</span>
-                maximaValues[0] + 1;
-<span class="fc" id="L301">            TIntList outV = new TIntArrayList(n2);</span>
-<span class="fc" id="L302">            TFloatList outC = new TFloatArrayList(n2);</span>
-<span class="fc" id="L303">            integerResampling(maximaValues, maximaCounts, outV, outC);</span>
-<span class="fc" id="L304">            maximaValues = outV.toArray(new int[outV.size()]);</span>
-<span class="fc" id="L305">            maximaCounts = outC.toArray(new float[outC.size()]);</span>
-            
-<span class="fc" id="L307">            float[][] smoothed = smooth(maximaValues, maximaCounts);</span>
-            
-<span class="fc" id="L309">            maximaValues = new int[smoothed[0].length];</span>
-<span class="fc bfc" id="L310" title="All 2 branches covered.">            for (int j = 0; j &lt; maximaValues.length; ++j) {</span>
-<span class="fc" id="L311">                maximaValues[j] = Math.round(smoothed[0][j]);</span>
-            }
-<span class="fc" id="L313">            maximaCounts = smoothed[1];</span>
-            
-<span class="fc" id="L315">            peakIdx = averagePeak(maximaValues, maximaCounts);</span>
-            
-<span class="fc" id="L317">            reprValue = maximaValues[peakIdx];</span>
-<span class="fc" id="L318">            reprCounts = maximaCounts[peakIdx];            </span>
-        }
-        
-<span class="fc bfc" id="L321" title="All 2 branches covered.">        if (firstZeroIdx == -1) {</span>
-            // calculate the firstZeroIdx after peak
-<span class="fc" id="L323">            float currentMinC = Float.POSITIVE_INFINITY;</span>
-<span class="fc" id="L324">            MinMaxPeakFinder finder2 = new MinMaxPeakFinder();</span>
-<span class="fc" id="L325">            float avgMin = finder2.calculateMeanOfSmallest(maximaCounts, 0.03f);</span>
-<span class="fc bfc" id="L326" title="All 2 branches covered.">            for (int i = (peakIdx + 1); i &lt; maximaValues.length; ++i) {</span>
-<span class="fc" id="L327">                int d = maximaValues[i];</span>
-<span class="fc bfc" id="L328" title="All 2 branches covered.">                if (firstZeroIdx == -1) {</span>
-<span class="fc" id="L329">                    firstZeroIdx = i;</span>
-                }
-<span class="fc" id="L331">                float c = maximaCounts[i];</span>
-<span class="fc bfc" id="L332" title="All 2 branches covered.">                if (c &lt;= avgMin) {</span>
-<span class="fc" id="L333">                    firstZeroIdx = i;</span>
-<span class="fc" id="L334">                    break;</span>
-<span class="pc bpc" id="L335" title="1 of 2 branches missed.">                } else if (c &lt; currentMinC) {</span>
-<span class="fc" id="L336">                    firstZeroIdx = i;</span>
-<span class="fc" id="L337">                    currentMinC = c;</span>
-                }
-            }
-<span class="fc bfc" id="L340" title="All 2 branches covered.">            if (firstZeroIdx == -1) {</span>
-<span class="fc" id="L341">                firstZeroIdx = maximaCounts.length - 1;</span>
-            }
-        }
-        
-        //float[] qs = MiscMath0.calcQuartiles(maximaCounts, true);
-        //System.out.println(&quot;qs=&quot; + Arrays.toString(qs));
-               
-<span class="fc" id="L348">        System.out.println(&quot;found background separation=&quot; + reprValue);</span>
-        
-<span class="fc" id="L350">        BackgroundSeparationHolder h = new BackgroundSeparationHolder();</span>
-                
-<span class="fc" id="L352">        int m2 = (int)reprValue;</span>
-<span class="pc bpc" id="L353" title="1 of 2 branches missed.">        if (m2 &lt; 1) {</span>
-<span class="nc" id="L354">            m2 = 1;</span>
-        }
-<span class="fc" id="L356">        h.setXYBackgroundSeparations(m2, m2);</span>
-        
-<span class="fc" id="L358">        h.setTheThreeSeparations(new float[]{</span>
-            0, m2, 
-            maximaValues[firstZeroIdx]});
-        
-<span class="fc" id="L362">        h.setAndNormalizeCounts(new float[]{</span>
-            reprCounts, reprCounts, 
-            maximaCounts[firstZeroIdx]});
-       
-<span class="fc" id="L366">        return h;</span>
+<span class="fc" id="L249">        return extractWithNN2D(pixelIdxs, width, height);</span>
     }
-    
-    public ScaledPoints scaleThePoints(TIntSet pixelIdxs, int width, int height) {
+
+    /**
+     * NOTE: this method is in progress and not ready for use yet
+     *
+     * @param pixelIdxs
+     * @param width
+     * @param height
+     * @return
+     */
+    protected BackgroundSeparationHolder extractWithNN2D(TLongSet pixelIdxs,
+        int width, int height) {
+
+<span class="fc" id="L263">        KNearestNeighbors knn = new KNearestNeighbors(pixelIdxs, width, height);</span>
+
+        //KDTree nn2d = new KDTree(pixelIdxs, width, height);
+
+        //NearestNeighbor2DLong nn2d = new NearestNeighbor2DLong(pixelIdxs,
+        //    width, height);
+
+<span class="fc" id="L270">        PixelHelper ph = new PixelHelper();</span>
+
+        int x, y;
+        long pixIdx1;
+
+        /*
+        NOTE: this method is in progress.
+        random sampling of void points to find maxima in separation from nearest
+        pixelIdx is not working as well as the distance transform method.
+
+        may include full sample of pixelsIdxs and their NN2D and contrast it
+        with the random void sample to find the threshold separation.
+        */
+
+<span class="fc" id="L284">        int[] xy = new int[2];</span>
+
+<span class="fc" id="L286">        TIntIntMap pointValueCounts = new TIntIntHashMap();</span>
+<span class="fc" id="L287">        TLongIterator iter = pixelIdxs.iterator();</span>
+<span class="fc bfc" id="L288" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L289">            pixIdx1 = iter.next();</span>
+<span class="fc" id="L290">            ph.toPixelCoords(pixIdx1, width, xy);</span>
+
+<span class="pc bpc" id="L292" title="3 of 4 branches missed.">            assert(xy[0] &gt; -1);</span>
+<span class="pc bpc" id="L293" title="3 of 4 branches missed.">            assert(xy[1] &gt; -1);</span>
+
+<span class="fc" id="L295">            List&lt;PairFloat&gt; nearest = knn.findNearest(2, xy[0], xy[1]);</span>
+            //KDTreeNode node = nn2d.findNearestNeighborNotEquals(xy[0], xy[1]);
+            //if (node == null) {
+            //    continue;
+            //}
+<span class="pc bpc" id="L300" title="2 of 4 branches missed.">            if (nearest == null || nearest.isEmpty()) {</span>
+<span class="nc" id="L301">                continue;</span>
+            }
+<span class="fc" id="L303">            PairFloat node = null;</span>
+<span class="pc bpc" id="L304" title="1 of 2 branches missed.">            for (PairFloat p0 : nearest) {</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">                if ((Math.abs(p0.getX() - xy[0]) &lt; eps)</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">                    &amp;&amp; (Math.abs(p0.getY() - xy[1]) &lt; eps)) {</span>
+<span class="fc" id="L307">                    continue;</span>
+                }
+<span class="fc" id="L309">                node = p0;</span>
+<span class="fc" id="L310">                break;</span>
+            }
+<span class="pc bpc" id="L312" title="3 of 4 branches missed.">            assert(node != null);</span>
+
+<span class="fc" id="L314">            float dx = xy[0] - node.getX();</span>
+<span class="fc" id="L315">            float dy = xy[1] - node.getY();</span>
+<span class="fc" id="L316">            int d = (int) Math.round(Math.sqrt(dx * dx + dy * dy));</span>
+
+            // default map value is 0 is no entry
+<span class="fc" id="L319">            int c = pointValueCounts.get(d);</span>
+<span class="fc" id="L320">            pointValueCounts.put(d, c + 1);</span>
+<span class="fc" id="L321">        }</span>
+
+<span class="fc bfc" id="L323" title="All 2 branches covered.">        if (pointValueCounts.size() == 1) {</span>
+<span class="fc" id="L324">            int m2 = pointValueCounts.keySet().iterator().next();</span>
+
+<span class="fc" id="L326">            System.out.println(&quot;m2=&quot; + m2);</span>
+
+<span class="fc" id="L328">            BackgroundSeparationHolder h = new BackgroundSeparationHolder();</span>
+
+<span class="fc" id="L330">            h.setXYBackgroundSeparations(m2, m2);</span>
+
+            //TODO: revise this:
+<span class="fc" id="L333">            h.setThePDF(new float[]{0, m2, 3*m2}, new float[]{0.5f, 0.5f, 0});</span>
+
+<span class="fc" id="L335">            return h;</span>
+        }
+
+        // sort the values, make regular spacings, and use pyramidal smoothing
+        // plotting each tansformed result
+
+<span class="fc" id="L341">        List&lt;OneDFloatArray&gt; outTransC = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L342">        List&lt;OneDFloatArray&gt; outCoeffC = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L343">        List&lt;OneDFloatArray&gt; outTransV = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L344">        List&lt;OneDFloatArray&gt; outCoeffV = new ArrayList&lt;OneDFloatArray&gt;();</span>
+
+<span class="fc" id="L346">        float maxV = resampleAndSmooth(pointValueCounts,</span>
+            outTransC, outCoeffC, outTransV, outCoeffV);
+
+        // ------
+
+<span class="fc" id="L351">        int k = 2;//4;</span>
+
+<span class="fc" id="L353">        TIntIntMap voidValueCounts = new TIntIntHashMap();</span>
+
+<span class="fc" id="L355">        long len = (long)width * height;</span>
+
+        // For random draws, considering 2 different approaches:
+        // (1) random draw of integer within range width*height
+        // (2) use of Low Discrepancy Sequences (requires moving the code to shared library)
+
+<span class="fc" id="L361">        Random rand = Misc0.getSecureRandom();</span>
+<span class="fc" id="L362">        long seed = System.currentTimeMillis();</span>
+        //seed = 1500602940797L;
+<span class="fc" id="L364">        System.out.println(&quot;SEED=&quot; + seed);</span>
+<span class="fc" id="L365">        rand.setSeed(seed);</span>
+
+        //TODO: once have a fixed manner of determining the background
+        //  separation below, consider what number of nDraws can determine it
+        //  to a percent of error or percent of success...
+        //  depends upon the density of the data and the unknown
+        //  separation of clusters. quartiles may be helpful for this.
+
+<span class="fc" id="L373">        final int nDraws = pixelIdxs.size();</span>
+<span class="fc" id="L374">        System.out.println(&quot;pix.size=&quot; + pixelIdxs.size() + &quot; nDraws=&quot; + nDraws);</span>
+
+<span class="fc" id="L376">        randomDrawSeparations(rand, nDraws, k, voidValueCounts,</span>
+            knn, pixelIdxs, width, height, maxV);
+
+<span class="fc" id="L379">        long ts = System.currentTimeMillis();</span>
+
+<span class="fc" id="L381">        List&lt;OneDFloatArray&gt; outTransC_void = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L382">        List&lt;OneDFloatArray&gt; outCoeffC_void = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L383">        List&lt;OneDFloatArray&gt; outTransV_void = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="fc" id="L384">        List&lt;OneDFloatArray&gt; outCoeffV_void = new ArrayList&lt;OneDFloatArray&gt;();</span>
+
+<span class="fc" id="L386">        float maxV_void = resampleAndSmooth(voidValueCounts,</span>
+            outTransC_void, outCoeffC_void, outTransV_void, outCoeffV_void);
+
+        // overplot the point sep w/ void separation
+        /*int idxP0 = findArrayWithNPoints(100, outTransC);
+        int idxV0 = findArrayWithNPoints(100, outTransC_void);
+        if (debug) {
+            try {
+                float[] xp = outTransV.get(idxP0).a;
+                float[] yp = outTransC.get(idxP0).a;
+                float[] xv = outTransV_void.get(idxV0).a;
+                float[] yv = outTransC_void.get(idxV0).a;
+                float maxCP = MiscMath0.findMax(yp);
+                float maxCV = MiscMath0.findMax(yv);
+                float maxC = Math.max(maxCP, maxCV);
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+                plotter.addPlot(0, width/3, 0, maxC,
+                   xp, yp, xp, yp, &quot;pt sep&quot;);
+                plotter.addPlot(0, width/3, 0, maxC,
+                   xv, yv, xv, yv, &quot;void sep&quot;);
+                plotter.writeFile(&quot;_pts_and_void_&quot; + System.currentTimeMillis());
+            } catch (Exception e) {
+            }
+        }*/
         
-<span class="pc bpc" id="L371" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
-<span class="nc" id="L372">            throw new IllegalArgumentException(</span>
+        //int peakIdxP = MiscMath0.findYMaxIndex(outTransC.get(0).a);
+        //System.out.println(&quot;points peak in unsmoothed data=&quot;
+        //    + &quot; peak=&quot; + outTransV.get(0).a[peakIdxP]);
+
+<span class="fc" id="L415">        int peakIdx = -1;</span>
+<span class="fc" id="L416">        int voidIdx = -1;</span>
+<span class="fc bfc" id="L417" title="All 2 branches covered.">        if (isMonotonicallyDecreasing(outTransV_void.get(0).a,</span>
+<span class="fc" id="L418">            outTransC_void.get(0).a, maxV)) {</span>
+<span class="fc" id="L419">            voidIdx = 0;</span>
+<span class="fc" id="L420">            peakIdx = MiscMath0.findYMaxIndex(outTransC_void.get(voidIdx).a);</span>
+<span class="fc" id="L421">            System.out.println(&quot;choosing void peak=&quot; +</span>
+<span class="fc" id="L422">                outTransV_void.get(voidIdx).a[0]);</span>
+
+        } else {
+            // calc m2 as the background separation
+            // for the curves smoothed to about 100 points.
+            //TODO: consider changing this to a smoothing factor w/
+            //    assumptions of filling factor and area
+<span class="fc" id="L429">            int nP = 100;</span>
+<span class="fc" id="L430">            voidIdx = findArrayWithNPoints(nP, outTransC_void);</span>
+            //System.out.println(&quot;voidIdx=&quot; + voidIdx);
+<span class="pc bpc" id="L432" title="1 of 4 branches missed.">            if (voidIdx &lt; 2 &amp;&amp; outTransC_void.size() &gt; 4) {</span>
+                // for small datasets
+<span class="fc" id="L434">                nP = 32;</span>
+<span class="fc" id="L435">                voidIdx = findArrayWithNPoints(nP, outTransC_void);</span>
+                //System.out.println(&quot;voidIdx=&quot; + voidIdx);
+            }
+
+<span class="fc" id="L439">            float snr = 5.f;//2.5f;</span>
+
+<span class="fc" id="L441">            MinMaxPeakFinder mmpf = new MinMaxPeakFinder();</span>
+<span class="fc" id="L442">            float avgMin = mmpf.calculateMeanOfSmallest(</span>
+<span class="fc" id="L443">                outTransC_void.get(voidIdx).a, 0.03f);</span>
+
+<span class="fc" id="L445">            int[] peakIdxs = mmpf.findPeaks(</span>
+<span class="fc" id="L446">                outTransC_void.get(voidIdx).a, snr, avgMin);</span>
+            
+            /*
+            System.out.print(&quot;nP=&quot; + nP + &quot; peakIdxs=&quot;
+                + Arrays.toString(peakIdxs) + &quot; values=&quot;);
+            for (int p : peakIdxs) {
+                System.out.print(&quot; &quot; + outTransV_void.get(voidIdx).a[p]
+                    + &quot;,&quot;);
+            }
+            System.out.print(&quot; counts=&quot;);
+            for (int p : peakIdxs) {
+                System.out.print(&quot; &quot; + outTransC_void.get(voidIdx).a[p]
+                    + &quot;,&quot;);
+            }
+            System.out.println(&quot;&quot;);
+            */
+            
+            // this section is where the a?.datasets arrive.
+            // they are separated by same amount as they are clustered
+            // and there are many of them distributed over a large
+            // width and height.
+
+            // using more than one randomw draw and taking the best
+            // results from that.
+
+            // NOTE: this is a work in progress.
+            // need to determine the number of iterations statistically
+<span class="fc" id="L473">            final int nIterMax = 8;//4;//32;</span>
+<span class="fc" id="L474">            int nIter = 0;</span>
+
+<span class="fc" id="L476">            int maxPeakIdx = Integer.MAX_VALUE;</span>
+<span class="fc" id="L477">            int maxVoidIdx = Integer.MAX_VALUE;</span>
+<span class="fc" id="L478">            float maxPeakValue = Float.NEGATIVE_INFINITY;</span>
+<span class="fc" id="L479">            List&lt;OneDFloatArray&gt; outTransC_voidT </span>
+                = new ArrayList&lt;OneDFloatArray&gt;(outTransC_void);
+<span class="fc" id="L481">            List&lt;OneDFloatArray&gt; outCoeffC_voidT</span>
+                = new ArrayList&lt;OneDFloatArray&gt;(outCoeffC_void);
+<span class="fc" id="L483">            List&lt;OneDFloatArray&gt; outTransV_voidT</span>
+                = new ArrayList&lt;OneDFloatArray&gt;(outTransV_void);
+<span class="fc" id="L485">            List&lt;OneDFloatArray&gt; outCoeffV_voidT</span>
+                = new ArrayList&lt;OneDFloatArray&gt;(outCoeffV_void);
+
+            while (true) {
+                int tmpIdx;
+                float tmpV;
+<span class="pc bpc" id="L491" title="1 of 4 branches missed.">                if (peakIdxs == null || peakIdxs.length == 0) {</span>
+<span class="fc" id="L492">                    tmpIdx = 0;</span>
+<span class="fc" id="L493">                    tmpV = outTransV_voidT.get(voidIdx).a[tmpIdx];</span>
+                } else {
+<span class="fc" id="L495">                    tmpIdx = peakIdxs[0];</span>
+<span class="pc bpc" id="L496" title="1 of 2 branches missed.">                    if (tmpIdx &lt; 0) {</span>
+<span class="nc" id="L497">                        int z = 0;</span>
+                    }
+<span class="pc bpc" id="L499" title="1 of 2 branches missed.">                    if (voidIdx &lt; 0) {</span>
+<span class="nc" id="L500">                        int z = 0;</span>
+                    }
+<span class="fc" id="L502">                    tmpV = outTransV_voidT.get(voidIdx).a[tmpIdx];</span>
+                }
+<span class="fc bfc" id="L504" title="All 2 branches covered.">                if (tmpV &gt; maxPeakValue) {</span>
+<span class="fc" id="L505">                    maxPeakValue = tmpV;</span>
+<span class="fc" id="L506">                    maxPeakIdx = tmpIdx;</span>
+<span class="fc" id="L507">                    maxVoidIdx = voidIdx;</span>
+                    
+<span class="fc" id="L509">                    voidIdx = maxVoidIdx;</span>
+<span class="fc" id="L510">                    peakIdx = maxPeakIdx;</span>
+                    
+<span class="fc" id="L512">                    outTransC_void.clear();</span>
+<span class="fc" id="L513">                    outTransC_void.addAll(outTransC_voidT);</span>
+<span class="fc" id="L514">                    outCoeffC_void.clear();</span>
+<span class="fc" id="L515">                    outCoeffC_void.addAll(outCoeffC_voidT);</span>
+                    
+<span class="fc" id="L517">                    outTransV_void.clear();</span>
+<span class="fc" id="L518">                    outTransV_void.addAll(outTransV_voidT);</span>
+<span class="fc" id="L519">                    outCoeffV_void.clear();</span>
+<span class="fc" id="L520">                    outCoeffV_void.addAll(outCoeffV_voidT);</span>
+                    
+<span class="fc" id="L522">                    System.out.println(&quot;==&gt; v=&quot; + tmpV + &quot; idx=&quot; + tmpIdx);</span>
+                }
+
+<span class="fc" id="L525">                nIter++;</span>
+
+<span class="fc bfc" id="L527" title="All 2 branches covered.">                if (nIter &gt;= nIterMax) {</span>
+<span class="fc" id="L528">                    break;</span>
+                }
+
+                //--- redraw points
+<span class="fc" id="L532">                voidValueCounts.clear();</span>
+<span class="fc" id="L533">                randomDrawSeparations(rand, nDraws, k, voidValueCounts,</span>
+                    knn, pixelIdxs, width, height, maxV);
+<span class="fc" id="L535">                outTransC_voidT.clear();</span>
+<span class="fc" id="L536">                outCoeffC_voidT.clear();</span>
+<span class="fc" id="L537">                outTransV_voidT.clear();</span>
+<span class="fc" id="L538">                outCoeffV_voidT.clear();</span>
+
+<span class="fc" id="L540">                maxV_void = resampleAndSmooth(voidValueCounts,</span>
+                    outTransC_voidT, outCoeffC_voidT, outTransV_voidT,
+                    outCoeffV_voidT);
+
+<span class="fc" id="L544">                voidIdx = findArrayWithNPoints(nP, outTransC_voidT);</span>
+
+<span class="fc" id="L546">                avgMin = mmpf.calculateMeanOfSmallest(</span>
+<span class="fc" id="L547">                    outTransC_voidT.get(voidIdx).a, 0.03f);</span>
+
+<span class="fc" id="L549">                peakIdxs = mmpf.findPeaks(</span>
+<span class="fc" id="L550">                    outTransC_voidT.get(voidIdx).a, snr, avgMin);</span>
+
+                /*
+                System.out.print(&quot;nP=&quot; + nP + &quot; peakIdxs=&quot;
+                    + Arrays.toString(peakIdxs) + &quot; values=&quot;);
+                for (int p : peakIdxs) {
+                    System.out.print(&quot; &quot; 
+                        + outTransV_voidT.get(voidIdx).a[p]
+                        + &quot;,&quot;);
+                }
+                System.out.print(&quot; counts=&quot;);
+                for (int p : peakIdxs) {
+                    System.out.print(&quot; &quot; 
+                        + outTransC_voidT.get(voidIdx).a[p]
+                        + &quot;,&quot;);
+                }
+                System.out.println(&quot;&quot;);
+                */
+<span class="fc" id="L568">            }</span>
+            
+<span class="fc" id="L570">            int n = outTransV_void.get(voidIdx).a.length;</span>
+<span class="fc" id="L571">            System.out.println(&quot;*voidIdx=&quot; + voidIdx + &quot; out of &quot; +</span>
+<span class="fc" id="L572">                outTransV_void.size()</span>
+                + &quot; peakIdx=&quot; + peakIdx + &quot; value=&quot; 
+<span class="fc" id="L574">                + outTransV_void.get(voidIdx).a[peakIdx]    </span>
+                + &quot; l=&quot; +
+<span class="fc" id="L576">                (outTransV_void.get(voidIdx).a.length - 1));</span>
+            //System.out.println(&quot;*values=&quot; +
+            //    Arrays.toString(outTransV_void.get(voidIdx).a));
+            //System.out.println(&quot; counts=&quot; +
+            //    Arrays.toString(outTransC_void.get(voidIdx).a));
+        }
+
+<span class="fc" id="L583">        int pdfIdx = findArrayWithGTNPoints(2, outTransC);</span>
+
+<span class="fc" id="L585">        int m2 = (int)Math.ceil(outTransV_void.get(voidIdx).a[peakIdx]);</span>
+<span class="pc bpc" id="L586" title="1 of 2 branches missed.">        if (m2 &lt; 1) {</span>
+<span class="nc" id="L587">            m2 = 1;</span>
+        }
+<span class="fc" id="L589">        System.out.println(&quot;m2=&quot; + m2);</span>
+
+<span class="fc" id="L591">        BackgroundSeparationHolder h = new BackgroundSeparationHolder();</span>
+
+<span class="fc" id="L593">        h.setXYBackgroundSeparations(m2, m2);</span>
+
+<span class="fc" id="L595">        h.setThePDF(outTransV.get(pdfIdx).a, outTransC.get(pdfIdx).a);</span>
+
+<span class="fc" id="L597">        return h;</span>
+    }
+
+    public ScaledPoints scaleThePoints(TLongSet pixelIdxs, int width, int height) {
+
+<span class="pc bpc" id="L602" title="1 of 2 branches missed.">        if (pixelIdxs.size() &lt; 12) {</span>
+<span class="nc" id="L603">            throw new IllegalArgumentException(</span>
                 &quot;pixelIdxs.size must be 12 or more&quot;);
         }
-                
-<span class="fc" id="L376">        ScaleFinder sf = new ScaleFinder();</span>
-        
-<span class="fc" id="L378">        int[] xyScales = sf.find(pixelIdxs, width, height);</span>
-        
-        TIntSet pixelIdxs2;
+
+<span class="fc" id="L607">        ScaleFinder sf = new ScaleFinder();</span>
+
+<span class="fc" id="L609">        int[] xyScales = sf.find(pixelIdxs, width, height);</span>
+
+        TLongSet pixelIdxs2;
         int width2, height2;
-<span class="pc bpc" id="L382" title="1 of 4 branches missed.">        if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
-<span class="fc" id="L383">            pixelIdxs2 = new TIntHashSet(pixelIdxs);</span>
-<span class="fc" id="L384">            width2 = width;</span>
-<span class="fc" id="L385">            height2 = height;</span>
-<span class="pc bpc" id="L386" title="3 of 4 branches missed.">        } else if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &gt; 1) {</span>
-<span class="nc" id="L387">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
-<span class="nc" id="L388">            width2 = width;</span>
-<span class="nc" id="L389">            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);            </span>
-<span class="pc bpc" id="L390" title="2 of 4 branches missed.">        } else if (xyScales[0] &gt; 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
-<span class="nc" id="L391">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
-<span class="nc" id="L392">            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);</span>
-<span class="nc" id="L393">            height2 = height;</span>
+<span class="pc bpc" id="L613" title="1 of 4 branches missed.">        if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
+<span class="fc" id="L614">            pixelIdxs2 = new TLongHashSet(pixelIdxs);</span>
+<span class="fc" id="L615">            width2 = width;</span>
+<span class="fc" id="L616">            height2 = height;</span>
+<span class="pc bpc" id="L617" title="3 of 4 branches missed.">        } else if (xyScales[0] &lt;= 1 &amp;&amp; xyScales[1] &gt; 1) {</span>
+<span class="nc" id="L618">            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());</span>
+<span class="nc" id="L619">            width2 = width;</span>
+<span class="nc" id="L620">            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);</span>
+<span class="pc bpc" id="L621" title="2 of 4 branches missed.">        } else if (xyScales[0] &gt; 1 &amp;&amp; xyScales[1] &lt;= 1) {</span>
+<span class="nc" id="L622">            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());</span>
+<span class="nc" id="L623">            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);</span>
+<span class="nc" id="L624">            height2 = height;</span>
         } else {
             // scale both axes
-<span class="fc" id="L396">            pixelIdxs2 = new TIntHashSet(pixelIdxs.size());</span>
-<span class="fc" id="L397">            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);</span>
-<span class="fc" id="L398">            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);</span>
+<span class="fc" id="L627">            pixelIdxs2 = new TLongHashSet(pixelIdxs.size());</span>
+<span class="fc" id="L628">            width2 = (int)Math.ceil((float)width/(float)xyScales[0]);</span>
+<span class="fc" id="L629">            height2 = (int)Math.ceil((float)height/(float)xyScales[1]);</span>
         }
-        
-<span class="fc bfc" id="L401" title="All 2 branches covered.">        if (pixelIdxs2.isEmpty()) {</span>
-            
-<span class="fc" id="L403">            PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L404">            int[] xy = new int[2];</span>
-            
-<span class="fc" id="L406">            TIntIterator iter = pixelIdxs.iterator();</span>
-<span class="fc bfc" id="L407" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
-                
-<span class="fc" id="L409">                int pixIsx = iter.next();</span>
-                
-<span class="fc" id="L411">                ph.toPixelCoords(pixIsx, width, xy);</span>
-                
-<span class="pc bpc" id="L413" title="1 of 2 branches missed.">                if (xyScales[0] &gt; 1) {</span>
-<span class="fc" id="L414">                    xy[0] /= xyScales[0];</span>
+
+<span class="fc bfc" id="L632" title="All 2 branches covered.">        if (pixelIdxs2.isEmpty()) {</span>
+
+<span class="fc" id="L634">            PixelHelper ph = new PixelHelper();</span>
+<span class="fc" id="L635">            int[] xy = new int[2];</span>
+
+<span class="fc" id="L637">            TLongIterator iter = pixelIdxs.iterator();</span>
+<span class="fc bfc" id="L638" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
+
+<span class="fc" id="L640">                long pixIdx = iter.next();</span>
+
+<span class="fc" id="L642">                ph.toPixelCoords(pixIdx, width, xy);</span>
+
+<span class="pc bpc" id="L644" title="1 of 2 branches missed.">                if (xyScales[0] &gt; 1) {</span>
+<span class="fc" id="L645">                    xy[0] /= xyScales[0];</span>
                 }
-<span class="pc bpc" id="L416" title="1 of 2 branches missed.">                if (xyScales[1] &gt; 1) {</span>
-<span class="fc" id="L417">                    xy[1] /= xyScales[1];</span>
+<span class="pc bpc" id="L647" title="1 of 2 branches missed.">                if (xyScales[1] &gt; 1) {</span>
+<span class="fc" id="L648">                    xy[1] /= xyScales[1];</span>
                 }
-                
-<span class="fc" id="L420">                int pixIdx2 = ph.toPixelIndex(xy[0], xy[1], width2);</span>
-                
-<span class="fc" id="L422">                pixelIdxs2.add(pixIdx2);</span>
-<span class="fc" id="L423">            }</span>
+
+<span class="fc" id="L651">                long pixIdx2 = ph.toPixelIndex(xy[0], xy[1], width2);</span>
+
+<span class="fc" id="L653">                pixelIdxs2.add(pixIdx2);</span>
+<span class="fc" id="L654">            }</span>
         }
-        
-<span class="fc" id="L426">        ScaledPoints sp = new ScaledPoints();</span>
-<span class="fc" id="L427">        sp.pixelIdxs = pixelIdxs2;</span>
-<span class="fc" id="L428">        sp.width = width2;</span>
-<span class="fc" id="L429">        sp.height = height2;</span>
-<span class="fc" id="L430">        sp.xScale = xyScales[0];</span>
-<span class="fc" id="L431">        sp.yScale = xyScales[1];</span>
-    
-<span class="fc" id="L433">        return sp;</span>
+
+<span class="fc" id="L657">        ScaledPoints sp = new ScaledPoints();</span>
+<span class="fc" id="L658">        sp.pixelIdxs = pixelIdxs2;</span>
+<span class="fc" id="L659">        sp.width = width2;</span>
+<span class="fc" id="L660">        sp.height = height2;</span>
+<span class="fc" id="L661">        sp.xScale = xyScales[0];</span>
+<span class="fc" id="L662">        sp.yScale = xyScales[1];</span>
+
+<span class="fc" id="L664">        return sp;</span>
     }
-    
-    private TIntObjectMap&lt;TIntSet&gt; createAdjacencyMap(
-        List&lt;TIntSet&gt; groupList, int width, int height) {
-        
-<span class="fc" id="L439">        TIntIntMap pixGroupMap = new TIntIntHashMap();</span>
-<span class="fc bfc" id="L440" title="All 2 branches covered.">        for (int i = 0; i &lt; groupList.size(); ++i) {</span>
-<span class="fc" id="L441">            TIntSet group = groupList.get(i);</span>
-<span class="fc" id="L442">            TIntIterator iter = group.iterator();</span>
-<span class="fc bfc" id="L443" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
-<span class="fc" id="L444">                int pixIdx = iter.next();</span>
-<span class="pc bpc" id="L445" title="3 of 4 branches missed.">                assert(!pixGroupMap.containsKey(pixIdx));</span>
-<span class="fc" id="L446">                pixGroupMap.put(pixIdx, i);</span>
-<span class="fc" id="L447">            }</span>
-        }
-        
-<span class="fc" id="L450">        PixelHelper ph = new PixelHelper();</span>
-<span class="fc" id="L451">        int[] dx8 = new int[]{-1, -1,  0,  1, 1, 1, 0, -1};</span>
-<span class="fc" id="L452">        int[] dy8 = new int[]{ 0, -1, -1, -1, 0, 1, 1,  1};</span>
-        
-<span class="fc" id="L454">        int[] xy = new int[2];</span>
-        
-<span class="fc" id="L456">        int nBSLen = groupList.size();</span>
-        
-<span class="fc" id="L458">        System.out.println(&quot;nBSLen=&quot; + nBSLen);</span>
-        
-<span class="fc" id="L460">        TIntObjectMap&lt;TIntSet&gt; adjMap = new TIntObjectHashMap&lt;TIntSet&gt;();</span>
-        
-<span class="fc bfc" id="L462" title="All 2 branches covered.">        for (int i = 0; i &lt; groupList.size(); ++i) {</span>
-<span class="fc" id="L463">            TIntSet group = groupList.get(i);</span>
-<span class="fc" id="L464">            TIntIterator iter = group.iterator();</span>
-<span class="fc" id="L465">            TIntSet adj = adjMap.get(i);</span>
-            
-<span class="fc bfc" id="L467" title="All 2 branches covered.">            while (iter.hasNext()) {</span>
-<span class="fc" id="L468">                int pixIdx = iter.next();</span>
-<span class="fc" id="L469">                ph.toPixelCoords(pixIdx, width, xy);</span>
-                
-<span class="fc bfc" id="L471" title="All 2 branches covered.">                for (int k = 0; k &lt; dx8.length; ++k) {</span>
-<span class="fc" id="L472">                    int vX = xy[0] + dx8[k];</span>
-<span class="fc" id="L473">                    int vY = xy[1] + dy8[k];</span>
-<span class="fc bfc" id="L474" title="All 8 branches covered.">                    if (vX &lt; 0 || vY &lt; 0 || vX &gt;= width || vY &gt;= height) {</span>
-<span class="fc" id="L475">                        continue;</span>
-                    }
-<span class="fc" id="L477">                    int pixIdx2 = ph.toPixelIndex(vX, vY, width);</span>
-                    
-<span class="pc bpc" id="L479" title="1 of 2 branches missed.">                    if (!pixGroupMap.containsKey(pixIdx2)) {</span>
-<span class="nc" id="L480">                        continue;</span>
-                    }
-                    
-<span class="fc" id="L483">                    int j = pixGroupMap.get(pixIdx2);</span>
-                    
-<span class="fc bfc" id="L485" title="All 2 branches covered.">                    if (i == j) {</span>
-<span class="fc" id="L486">                        continue;</span>
-                    }
-                    
-<span class="fc bfc" id="L489" title="All 2 branches covered.">                    if (adj == null) {</span>
-<span class="fc" id="L490">                        adj = new TIntHashSet();</span>
-<span class="fc" id="L491">                        adjMap.put(i, adj);</span>
-                    }
-<span class="fc" id="L493">                    adj.add(j);</span>
-                }
-<span class="fc" id="L495">            }</span>
-        }
-        
-<span class="fc" id="L498">        return adjMap;</span>
-    }
-    
-    private void writeDebugImage(double[][] dt, String fileSuffix, int width, 
-        int height) throws IOException {
 
-<span class="nc" id="L504">        BufferedImage outputImage = new BufferedImage(width, height,</span>
-            BufferedImage.TYPE_BYTE_GRAY);
-
-<span class="nc" id="L507">        WritableRaster raster = outputImage.getRaster();</span>
-
-<span class="nc bnc" id="L509" title="All 2 branches missed.">        for (int i = 0; i &lt; dt.length; ++i) {</span>
-<span class="nc bnc" id="L510" title="All 2 branches missed.">            for (int j = 0; j &lt; dt[0].length; ++j) {</span>
-<span class="nc" id="L511">                int v = (int)Math.round(dt[i][j]);</span>
-<span class="nc" id="L512">                raster.setSample(i, j, 0, v);</span>
-            }
-        }
-
-        // write to an output directory.  we have user.dir from system properties
-        // but no other knowledge of users's directory structure
-<span class="nc" id="L518">        URL baseDirURL = this.getClass().getClassLoader().getResource(&quot;.&quot;);</span>
-<span class="nc" id="L519">        String baseDir = null;</span>
-<span class="nc bnc" id="L520" title="All 2 branches missed.">        if (baseDirURL != null) {</span>
-<span class="nc" id="L521">            baseDir = baseDirURL.getPath();</span>
-        } else {
-<span class="nc" id="L523">            baseDir = System.getProperty(&quot;user.dir&quot;);</span>
-        }
-<span class="nc bnc" id="L525" title="All 2 branches missed.">        if (baseDir == null) {</span>
-<span class="nc" id="L526">            return;</span>
-        }
-<span class="nc" id="L528">        File t = new File(baseDir + &quot;/bin&quot;);</span>
-<span class="nc bnc" id="L529" title="All 2 branches missed.">        if (t.exists()) {</span>
-<span class="nc" id="L530">            baseDir = t.getPath();</span>
-<span class="nc bnc" id="L531" title="All 2 branches missed.">        } else if ((new File(baseDir + &quot;/target&quot;)).exists()) {</span>
-<span class="nc" id="L532">            baseDir = baseDir + &quot;/target&quot;;</span>
-        }
-
-        // no longer need to use file.separator
-<span class="nc" id="L536">        String outFilePath = baseDir + &quot;/&quot; + fileSuffix + &quot;.png&quot;;</span>
-
-<span class="nc" id="L538">        ImageIO.write(outputImage, &quot;PNG&quot;, new File(outFilePath));</span>
-
-<span class="nc" id="L540">        Logger.getLogger(this.getClass().getName()).info(&quot;wrote &quot; + outFilePath);</span>
-<span class="nc" id="L541">    }</span>
-   
-    private static void printDT(int[][] dt) {
-        
-<span class="nc" id="L545">        int w = dt.length;</span>
-<span class="nc" id="L546">        int h = dt[0].length;</span>
-        
-<span class="nc" id="L548">        StringBuilder sb2 = new StringBuilder();</span>
-<span class="nc bnc" id="L549" title="All 2 branches missed.">        for (int j = 0; j &lt; h; ++j) {</span>
-<span class="nc" id="L550">            sb2.append(&quot;row &quot;).append(j).append(&quot;: &quot;);</span>
-<span class="nc bnc" id="L551" title="All 2 branches missed.">            for (int i = 0; i &lt; w; ++i) {</span>
-<span class="nc" id="L552">                int v = dt[i][j];</span>
-<span class="nc bnc" id="L553" title="All 2 branches missed.">                if (v &gt; (Integer.MAX_VALUE - 3)) {</span>
-<span class="nc" id="L554">                    sb2.append(String.format(&quot; ---&quot;));</span>
-                } else {
-<span class="nc" id="L556">                    sb2.append(String.format(&quot; %3d&quot;, v));</span>
-                }
-            }
-<span class="nc" id="L559">            sb2.append(&quot;\n&quot;);</span>
-        }
-<span class="nc" id="L561">        System.out.println(sb2.toString());</span>
-<span class="nc" id="L562">    }</span>
-    
     private int findPeakIfSingleProfile(float[] counts) {
 
-<span class="fc" id="L566">        int yMaxIdx = MiscMath0.findYMaxIndex(counts);</span>
-<span class="fc" id="L567">        float yMax = counts[yMaxIdx];</span>
-        
+<span class="nc" id="L669">        int yMaxIdx = MiscMath0.findYMaxIndex(counts);</span>
+<span class="nc" id="L670">        float yMax = counts[yMaxIdx];</span>
+
         // increasing towards peak and decreasing after?
-<span class="fc" id="L570">        boolean sp = true;</span>
-<span class="fc" id="L571">        float prev = counts[0];</span>
-<span class="fc bfc" id="L572" title="All 2 branches covered.">        for (int i = 1; i &lt; counts.length; ++i) {</span>
-<span class="fc" id="L573">            float v = counts[i];</span>
-<span class="fc bfc" id="L574" title="All 2 branches covered.">            if (i &lt; yMaxIdx) {</span>
-<span class="pc bpc" id="L575" title="1 of 4 branches missed.">                if (v &lt; prev || v &gt; yMax) {</span>
-<span class="fc" id="L576">                    sp = false;</span>
-<span class="fc" id="L577">                    break;</span>
+<span class="nc" id="L673">        boolean sp = true;</span>
+<span class="nc" id="L674">        float prev = counts[0];</span>
+<span class="nc bnc" id="L675" title="All 2 branches missed.">        for (int i = 1; i &lt; counts.length; ++i) {</span>
+<span class="nc" id="L676">            float v = counts[i];</span>
+<span class="nc bnc" id="L677" title="All 2 branches missed.">            if (i &lt; yMaxIdx) {</span>
+<span class="nc bnc" id="L678" title="All 4 branches missed.">                if (v &lt; prev || v &gt; yMax) {</span>
+<span class="nc" id="L679">                    sp = false;</span>
+<span class="nc" id="L680">                    break;</span>
                 }
-<span class="fc bfc" id="L579" title="All 2 branches covered.">            } else if (i &gt; yMaxIdx) {</span>
-<span class="pc bpc" id="L580" title="1 of 4 branches missed.">                if (v &gt; prev || v &gt; yMax) {</span>
-<span class="fc" id="L581">                    sp = false;</span>
-<span class="fc" id="L582">                    break;</span>
+<span class="nc bnc" id="L682" title="All 2 branches missed.">            } else if (i &gt; yMaxIdx) {</span>
+<span class="nc bnc" id="L683" title="All 4 branches missed.">                if (v &gt; prev || v &gt; yMax) {</span>
+<span class="nc" id="L684">                    sp = false;</span>
+<span class="nc" id="L685">                    break;</span>
                 }
             }
-<span class="fc" id="L585">            prev = counts[i];</span>
+<span class="nc" id="L688">            prev = counts[i];</span>
         }
-<span class="fc bfc" id="L587" title="All 2 branches covered.">        if (sp) {</span>
-<span class="fc" id="L588">            return yMaxIdx;</span>
+<span class="nc bnc" id="L690" title="All 2 branches missed.">        if (sp) {</span>
+<span class="nc" id="L691">            return yMaxIdx;</span>
         }
-        
-<span class="fc" id="L591">        return -1;</span>
+
+<span class="nc" id="L694">        return -1;</span>
     }
-    
+
     private void integerResampling(int[] values, float[] counts,
         TIntList outputValues, TFloatList outputCounts) {
-        
-<span class="fc" id="L597">        int sStart = values[0];</span>
-<span class="fc" id="L598">        int sEnd = values[values.length - 1];</span>
-        
-<span class="fc" id="L600">        int n = sEnd - sStart + 1;</span>
-        
-<span class="fc" id="L602">        Interp interp = new Interp();</span>
-<span class="fc" id="L603">        float[] input = new float[2];</span>
-        
-<span class="fc bfc" id="L605" title="All 2 branches covered.">        for (int i = 0; i &lt; values.length - 1; ++i) {</span>
-<span class="fc" id="L606">            int a0 = values[i];</span>
-<span class="fc" id="L607">            int a1 = values[i + 1];</span>
-<span class="fc bfc" id="L608" title="All 2 branches covered.">            if (a1 == (a0 + 1)) {</span>
-<span class="fc" id="L609">                outputValues.add(a0);</span>
-<span class="fc" id="L610">                outputCounts.add(counts[i]);</span>
-<span class="fc" id="L611">                continue;</span>
+
+<span class="nc" id="L700">        int sStart = values[0];</span>
+<span class="nc" id="L701">        int sEnd = values[values.length - 1];</span>
+
+<span class="nc" id="L703">        int n = sEnd - sStart + 1;</span>
+
+<span class="nc" id="L705">        Interp interp = new Interp();</span>
+<span class="nc" id="L706">        float[] input = new float[2];</span>
+
+<span class="nc bnc" id="L708" title="All 2 branches missed.">        for (int i = 0; i &lt; values.length - 1; ++i) {</span>
+<span class="nc" id="L709">            int a0 = values[i];</span>
+<span class="nc" id="L710">            int a1 = values[i + 1];</span>
+<span class="nc bnc" id="L711" title="All 2 branches missed.">            if (a1 == (a0 + 1)) {</span>
+<span class="nc" id="L712">                outputValues.add(a0);</span>
+<span class="nc" id="L713">                outputCounts.add(counts[i]);</span>
+<span class="nc" id="L714">                continue;</span>
             }
-<span class="fc" id="L613">            input[0] = counts[i];</span>
-<span class="fc" id="L614">            input[1] = counts[i + 1];</span>
-<span class="fc" id="L615">            int n2 = a1 - a0 + 1;</span>
-<span class="fc" id="L616">            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);</span>
-<span class="fc bfc" id="L617" title="All 2 branches covered.">            for (int j = 0; j &lt; n2; ++j) {</span>
-<span class="fc" id="L618">                outputValues.add(j + a0);</span>
-<span class="fc" id="L619">                outputCounts.add(Math.round(output[j]));</span>
+<span class="nc" id="L716">            input[0] = counts[i];</span>
+<span class="nc" id="L717">            input[1] = counts[i + 1];</span>
+<span class="nc" id="L718">            int n2 = a1 - a0 + 1;</span>
+<span class="nc" id="L719">            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);</span>
+<span class="nc bnc" id="L720" title="All 2 branches missed.">            for (int j = 0; j &lt; n2; ++j) {</span>
+<span class="nc" id="L721">                outputValues.add(j + a0);</span>
+<span class="nc" id="L722">                outputCounts.add(Math.round(output[j]));</span>
             }
-        }        
-<span class="fc" id="L622">    }</span>
-    
+        }
+<span class="nc" id="L725">    }</span>
+
     // result[0] is the array transformed values
     // result[1] is the array of transformed counts
     private float[][] smooth(int[] maximaValues, float[] maximaCounts) {
 
-<span class="fc" id="L628">        MedianTransform1D mt = new MedianTransform1D();</span>
-        
-<span class="fc" id="L630">        List&lt;OneDFloatArray&gt; outTrans = new ArrayList&lt;OneDFloatArray&gt;();</span>
-<span class="fc" id="L631">        List&lt;OneDFloatArray&gt; outCoeff = new ArrayList&lt;OneDFloatArray&gt;();</span>
-        
-        //using pyramidal means need to rescale maximaValues too
-<span class="fc" id="L634">        List&lt;OneDFloatArray&gt; outTransV = new ArrayList&lt;OneDFloatArray&gt;();</span>
-<span class="fc" id="L635">        List&lt;OneDFloatArray&gt; outCoeffV = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="nc" id="L731">        MedianTransform1D mt = new MedianTransform1D();</span>
 
-<span class="fc" id="L637">        float[] input = maximaCounts;</span>
-<span class="fc" id="L638">        float[] inputV = new float[maximaValues.length];</span>
-<span class="fc bfc" id="L639" title="All 2 branches covered.">        for (int i = 0; i &lt; maximaValues.length; ++i) {</span>
-<span class="fc" id="L640">            inputV[i] = maximaValues[i];</span>
+<span class="nc" id="L733">        List&lt;OneDFloatArray&gt; outTrans = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="nc" id="L734">        List&lt;OneDFloatArray&gt; outCoeff = new ArrayList&lt;OneDFloatArray&gt;();</span>
+
+        //using pyramidal means need to rescale maximaValues too
+<span class="nc" id="L737">        List&lt;OneDFloatArray&gt; outTransV = new ArrayList&lt;OneDFloatArray&gt;();</span>
+<span class="nc" id="L738">        List&lt;OneDFloatArray&gt; outCoeffV = new ArrayList&lt;OneDFloatArray&gt;();</span>
+
+<span class="nc" id="L740">        float[] input = maximaCounts;</span>
+<span class="nc" id="L741">        float[] inputV = new float[maximaValues.length];</span>
+<span class="nc bnc" id="L742" title="All 2 branches missed.">        for (int i = 0; i &lt; maximaValues.length; ++i) {</span>
+<span class="nc" id="L743">            inputV[i] = maximaValues[i];</span>
         }
-        
+
         while (true) {
-            
-<span class="fc" id="L645">            mt.multiscalePyramidalMedianTransform2(input, outTrans, outCoeff);</span>
-<span class="fc" id="L646">            mt.multiscalePyramidalMedianTransform2(inputV, outTransV, outCoeffV);</span>
+
+<span class="nc" id="L748">            mt.multiscalePyramidalMedianTransform2(input, outTrans, outCoeff);</span>
+<span class="nc" id="L749">            mt.multiscalePyramidalMedianTransform2(inputV, outTransV, outCoeffV);</span>
 
             // search for the first transformed which has only one pea in it
-<span class="pc bpc" id="L649" title="1 of 2 branches missed.">            for (int i = 0; i &lt; outTrans.size(); ++i) {</span>
-<span class="fc" id="L650">                OneDFloatArray tr = outTrans.get(i);</span>
-<span class="fc" id="L651">                OneDFloatArray trV = outTransV.get(i);</span>
-<span class="pc bpc" id="L652" title="3 of 4 branches missed.">                assert(tr.a.length == trV.a.length);</span>
-                
-<span class="fc" id="L654">                int peakIdx = findPeakIfSingleProfile(tr.a);</span>
-<span class="fc bfc" id="L655" title="All 2 branches covered.">                if (peakIdx &gt; -1) {</span>
-<span class="fc" id="L656">                    float[][] a = new float[2][];</span>
-<span class="fc" id="L657">                    a[0] = trV.a;</span>
-<span class="fc" id="L658">                    a[1] = tr.a;</span>
-<span class="fc" id="L659">                    return a;</span>
+<span class="nc bnc" id="L752" title="All 2 branches missed.">            for (int i = 0; i &lt; outTrans.size(); ++i) {</span>
+<span class="nc" id="L753">                OneDFloatArray tr = outTrans.get(i);</span>
+<span class="nc" id="L754">                OneDFloatArray trV = outTransV.get(i);</span>
+<span class="nc bnc" id="L755" title="All 4 branches missed.">                assert(tr.a.length == trV.a.length);</span>
+
+<span class="nc" id="L757">                int peakIdx = findPeakIfSingleProfile(tr.a);</span>
+<span class="nc bnc" id="L758" title="All 2 branches missed.">                if (peakIdx &gt; -1) {</span>
+<span class="nc" id="L759">                    float[][] a = new float[2][];</span>
+<span class="nc" id="L760">                    a[0] = trV.a;</span>
+<span class="nc" id="L761">                    a[1] = tr.a;</span>
+<span class="nc" id="L762">                    return a;</span>
                 }
             }
-            
-<span class="nc" id="L663">            input = outTrans.get(outTrans.size() - 1).a;</span>
-<span class="nc" id="L664">            inputV = outTransV.get(outTransV.size() - 1).a;</span>
-<span class="nc bnc" id="L665" title="All 4 branches missed.">            assert(input.length &gt; 3);</span>
-<span class="nc" id="L666">            outTrans.clear();</span>
-<span class="nc" id="L667">            outCoeff.clear();</span>
-<span class="nc" id="L668">            outTransV.clear();</span>
-<span class="nc" id="L669">            outCoeffV.clear();</span>
+
+<span class="nc" id="L766">            input = outTrans.get(outTrans.size() - 1).a;</span>
+<span class="nc" id="L767">            inputV = outTransV.get(outTransV.size() - 1).a;</span>
+<span class="nc bnc" id="L768" title="All 4 branches missed.">            assert(input.length &gt; 3);</span>
+<span class="nc" id="L769">            outTrans.clear();</span>
+<span class="nc" id="L770">            outCoeff.clear();</span>
+<span class="nc" id="L771">            outTransV.clear();</span>
+<span class="nc" id="L772">            outCoeffV.clear();</span>
         }
     }
 
-    private int averagePeak(int[] values, float[] counts) {
+    private float resampleAndSmooth(TIntIntMap valueCounts,
+        List&lt;OneDFloatArray&gt; outTransC, List&lt;OneDFloatArray&gt; outCoeffC,
+        List&lt;OneDFloatArray&gt; outTransV, List&lt;OneDFloatArray&gt; outCoeffV) {
 
-<span class="fc" id="L675">        float avg = 0;</span>
-<span class="fc bfc" id="L676" title="All 2 branches covered.">        for (float c : counts) {</span>
-<span class="fc" id="L677">            avg += c;</span>
+<span class="fc" id="L780">        int n = valueCounts.size();</span>
+
+<span class="fc" id="L782">        System.out.println(&quot;freq map key size=&quot; + n);</span>
+
+<span class="fc" id="L784">        TIntList outV = new TIntArrayList();</span>
+<span class="fc" id="L785">        TFloatList outC = new TFloatArrayList();</span>
+<span class="fc" id="L786">        integerResampling(valueCounts, outV, outC);</span>
+
+<span class="fc" id="L788">        float[] values = new float[outC.size()];</span>
+<span class="fc bfc" id="L789" title="All 2 branches covered.">        for (int i = 0; i &lt; outV.size(); ++i) {</span>
+<span class="fc" id="L790">            values[i] = outV.get(i);</span>
         }
-<span class="fc" id="L679">        avg /= (float)counts.length;</span>
-        
-<span class="fc" id="L681">        int idx = 0;</span>
-<span class="pc bpc" id="L682" title="1 of 2 branches missed.">        for (int i = 0; i &lt; counts.length; ++i) {</span>
-<span class="fc bfc" id="L683" title="All 2 branches covered.">            if (counts[i] &lt; avg) {</span>
-<span class="fc" id="L684">                idx = i;</span>
-<span class="pc bpc" id="L685" title="1 of 2 branches missed.">            } else if (counts[i] == avg) {</span>
-<span class="nc" id="L686">                idx = i;</span>
-<span class="nc" id="L687">                break;</span>
-            } else {
-                break;
+<span class="fc" id="L792">        float[] counts = outC.toArray(new float[outC.size()]);</span>
+
+<span class="fc" id="L794">        MedianTransform1D mt = new MedianTransform1D();</span>
+<span class="fc" id="L795">        mt.multiscalePyramidalMedianTransform2(counts, outTransC, outCoeffC);</span>
+<span class="fc" id="L796">        mt.multiscalePyramidalMedianTransform2(values, outTransV, outCoeffV);</span>
+
+<span class="pc bpc" id="L798" title="3 of 4 branches missed.">        assert(outTransC.size() == outTransV.size());</span>
+
+        /*if (debug) {
+            try {//DEBUG
+                PolygonAndPointPlotter plotter = new PolygonAndPointPlotter();
+                for (int i = 0; i &lt; outTransC.size(); ++i) {
+                    float[] v = outTransV.get(i).a;
+                    if (v.length &lt;= 1) {
+                        continue;
+                    }
+                    float[] c = outTransC.get(i).a;
+                    assert(v.length == c.length);
+                    float maxC = MiscMath0.findMax(c);
+                    plotter.addPlot(0, v[v.length - 1], 0, maxC,
+                        v, c, v, c, &quot; &quot; + v.length);
+                }
+                plotter.writeFile(&quot;point_pairs_&quot; + System.currentTimeMillis());
+
+            } catch (IOException ex) {
+                Logger.getLogger(PairwiseSeparations.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-<span class="fc" id="L692">        return idx;</span>
+        */
+
+<span class="fc" id="L822">        return values[values.length - 1];</span>
+    }
+
+    private void integerResampling(TIntIntMap valueCounts, TIntList outV,
+        TFloatList outC) {
+
+        // sort pointValueCounts by value
+<span class="fc" id="L829">        int[] values = new int[valueCounts.size()];</span>
+<span class="fc" id="L830">        int[] counts = new int[values.length];</span>
+
+<span class="fc" id="L832">        TIntIntIterator iter = valueCounts.iterator();</span>
+
+<span class="fc bfc" id="L834" title="All 2 branches covered.">        for (int i = 0; i &lt; valueCounts.size(); ++i) {</span>
+<span class="fc" id="L835">            iter.advance();</span>
+<span class="fc" id="L836">            counts[i] = iter.value();</span>
+            // distances:
+<span class="fc" id="L838">            values[i] = iter.key();</span>
+        }
+<span class="fc" id="L840">        MiscSorter.sortBy1stArg(values, counts);</span>
+
+<span class="fc" id="L842">        System.out.println(&quot;freq map smallest key=&quot; + values[0]);</span>
+
+<span class="fc" id="L844">        Interp interp = new Interp();</span>
+<span class="fc" id="L845">        float[] input = new float[2];</span>
+
+<span class="fc bfc" id="L847" title="All 2 branches covered.">        for (int i = 0; i &lt; values.length - 1; ++i) {</span>
+<span class="fc" id="L848">            int a0 = values[i];</span>
+<span class="fc" id="L849">            int a1 = values[i + 1];</span>
+<span class="fc bfc" id="L850" title="All 2 branches covered.">            if (a1 == (a0 + 1)) {</span>
+<span class="fc" id="L851">                outV.add(a0);</span>
+<span class="fc" id="L852">                outC.add(counts[i]);</span>
+<span class="fc" id="L853">                continue;</span>
+            }
+<span class="fc" id="L855">            input[0] = counts[i];</span>
+<span class="fc" id="L856">            input[1] = counts[i + 1];</span>
+<span class="fc" id="L857">            int n2 = a1 - a0 + 1;</span>
+
+<span class="fc" id="L859">            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);</span>
+
+<span class="fc bfc" id="L861" title="All 2 branches covered.">            for (int j = 0; j &lt; n2; ++j) {</span>
+<span class="fc" id="L862">                outV.add(j + a0);</span>
+<span class="fc" id="L863">                outC.add(Math.round(output[j]));</span>
+            }
+        }
+<span class="fc" id="L866">    }</span>
+
+
+    private int findArrayWithGTNPoints(int nP, List&lt;OneDFloatArray&gt; arrays) {
+<span class="fc bfc" id="L870" title="All 2 branches covered.">        for (int i = arrays.size() - 1; i &gt; -1; --i) {</span>
+<span class="fc" id="L871">            int lenI = arrays.get(i).a.length;</span>
+<span class="fc bfc" id="L872" title="All 2 branches covered.">            if (lenI &gt; nP) {</span>
+<span class="pc bpc" id="L873" title="1 of 2 branches missed.">                if (i &gt; 0) {</span>
+<span class="fc" id="L874">                    return i;</span>
+                }
+            }
+        }
+<span class="fc" id="L878">        return arrays.size() - 1;</span>
+    }
+
+    private int findArrayWithNPoints(int nP, List&lt;OneDFloatArray&gt; arrays) {
+<span class="fc" id="L882">        int idx = 0;</span>
+<span class="fc" id="L883">        int diff = Math.abs(arrays.get(0).a.length - nP);</span>
+<span class="fc bfc" id="L884" title="All 2 branches covered.">        for (int i = 1; i &lt; arrays.size(); ++i) {</span>
+<span class="fc" id="L885">            int lenI = arrays.get(i).a.length;</span>
+<span class="fc" id="L886">            int diffI = Math.abs(lenI - nP);</span>
+<span class="fc bfc" id="L887" title="All 2 branches covered.">            if (diffI &lt; diff) {</span>
+<span class="fc" id="L888">                idx = i;</span>
+<span class="fc" id="L889">                diff = diffI;</span>
+            }
+        }
+<span class="fc" id="L892">        return idx;</span>
     }
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
