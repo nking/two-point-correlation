@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  * 
  * @author nichole
  */
-public class DTClusterFinder {
+public class ClusterFinder {
     
     /**
      * pixel indexes
@@ -63,7 +63,7 @@ public class DTClusterFinder {
      * @param width
      * @param height
      */
-    public DTClusterFinder(TLongSet thePoints, int width, int height) {
+    public ClusterFinder(TLongSet thePoints, int width, int height) {
         
         this.points = thePoints;
         this.width = width;
@@ -196,7 +196,7 @@ public class DTClusterFinder {
             " bckGndSep=" + Arrays.toString(sepHolder.bckGndSep) + 
             " thresholdFactor=" + threshholdFactor);
         
-        DTGroupFinder groupFinder = new DTGroupFinder(width, height);
+        GroupFinder groupFinder = new GroupFinder(width, height);
         
         groupFinder.setThreshholdFactor(threshholdFactor);
         

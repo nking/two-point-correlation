@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  *
  * @author nichole
  */
-public class DTClusterFinder3Test extends BaseTwoPointTest {
+public class ClusterFinder3Test extends BaseTwoPointTest {
     
     private Logger log = Logger.getLogger(this.getClass().getName());
 
@@ -130,8 +130,8 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
             }
         }
         
-        DTClusterFinder clusterFinder = 
-            new DTClusterFinder(pixIdxs, width, height);
+        ClusterFinder clusterFinder = 
+            new ClusterFinder(pixIdxs, width, height);
 
         if (setDebug) {
             clusterFinder.setToDebug();
@@ -250,8 +250,8 @@ public class DTClusterFinder3Test extends BaseTwoPointTest {
         PixelHelper ph = new PixelHelper();
         TLongSet pixIdxs = ph.convert(points, width);
 
-        DTClusterFinder clusterFinder
-            = new DTClusterFinder(pixIdxs, width, height);
+        ClusterFinder clusterFinder
+            = new ClusterFinder(pixIdxs, width, height);
 
         if (setDebug) {
             clusterFinder.setToDebug();

@@ -13,7 +13,7 @@ import junit.framework.TestCase;
  *
  * @author nichole
  */
-public class DTGroupFinderTest extends TestCase {
+public class GroupFinderTest extends TestCase {
     
     /**
      *
@@ -27,7 +27,7 @@ public class DTGroupFinderTest extends TestCase {
         
         TLongSet pixIdxs = ph.convert(points, 8);
         
-        DTGroupFinder finder = new DTGroupFinder(8, 8);
+        GroupFinder finder = new GroupFinder(8, 8);
                 
         float critSep = 2.f;
         

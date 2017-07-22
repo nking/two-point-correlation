@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  *
  * @author nichole
  */
-public class DTGroupFinder {
+public class GroupFinder {
 
     private DisjointSet2Helper disjointSetHelper = null;
 
@@ -50,7 +50,7 @@ public class DTGroupFinder {
 
     protected Logger log = Logger.getLogger(this.getClass().getName());
 
-    public DTGroupFinder(int imageWidth, int imageHeight) {
+    public GroupFinder(int imageWidth, int imageHeight) {
 
         imgWidth = imageWidth;
 

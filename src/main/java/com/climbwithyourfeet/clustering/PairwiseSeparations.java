@@ -493,6 +493,12 @@ public class PairwiseSeparations {
                     tmpV = outTransV_voidT.get(voidIdx).a[tmpIdx];
                 } else {
                     tmpIdx = peakIdxs[0];
+                    if (tmpIdx < 0) {
+                        int z = 0;
+                    }
+                    if (voidIdx < 0) {
+                        int z = 0;
+                    }
                     tmpV = outTransV_voidT.get(voidIdx).a[tmpIdx];
                 }
                 if (tmpV > maxPeakValue) {
