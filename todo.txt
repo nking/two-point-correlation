@@ -17,6 +17,24 @@
              being a hybrid of k nearest neighbors and also of KDE.
             -- need to keep track of the bandwidth for each wavelet
                invocation because it is needed for the errors.
+-- in the documentation, espec on the wiki, edit the discussion
+   of point spacings and point associations:
+     -- add back some of the explanation of poisson distribution
+        of void points and the resulting generalized extreme value
+        curve peak, along w/ brief discussion of that as background
+        density and a typical threshold above error being 2.5 sigma.
+        - emphasize that at best, the runtime complexity for that
+          approach is O(N^2) and provide the details.
+     -- add back a discussion about the distance transform
+        based emthod that was just refactored out of code:
+          the maxima in the distance transform of void points
+          giving a somewhat fast separation distance.
+          resembles parts of LDA and SVM
+      -- add details of current logic for the separation distance
+         -- add details for the definition of cluster as being
+            pairwise association .lte. the separation distance.
+            this definition of cluster membership differs among
+            some cluster algorithms.
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
    -- redo a couple of "other" snapshots on two-pt-correl web page:
