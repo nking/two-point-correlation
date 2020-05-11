@@ -14,7 +14,7 @@
              the error analysis easier.  That bandwidth is used for
              the normalization of each convolution result).
              NOTE that this alteration leads to the resulting smoothing
-             being a hybrid of k nearest neighbors and also of KDE.
+             being a hybrid of k nearest neighbors and also of KDE (kernel density estimation).
             -- need to keep track of the bandwidth for each wavelet
                invocation because it is needed for the errors.
 -- in the documentation, espec on the wiki, edit the discussion
@@ -51,3 +51,17 @@
 -- create ability for multiple dimensions
    -- that is n^2/2 number of dts and/or knn
 -- need improvements in hist...
+
+-- one day, revisit the first version of the code which uses the peak of
+   the GEV of the histogram of 2-point distances.  
+   many ways to determine the Gumbel parameters faster, and ML appears to be
+   efficient with a small mean-square error, but difficult to get exact sol'n.
+   Note that limiting the GEV to just the Gumbel distribution simplifies the
+   problem and makes numerical approximations possible (no longer multiple sets
+   of very different parameters that give similar GEV distributions... many local
+   minima...)
+   NOTE that using the peak of the GEV as a model for the point separation of
+   the presumed poisson background (non-cluster) points, can be compared
+   to "maximum spacing estimation", that is,  maximum product of spacings 
+   (MPS) and Moran statistic, so want to consider
+   comparing my 2.5 sigma threshold to the MSE too.
