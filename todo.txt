@@ -1,3 +1,5 @@
+revise the notes below
+
 -- for the point separation analysis,
    I'm currently using resampling to evenly spaced intervals
    then pyramidal wavelets to smooth,
@@ -25,16 +27,32 @@
         density and a typical threshold above error being 2.5 sigma.
         - emphasize that at best, the runtime complexity for that
           approach is O(N^2) and provide the details.
+        - include snapshots and runtime complexity details.
      -- add back a discussion about the distance transform
-        based emthod that was just refactored out of code:
+        based method that was just refactored out of code:
           the maxima in the distance transform of void points
           giving a somewhat fast separation distance.
           resembles parts of LDA and SVM
-      -- add details of current logic for the separation distance
-         -- add details for the definition of cluster as being
-            pairwise association .lte. the separation distance.
-            this definition of cluster membership differs among
-            some cluster algorithms.
+        - include snapshots and runtime complexity details.
+        - note that the distance transform method is for a pair of dimensions,
+          that is x and y.  for dimensions d, the runtime would be O(N^(d*(d-1)/2))
+      -- add details of current logic for the distance
+        - include snapshots and runtime complexity details.
+
+-- consider some criteria that Jain has to describe clusters
+   that are defined by the content rather than the separation
+   (voids):
+    "Data Clustering: 50 Years Beyond K-Means"
+    -- convex admissable if convex hulls do not intersect
+    -- cluster proportion admissable if cluster boundaries 
+       do not change even if some clusters are duplicated.
+    -- cluster omission admissable if can remove a cluster
+       and get same results for the remaining cluster when
+       algorithm is rerun
+    -- monotone admissable
+    -- consistency: changing the between cluster distance or
+       intracluster distance does not change results.
+
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
    -- redo a couple of "other" snapshots on two-pt-correl web page:
@@ -60,8 +78,16 @@
    problem and makes numerical approximations possible (no longer multiple sets
    of very different parameters that give similar GEV distributions... many local
    minima...)
+      the mode mu is easy to determine as peak of distribution, but has the histogram
+         bin center and width caveat.  then solve beta with median, then gamma with mean,
+         then have gumbel parameters for pdf and cdf.
+         see L-moments in general in https://en.wikipedia.org/wiki/L-moment
+         and Gumbel distribution article and table within L-moment article.
    NOTE that using the peak of the GEV as a model for the point separation of
    the presumed poisson background (non-cluster) points, can be compared
    to "maximum spacing estimation", that is,  maximum product of spacings 
    (MPS) and Moran statistic, so want to consider
    comparing my 2.5 sigma threshold to the MSE too.
+   -- comparison of GEV fitting techniques for small range of shape:
+      https://mspace.lib.umanitoba.ca/bitstream/handle/1993/23841/saha_sathi.pdf?sequence=1
+
