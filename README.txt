@@ -30,6 +30,12 @@ lowest surface densities.);
 NOTE that the project assumes that the data have proportial
 separations for each axis - one critical separation 
 is used for both axes.
+One could use "standard unit normalization" from the included
+shared library to transform the points before use: 
+    algorithms.misc.Standardization.standardUnitNormalization()
+    (if class is not present yet, it will be soon after a project update).
+Note that the project acts upon 2 dimensions.  For d-dimensions, use of
+this would have a runtime of roughly O(N_points^(d*(d-1)/2)).
 
 Usage as an API:
 
