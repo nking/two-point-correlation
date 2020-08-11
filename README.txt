@@ -37,10 +37,10 @@ shared library to transform the points before use:
     and then scale the result to integer values or use another standardization
     technique.
 Note that the project acts upon 2 dimensions.  For d-dimensions, use of
-this would have a runtime of roughly O(N_dimension_length^(d*(d-1)/2)).
+this would have a runtime of roughly O(N_dimension_area^(d*(d-1)/2)).
 Note also that the distance transform is not ideal for sparse datasets
 that span a large amount of space as algorithms depending upon the number of
-points instead of dimension lengths may perform better in that case.
+points instead of dimension lengths of dataset may perform better in that case.
 
 Usage as an API:
 
