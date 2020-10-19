@@ -72,6 +72,8 @@ revise the notes below
 
 -- one day, revisit the first version of the code which uses the peak of
    the GEV of the histogram of 2-point distances.  
+   explore use of standard form of GEV and more ismply, the Gumbel distribution:
+      https://www.itl.nist.gov/div898/handbook/eda/section3/eda364.htm
    many ways to determine the Gumbel parameters faster, and ML appears to be
    efficient with a small mean-square error, but difficult to get exact sol'n.
    Note that limiting the GEV to just the Gumbel distribution simplifies the
