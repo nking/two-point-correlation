@@ -3,7 +3,7 @@ package com.climbwithyourfeet.clustering;
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
-import algorithms.misc.MiscSorter;
+import algorithms.sort.MiscSorter;
 import algorithms.search.KDTree;
 import algorithms.search.KNearestNeighbors;
 import algorithms.search.NearestNeighbor2DLong;
