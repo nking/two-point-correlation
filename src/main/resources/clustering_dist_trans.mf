@@ -1,5 +1,5 @@
 Implementation-Title: Density_Clustering
-Implementation-Version: 1.2.5
+Implementation-Version: 1.2.6
 Implementation-Vendor: NicholeKing
 Implementation-URL: http://nking.github.io/two-point-correlation/
 Class-Path: com.climbwithyourfeet.shared.jar trove4j-3.0.3.jar

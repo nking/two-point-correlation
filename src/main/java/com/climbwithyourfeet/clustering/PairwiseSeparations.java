@@ -568,12 +568,12 @@ public class PairwiseSeparations {
             }
             
             int n = outTransV_void.get(voidIdx).a.length;
-            System.out.println("*voidIdx=" + voidIdx + " out of " +
+            /*System.out.println("*voidIdx=" + voidIdx + " out of " +
                 outTransV_void.size()
                 + " peakIdx=" + peakIdx + " value=" 
                 + outTransV_void.get(voidIdx).a[peakIdx]    
                 + " l=" +
-                (outTransV_void.get(voidIdx).a.length - 1));
+                (outTransV_void.get(voidIdx).a.length - 1));*/
             //System.out.println("*values=" +
             //    Arrays.toString(outTransV_void.get(voidIdx).a));
             //System.out.println(" counts=" +
