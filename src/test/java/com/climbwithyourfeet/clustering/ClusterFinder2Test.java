@@ -4,22 +4,14 @@ import algorithms.compGeometry.clustering.twopointcorrelation.RandomClusterAndBa
 import algorithms.compGeometry.clustering.twopointcorrelation.AxisIndexer;
 import algorithms.compGeometry.clustering.twopointcorrelation.BaseTwoPointTest;
 import algorithms.compGeometry.clustering.twopointcorrelation.CreateClusterDataTest;
-import algorithms.misc.Frequency;
 import algorithms.util.ContourPlotter;
 import algorithms.util.PairInt;
 import algorithms.util.PixelHelper;
 import algorithms.util.ResourceFinder;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntFloatMap;
 import gnu.trove.map.TLongFloatMap;
-import gnu.trove.map.hash.TIntFloatHashMap;
 import gnu.trove.map.hash.TLongFloatHashMap;
-import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
-import gnu.trove.set.hash.TIntHashSet;
 import gnu.trove.set.hash.TLongHashSet;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -277,12 +269,12 @@ public class ClusterFinder2Test extends BaseTwoPointTest {
         String[] fileNames = {
             "Aggregation.txt", 
             "Compound.txt", 
-            "Pathbased.txt" , 
-            "Spiral.txt",
+            "pathbased.txt" , 
+            "spiral.txt",
             "D31.txt", 
            "R15.txt" , 
-            "Jain.txt", 
-            "Flame.txt",
+            "jain.txt", 
+            "flame.txt",
             //"a1.txt", "a2.txt", "a3.txt"
             /*,
             "s1.txt", "s2.txt", "s3.txt", "s4.txt",

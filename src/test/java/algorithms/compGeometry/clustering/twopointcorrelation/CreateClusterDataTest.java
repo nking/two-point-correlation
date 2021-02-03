@@ -546,7 +546,9 @@ public class CreateClusterDataTest extends BaseTwoPointTest {
         boolean hasTabs = false;
         
         try {
-            reader = new FileReader(new File(filePath));
+            File fl = new File(filePath);
+            //System.out.println("looking for file=" + fl.toString() + " exists=" + fl.exists());
+            reader = new FileReader(fl);
             in = new BufferedReader(reader);
             
             int nLines = 0;
