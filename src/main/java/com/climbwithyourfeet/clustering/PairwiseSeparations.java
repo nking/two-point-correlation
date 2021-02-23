@@ -159,6 +159,13 @@ public class PairwiseSeparations {
         Random rand, int nDraws, int k, TIntIntMap voidValueCounts,
         KNearestNeighbors knn, TLongSet pixelIdxs, int width, int height,
         float maxV) {
+        
+        if (width < 3) {
+            throw new IllegalArgumentException("width must be >= 3");
+        }
+        if (height < 3) {
+            throw new IllegalArgumentException("height must be >= 3");
+        }
 
         PixelHelper ph = new PixelHelper();
 
@@ -221,6 +228,13 @@ public class PairwiseSeparations {
             throw new IllegalArgumentException(
                 "pixelIdxs.size must be 12 or more");
         }
+        
+        if (width < 3) {
+            throw new IllegalArgumentException("width must be >= 3");
+        }
+        if (height < 3) {
+            throw new IllegalArgumentException("height must be >= 3");
+        }
 
         long maxC = (long)width * height;
         int maxW = 1 + (int) Math.ceil(Math.log(maxC) / Math.log(2));
@@ -260,6 +274,13 @@ public class PairwiseSeparations {
     protected BackgroundSeparationHolder extractWithNN2D(TLongSet pixelIdxs,
         int width, int height) {
 
+        if (width < 3) {
+            throw new IllegalArgumentException("width must be >= 3");
+        }
+        if (height < 3) {
+            throw new IllegalArgumentException("height must be >= 3");
+        }
+        
         KNearestNeighbors knn = new KNearestNeighbors(pixelIdxs, width, height);
 
         //KDTree nn2d = new KDTree(pixelIdxs, width, height);

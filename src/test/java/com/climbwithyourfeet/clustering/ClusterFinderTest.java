@@ -107,9 +107,9 @@ public class ClusterFinderTest extends BaseTwoPointTest {
 
                 int[] minMaxXY = new int[4];
                 minMaxXY[0] = Integer.MAX_VALUE;
-                minMaxXY[1] = Integer.MIN_VALUE;
+                minMaxXY[1] = 3;//Integer.MIN_VALUE;
                 minMaxXY[2] = Integer.MAX_VALUE;
-                minMaxXY[3] = Integer.MIN_VALUE;
+                minMaxXY[3] = 3;//Integer.MIN_VALUE;
                 Set<PairInt> points = new HashSet<PairInt>();
                 for (int k = 0; k < indexer.getNXY(); ++k) {
                     PairInt p = new PairInt(
@@ -132,7 +132,7 @@ public class ClusterFinderTest extends BaseTwoPointTest {
                 
                 int width = minMaxXY[1] + 1;
                 int height = minMaxXY[3] + 1;
-                
+                                
                 PixelHelper ph = new PixelHelper();
                 TLongSet pixIdxs = ph.convert(points, width);
                 
@@ -270,9 +270,9 @@ public class ClusterFinderTest extends BaseTwoPointTest {
             
             int[] minMaxXY = new int[4];
             minMaxXY[0] = Integer.MAX_VALUE;
-            minMaxXY[1] = Integer.MIN_VALUE;
+            minMaxXY[1] = 3;//Integer.MIN_VALUE;
             minMaxXY[2] = Integer.MAX_VALUE;
-            minMaxXY[3] = Integer.MIN_VALUE;
+            minMaxXY[3] = 3;//Integer.MIN_VALUE;
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(
@@ -510,9 +510,9 @@ public class ClusterFinderTest extends BaseTwoPointTest {
 
             int[] minMaxXY = new int[4];
             minMaxXY[0] = Integer.MAX_VALUE;
-            minMaxXY[1] = Integer.MIN_VALUE;
+            minMaxXY[1] = 3;//Integer.MIN_VALUE;
             minMaxXY[2] = Integer.MAX_VALUE;
-            minMaxXY[3] = Integer.MIN_VALUE;
+            minMaxXY[3] = 3;//Integer.MIN_VALUE;
             Set<PairInt> points = new HashSet<PairInt>();
             for (int k = 0; k < indexer.getNXY(); ++k) {
                 PairInt p = new PairInt(Math.round(indexer.getX()[k]),

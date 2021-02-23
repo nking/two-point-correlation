@@ -65,6 +65,13 @@ public class ClusterFinder {
      */
     public ClusterFinder(TLongSet thePoints, int width, int height) {
         
+        if (width < 3) {
+            throw new IllegalArgumentException("width must be >= 3");
+        }
+        if (height < 3) {
+            throw new IllegalArgumentException("height must be >= 3");
+        }
+        
         this.points = thePoints;
         this.width = width;
         this.height = height;
@@ -121,7 +128,7 @@ public class ClusterFinder {
         may need to partition the data and process each section, then combine
         results.
         */
-            
+         
         if (rescaleAxes) {
                         
             PairwiseSeparations.ScaledPoints sp = ps.scaleThePoints(
