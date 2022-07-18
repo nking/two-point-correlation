@@ -3,7 +3,7 @@
 import algorithms.misc.MinMaxPeakFinder;
 import algorithms.misc.Misc0;
 import algorithms.misc.MiscMath0;
-import algorithms.misc.MiscSorter;
+import algorithms.sort.MiscSorter;
 import algorithms.search.KDTree;
 import algorithms.search.KNearestNeighbors;
 import algorithms.search.NearestNeighbor2DLong;
@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  *
  * @author nichole
  */
-<span class="pc bpc" id="L41" title="1 of 2 branches missed.">public class PairwiseSeparations {</span>
+<span class="fc" id="L41">public class PairwiseSeparations {</span>
 
 <span class="fc" id="L43">    private boolean debug = false;</span>
 
@@ -199,7 +199,7 @@ import java.util.logging.Logger;
 <span class="fc" id="L199">                        int c = voidValueCounts.get(d);</span>
 <span class="fc" id="L200">                        voidValueCounts.put(d, c + 1);</span>
 
-<span class="pc bpc" id="L202" title="3 of 4 branches missed.">                        assert(voidValueCounts.containsKey(d));</span>
+<span class="pc bnc" id="L202" title="All 2 branches missed.">                        assert(voidValueCounts.containsKey(d));</span>
                     }
 <span class="fc" id="L204">                }</span>
             }
@@ -289,8 +289,8 @@ import java.util.logging.Logger;
 <span class="fc" id="L289">            pixIdx1 = iter.next();</span>
 <span class="fc" id="L290">            ph.toPixelCoords(pixIdx1, width, xy);</span>
 
-<span class="pc bpc" id="L292" title="3 of 4 branches missed.">            assert(xy[0] &gt; -1);</span>
-<span class="pc bpc" id="L293" title="3 of 4 branches missed.">            assert(xy[1] &gt; -1);</span>
+<span class="pc bnc" id="L292" title="All 2 branches missed.">            assert(xy[0] &gt; -1);</span>
+<span class="pc bnc" id="L293" title="All 2 branches missed.">            assert(xy[1] &gt; -1);</span>
 
 <span class="fc" id="L295">            List&lt;PairFloat&gt; nearest = knn.findNearest(2, xy[0], xy[1]);</span>
             //KDTreeNode node = nn2d.findNearestNeighborNotEquals(xy[0], xy[1]);
@@ -309,7 +309,7 @@ import java.util.logging.Logger;
 <span class="fc" id="L309">                node = p0;</span>
 <span class="fc" id="L310">                break;</span>
             }
-<span class="pc bpc" id="L312" title="3 of 4 branches missed.">            assert(node != null);</span>
+<span class="pc bnc" id="L312" title="All 2 branches missed.">            assert(node != null);</span>
 
 <span class="fc" id="L314">            float dx = xy[0] - node.getX();</span>
 <span class="fc" id="L315">            float dy = xy[1] - node.getY();</span>
@@ -752,7 +752,7 @@ import java.util.logging.Logger;
 <span class="nc bnc" id="L752" title="All 2 branches missed.">            for (int i = 0; i &lt; outTrans.size(); ++i) {</span>
 <span class="nc" id="L753">                OneDFloatArray tr = outTrans.get(i);</span>
 <span class="nc" id="L754">                OneDFloatArray trV = outTransV.get(i);</span>
-<span class="nc bnc" id="L755" title="All 4 branches missed.">                assert(tr.a.length == trV.a.length);</span>
+<span class="nc bnc" id="L755" title="All 2 branches missed.">                assert(tr.a.length == trV.a.length);</span>
 
 <span class="nc" id="L757">                int peakIdx = findPeakIfSingleProfile(tr.a);</span>
 <span class="nc bnc" id="L758" title="All 2 branches missed.">                if (peakIdx &gt; -1) {</span>
@@ -765,7 +765,7 @@ import java.util.logging.Logger;
 
 <span class="nc" id="L766">            input = outTrans.get(outTrans.size() - 1).a;</span>
 <span class="nc" id="L767">            inputV = outTransV.get(outTransV.size() - 1).a;</span>
-<span class="nc bnc" id="L768" title="All 4 branches missed.">            assert(input.length &gt; 3);</span>
+<span class="nc bnc" id="L768" title="All 2 branches missed.">            assert(input.length &gt; 3);</span>
 <span class="nc" id="L769">            outTrans.clear();</span>
 <span class="nc" id="L770">            outCoeff.clear();</span>
 <span class="nc" id="L771">            outTransV.clear();</span>
@@ -795,7 +795,7 @@ import java.util.logging.Logger;
 <span class="fc" id="L795">        mt.multiscalePyramidalMedianTransform2(counts, outTransC, outCoeffC);</span>
 <span class="fc" id="L796">        mt.multiscalePyramidalMedianTransform2(values, outTransV, outCoeffV);</span>
 
-<span class="pc bpc" id="L798" title="3 of 4 branches missed.">        assert(outTransC.size() == outTransV.size());</span>
+<span class="pc bnc" id="L798" title="All 2 branches missed.">        assert(outTransC.size() == outTransV.size());</span>
 
         /*if (debug) {
             try {//DEBUG
@@ -893,4 +893,4 @@ import java.util.logging.Logger;
     }
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>
