@@ -20,7 +20,7 @@ import java.util.logging.Logger;
  *
  * @author nichole
  */
-<span class="pc bpc" id="L23" title="1 of 2 branches missed.">public class GroupFinder {</span>
+<span class="fc" id="L23">public class GroupFinder {</span>
 
 <span class="fc" id="L25">    private DisjointSet2Helper disjointSetHelper = null;</span>
 
@@ -136,13 +136,13 @@ import java.util.logging.Logger;
 
 <span class="fc" id="L137">        DisjointSet2Node&lt;Long&gt; uNode = pixNodes.get(uPoint);</span>
 <span class="fc" id="L138">        DisjointSet2Node&lt;Long&gt; uParentNode = disjointSetHelper.findSet(uNode);</span>
-<span class="pc bpc" id="L139" title="3 of 4 branches missed.">        assert(uParentNode != null);</span>
+<span class="pc bnc" id="L139" title="All 2 branches missed.">        assert(uParentNode != null);</span>
 
         //int uGroupId = uParentNode.getMember().intValue();
 
 <span class="fc" id="L143">        DisjointSet2Node&lt;Long&gt; vNode = pixNodes.get(vPoint);</span>
 <span class="fc" id="L144">        DisjointSet2Node&lt;Long&gt; vParentNode = disjointSetHelper.findSet(vNode);</span>
-<span class="pc bpc" id="L145" title="3 of 4 branches missed.">        assert(vParentNode != null);</span>
+<span class="pc bnc" id="L145" title="All 2 branches missed.">        assert(vParentNode != null);</span>
 
         //int vGroupId = vParentNode.getMember().intValue();
 
@@ -289,4 +289,4 @@ import java.util.logging.Logger;
 <span class="fc" id="L289">        }    </span>
 <span class="fc" id="L290">    }</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

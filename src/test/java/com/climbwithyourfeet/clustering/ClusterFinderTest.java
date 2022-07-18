@@ -238,11 +238,11 @@ public class ClusterFinderTest extends BaseTwoPointTest {
         String[] fileNames = {
             "Aggregation.txt", 
             "Compound.txt", 
-            "pathbased.txt", 
+            "pathbased.txt",
             "spiral.txt",
             "D31.txt", 
             "R15.txt" , 
-            "jain.txt", 
+            "jain.txt",
             "flame.txt",
             "a1.txt", 
             "a2.txt", 
