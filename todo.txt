@@ -14,3 +14,9 @@
 -- create ability for multiple dimensions
    -- that is n^2/2 number of dts and/or knn
 -- need improvements in hist...
+
+-- add back in some of the GEV context
+
+-- consider 3-d tests and projection effects in critical separation
+   threshold for clustering
+
