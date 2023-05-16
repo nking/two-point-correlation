@@ -1,3 +1,9 @@
+-- explore the union of Fast DCov algorithm
+   and sketches in a streaming context
+   also 
+       Dai et al. 2015, "Active Sampling Count Sketch (ASCS) for Online Sparse Estimation of a Trillion Scale Covariance Matrix"
+
+   
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
    -- redo a couple of "other" snapshots on two-pt-correl web page:
