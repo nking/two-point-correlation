@@ -1,58 +1,9 @@
-revise the notes below
+-- explore the union of Fast DCov algorithm
+   and sketches in a streaming context
+   also 
+       Dai et al. 2015, "Active Sampling Count Sketch (ASCS) for Online Sparse Estimation of a Trillion Scale Covariance Matrix"
 
--- for the point separation analysis,
-   I'm currently using resampling to evenly spaced intervals
-   then pyramidal wavelets to smooth,
-   --> because that may increase the complexity too much for
-       some datasets, will replace it with sparse implementation:
-         -- adapt the pyramidal pattern for sparse point spacing:
-            make new method for it that only includes points within
-            a current bandwidth h for that wavelet level
-            (the adapted convolution needs to be corrected, that is
-             when reach the end of the bandwidth surrounding a point, 
-             will need to 
-             interpolate points for the endpoints.
-             Then the bandwidth will be the same for all points, making 
-             the error analysis easier.  That bandwidth is used for
-             the normalization of each convolution result).
-             NOTE that this alteration leads to the resulting smoothing
-             being a hybrid of k nearest neighbors and also of KDE (kernel density estimation).
-            -- need to keep track of the bandwidth for each wavelet
-               invocation because it is needed for the errors.
--- in the documentation, espec on the wiki, edit the discussion
-   of point spacings and point associations:
-     -- add back some of the explanation of poisson distribution
-        of void points and the resulting generalized extreme value
-        curve peak, along w/ brief discussion of that as background
-        density and a typical threshold above error being 2.5 sigma.
-        - emphasize that at best, the runtime complexity for that
-          approach is O(N^2) and provide the details.
-        - include snapshots and runtime complexity details.
-     -- add back a discussion about the distance transform
-        based method that was just refactored out of code:
-          the maxima in the distance transform of void points
-          giving a somewhat fast separation distance.
-          resembles parts of LDA and SVM
-        - include snapshots and runtime complexity details.
-        - note that the distance transform method is for a pair of dimensions,
-          that is x and y.  for dimensions d, the runtime would be O(N^(d*(d-1)/2))
-      -- add details of current logic for the distance
-        - include snapshots and runtime complexity details.
-
--- consider some criteria that Jain has to describe clusters
-   that are defined by the content rather than the separation
-   (voids):
-    "Data Clustering: 50 Years Beyond K-Means"
-    -- convex admissable if convex hulls do not intersect
-    -- cluster proportion admissable if cluster boundaries 
-       do not change even if some clusters are duplicated.
-    -- cluster omission admissable if can remove a cluster
-       and get same results for the remaining cluster when
-       algorithm is rerun
-    -- monotone admissable
-    -- consistency: changing the between cluster distance or
-       intracluster distance does not change results.
-
+   
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
    -- redo a couple of "other" snapshots on two-pt-correl web page:
@@ -70,26 +21,12 @@ revise the notes below
    -- that is n^2/2 number of dts and/or knn
 -- need improvements in hist...
 
--- one day, revisit the first version of the code which uses the peak of
-   the GEV of the histogram of 2-point distances.  
-   explore use of standard form of GEV and more ismply, the Gumbel distribution:
-      https://www.itl.nist.gov/div898/handbook/eda/section3/eda364.htm
-   many ways to determine the Gumbel parameters faster, and ML appears to be
-   efficient with a small mean-square error, but difficult to get exact sol'n.
-   Note that limiting the GEV to just the Gumbel distribution simplifies the
-   problem and makes numerical approximations possible (no longer multiple sets
-   of very different parameters that give similar GEV distributions... many local
-   minima...)
-      the mode mu is easy to determine as peak of distribution, but has the histogram
-         bin center and width caveat.  then solve beta with median, then gamma with mean,
-         then have gumbel parameters for pdf and cdf.
-         see L-moments in general in https://en.wikipedia.org/wiki/L-moment
-         and Gumbel distribution article and table within L-moment article.
-   NOTE that using the peak of the GEV as a model for the point separation of
-   the presumed poisson background (non-cluster) points, can be compared
-   to "maximum spacing estimation", that is,  maximum product of spacings 
-   (MPS) and Moran statistic, so want to consider
-   comparing my 2.5 sigma threshold to the MSE too.
-   -- comparison of GEV fitting techniques for small range of shape:
-      https://mspace.lib.umanitoba.ca/bitstream/handle/1993/23841/saha_sathi.pdf?sequence=1
+-- sparse distance transform:
+   Line-based recognition using a multidimensional Hausdorff distance
+Article in IEEE Transactions on Pattern Analysis and Machine Intelligence · October 1999 DOI: 10.1109/34.790430 · Source: IEEE Xplore
+
+-- add back in some of the GEV context
+
+-- consider 3-d tests and projection effects in critical separation
+   threshold for clustering
 
