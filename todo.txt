@@ -18,7 +18,8 @@
       shared class files
 
 -- create ability for multiple dimensions
-   -- that is n^2/2 number of dts and/or knn
+   -- though with very high dimensions the distances between points is
+      not a good indicator for clustering.
 -- need improvements in hist...
 
 -- sparse distance transform:
