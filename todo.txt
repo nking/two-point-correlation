@@ -21,6 +21,10 @@
    -- that is n^2/2 number of dts and/or knn
 -- need improvements in hist...
 
+-- sparse distance transform:
+   Line-based recognition using a multidimensional Hausdorff distance
+Article in IEEE Transactions on Pattern Analysis and Machine Intelligence · October 1999 DOI: 10.1109/34.790430 · Source: IEEE Xplore
+
 -- add back in some of the GEV context
 
 -- consider 3-d tests and projection effects in critical separation
