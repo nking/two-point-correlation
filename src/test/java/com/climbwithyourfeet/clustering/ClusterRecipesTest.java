@@ -5,27 +5,28 @@ import algorithms.dimensionReduction.CURDecomposition;
 import algorithms.disjointSets.DisjointSet2Node;
 import algorithms.matrix.MatrixUtil;
 import algorithms.misc.Histogram;
-import algorithms.misc.HistogramHolder;
 import algorithms.misc.MiscMath0;
-import algorithms.statistics.Standardization;
-import algorithms.util.FormatArray;
-import algorithms.util.PairInt;
-import algorithms.util.PixelHelper;
+import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TIntHashSet;
-import gnu.trove.set.hash.TLongHashSet;
 import junit.framework.TestCase;
-import no.uib.cipr.matrix.DenseMatrix;
-import no.uib.cipr.matrix.SVD;
+import org.knowm.xchart.*;
+import org.knowm.xchart.demo.charts.ExampleChart;
+import org.knowm.xchart.style.Styler;
+import org.knowm.xchart.style.markers.SeriesMarkers;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 /**
  *
@@ -38,8 +39,6 @@ public class ClusterRecipesTest extends TestCase {
         RecipeReviewsReader reader = new RecipeReviewsReader();
         reader.readUserRecipeUtilityMatrix();
 
-        //TODO: handle unit standard normalization.  stars range is 0 to 5.
-
         /*
         utility map w/ 0s for missing entries
          * 12008 users, 100 recipes.
@@ -50,7 +49,6 @@ public class ClusterRecipesTest extends TestCase {
         double[][] userRecipeStars = reader.getUserRecipeStars();
 
         // when k = 2, takes many tries to get a decent random selection.
-        // the results improve for larger k but take
         int k = 2;
         // k=50 took 7+-5 iterations for good svd.s
         // k=25 took 1 iterations ...
@@ -208,10 +206,10 @@ public class ClusterRecipesTest extends TestCase {
         List<TLongSet> groups = finder.findGroups(data, nNZ, sep);
 
         // get the original user ids using indexes
-        List<TLongSet> groups0 = new ArrayList<TLongSet>();
+        List<TIntSet> groups0 = new ArrayList<TIntSet>();
         List<Set<String>> groups0UserIds = new ArrayList<Set<String>>();
         for (TLongSet group : groups) {
-            TLongSet group0 = new TLongHashSet();
+            TIntSet group0 = new TIntHashSet();
             groups0.add(group0);
 
             Set<String> group0UserId = new HashSet<String>();
@@ -226,12 +224,50 @@ public class ClusterRecipesTest extends TestCase {
                 String uId = reader.getUserIndexIdMap().get(oIdx);
                 group0UserId.add(uId);
             }
-            System.out.printf("group %d userIds=%s\n", groups0UserIds.size() - 1,
-                    Arrays.toString(group0UserId.toArray()));
+            //System.out.printf("group %d userIds=%s\n", groups0UserIds.size() - 1,
+            //        Arrays.toString(group0UserId.toArray()));
         }
 
         System.out.printf("\nfound %d clusters\n", groups0UserIds.size());
 
+        // invert groups0 for cluster membership lookup
+        /*TIntIntMap userIdClusterMap = new TIntIntHashMap();
+        for (i = 0; i < groups0.size(); ++i) {
+            TIntSet group0 = groups0.get(i);
+            TIntIterator iter = group0.iterator();
+            while (iter.hasNext()) {
+                int idx = iter.next();
+                userIdClusterMap.put(idx, i);
+            }
+        }*/
+
+        ScatterChart01 plotter = new ScatterChart01();
+        List<Double> x = new ArrayList<Double>();
+        List<Double> y = new ArrayList<Double>();
+        for (i = 0; i < projected.length; ++i) {
+            x.add(projected[i][0]);
+            y.add(projected[i][1]);
+        }
+        plotter.addXYData(x, y, Color.BLACK,"projected");
+
+        for (i = 0; i < groups0.size(); ++i) {
+            TIntSet group0 = groups0.get(i);
+            x = new ArrayList<Double>();
+            y = new ArrayList<Double>();
+            TIntIterator iter = group0.iterator();
+            while (iter.hasNext()) {
+                int oIdx = iter.next();
+                x.add(projected[oIdx][0]);
+                y.add(projected[oIdx][1]);
+            }
+            plotter.addXYData(x, y, getNextColorRGB(i), "c " + Integer.toString(i));
+        }
+
+        XYChart chart = plotter.getChart();
+
+        BitmapEncoder.saveBitmap(chart, "./bin/Projected_Chart", BitmapEncoder.BitmapFormat.PNG);
+
+        int t = 1;
         // TODO: consider affects of associating the users in projected that are not in projectedNZ (hence not in groups0)
         //  to groups0 by proximity.
 
@@ -242,6 +278,32 @@ public class ClusterRecipesTest extends TestCase {
 
         //TODO: consider comparison to Latent Factor Analysis, iterative fit to factor matrices, excluding missing values
 
+    }
+
+    public Color getNextColorRGB(int clrCount) {
+
+        if (clrCount == -1) {
+            clrCount = 0;
+        }
+
+        clrCount = clrCount % 6;
+
+        switch (clrCount) {
+            case 0:
+                return Color.BLUE;
+            case 1:
+                return Color.PINK;
+            case 2:
+                return Color.GREEN;
+            case 3:
+                return Color.RED;
+            case 4:
+                return Color.CYAN;
+            case 5:
+                return Color.MAGENTA;
+            default:
+                return Color.BLUE;
+        }
     }
 
     /**
@@ -322,4 +384,65 @@ public class ClusterRecipesTest extends TestCase {
             }
         }
     }
+
+    // adapter from https://knowm.org/open-source/xchart/xchart-example-code/
+    public class ScatterChart01 implements ExampleChart<XYChart> {
+
+        final XYChart chart;
+
+        public ScatterChart01(){
+            // Create Chart
+            chart = new XYChartBuilder().width(800).height(600).build();
+
+            // Customize Chart
+            chart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Scatter);
+            chart.getStyler().setChartTitleVisible(false);
+            chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideSW);
+            chart.getStyler().setMarkerSize(10);
+        }
+
+        public XYSeries addXYData(double[] x, double[] y, String label) {
+            // Series
+            List<Double> xData = new LinkedList<Double>();
+            List<Double> yData = new LinkedList<Double>();
+            for (int i = 0; i < x.length; i++) {
+                xData.add(x[i]);
+                yData.add(y[i]);
+            }
+            XYSeries series = chart.addSeries(label, xData, yData);
+            return series;
+        }
+        public XYSeries addXYData(List<Double> xData, List<Double> yData, String label) {
+            // Series
+            XYSeries series = chart.addSeries(label, xData, yData);
+            return series;
+        }
+
+        public void addXYData(List<Double> xData, List<Double> yData, java.awt.Color clr, String label) {
+            XYSeries series = addXYData(xData, yData, label);
+            //series.setLineColor(clr);
+            series.setMarkerColor(clr);
+            series.setMarker(SeriesMarkers.DIAMOND);
+            //series.setLineStyle(SeriesLines.SOLID);
+        }
+        public void addXYData(double[] x, double[] y, java.awt.Color clr, String label) {
+            XYSeries series = addXYData(x, y, label);
+            //series.setLineColor(clr);
+            series.setMarkerColor(clr);
+            series.setMarker(SeriesMarkers.PLUS);
+            //series.setLineStyle(SeriesLines.SOLID);
+        }
+
+        @Override
+        public XYChart getChart() {
+            return chart;
+        }
+
+        @Override
+        public String getExampleChartName() {
+            return null;
+        }
+
+    }
+
 }

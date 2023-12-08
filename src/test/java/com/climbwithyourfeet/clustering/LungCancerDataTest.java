@@ -16,5 +16,8 @@ public class LungCancerDataTest extends TestCase {
         double[][] x = reader.getX();
         int[] y = reader.getY();
 
+        //TODO: consider Xgboost or LightGBM
+        //TODO: like authors of paper, consider Knn and discriminant plane
+
     }
 }
