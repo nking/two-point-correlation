@@ -39,6 +39,10 @@ public class ClusterRecipesTest extends TestCase {
         RecipeReviewsReader reader = new RecipeReviewsReader();
         reader.readUserRecipeUtilityMatrix();
 
+        // if we had recipe ingredients,
+        //    we could use them to make content-based recommendations
+        //    or item-item collaborative filtering
+
         /*
         utility map w/ 0s for missing entries
          * 12008 users, 100 recipes.
