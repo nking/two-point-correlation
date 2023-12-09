@@ -12,21 +12,22 @@ import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TIntHashSet;
 import junit.framework.TestCase;
-import org.knowm.xchart.*;
+import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.XYChart;
+import org.knowm.xchart.XYChartBuilder;
+import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.demo.charts.ExampleChart;
 import org.knowm.xchart.style.Styler;
 import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import java.awt.*;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 /**
  *
@@ -35,9 +36,6 @@ import java.util.List;
 public class ClusterRecipesTest extends TestCase {
 
     public void test0() throws Exception {
-
-        RecipeReviewsReader reader = new RecipeReviewsReader();
-        reader.readUserRecipeUtilityMatrix();
 
         // if we had recipe ingredients,
         //    we could use them to make content-based recommendations
@@ -50,7 +48,13 @@ public class ClusterRecipesTest extends TestCase {
          *         12000 users made 1 recipe review.
          *         extremely sparse dataset
          */
+        /*RecipeReviewsReader reader = new RecipeReviewsReader();
+        reader.readUserRecipeUtilityMatrix();
         double[][] userRecipeStars = reader.getUserRecipeStars();
+        */
+        AmazonFoodReviewsReader reader = new AmazonFoodReviewsReader();
+        reader.readUserProductUtilityMatrix(25);
+        double[][] userRecipeStars = reader.getUserProductScore();
 
         // when k = 2, takes many tries to get a decent random selection.
         int k = 2;
@@ -59,20 +63,22 @@ public class ClusterRecipesTest extends TestCase {
         // k=11 took 2 iterations ...
         // k=2 took 40+-30 iterations ...
         MatrixUtil.SVDProducts svd = null;
+        int sTrys = 0;
         while (true) {
+            ++sTrys;
             try {
                 svd = CURDecomposition.calculateDecomposition(userRecipeStars, k).getApproximateSVD();
             } catch (IllegalArgumentException ex) {
                 continue;
             }
-            if (svd.s.length < 2) {
+            if (svd.s.length < 2 || svd.s[0] == 0. || svd.s[1] == 0.) {
                 continue;
             }
-            if (svd.s[0] > 0. && svd.s[1] > 0. && svd.s[0] <= 1E4) {
+            if (svd.s[0] <= 1E4) {
                 break;
             }
         }
-        System.out.println("s=" + Arrays.toString(svd.s));
+        System.out.println("s=" + Arrays.toString(svd.s) + " after " + sTrys + " attempts");
 
         System.out.println("vT dimensions = " + svd.vT.length + ", " + svd.vT[0].length);
 
@@ -225,7 +231,7 @@ public class ClusterRecipesTest extends TestCase {
                 int oIdx = indexes.get((int)idx);
                 group0.add(oIdx);
 
-                String uId = reader.getUserIndexIdMap().get(oIdx);
+                String uId = reader.getUserIdxIdMap().get(oIdx);
                 group0UserId.add(uId);
             }
             //System.out.printf("group %d userIds=%s\n", groups0UserIds.size() - 1,
@@ -252,7 +258,7 @@ public class ClusterRecipesTest extends TestCase {
             x.add(projected[i][0]);
             y.add(projected[i][1]);
         }
-        plotter.addXYData(x, y, Color.BLACK,"projected");
+        plotter.addXYData(x, y, Color.BLACK,"projected ("+projected.length+")");
 
         for (i = 0; i < groups0.size(); ++i) {
             TIntSet group0 = groups0.get(i);
@@ -264,7 +270,7 @@ public class ClusterRecipesTest extends TestCase {
                 x.add(projected[oIdx][0]);
                 y.add(projected[oIdx][1]);
             }
-            plotter.addXYData(x, y, getNextColorRGB(i), "c " + Integer.toString(i));
+            plotter.addXYData(x, y, getNextColorRGB(i), "z " + Integer.toString(i) + " ("+group0.size()+")");
         }
 
         XYChart chart = plotter.getChart();

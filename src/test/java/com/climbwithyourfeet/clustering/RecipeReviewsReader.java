@@ -19,8 +19,10 @@ public class RecipeReviewsReader {
 
     // utility matrix with row indexes = user id indexes, col indexes = recipe id indexes, value = stars
     private double[][] userRecipeStars;
-    private Map<Integer, String> userIndexIdMap;
-    private Map<Integer, Integer> recipeIndexIdMap;
+    //(userIdx, userId);
+    private Map<Integer, String> userIdxIdMap;
+    //(recipeIdx, recipeId)
+    private Map<Integer, Integer> recipeIdxIdMap;
 
     //TODO: would like to use the text, commentId, userId, recipeId also
 
@@ -82,8 +84,10 @@ public class RecipeReviewsReader {
         Map<String, Integer> userIdIndexMap = new HashMap<>();
         TIntIntMap recipeIdIndexMap = new TIntIntHashMap();
 
-        userIndexIdMap = new HashMap<Integer, String>();
-        recipeIndexIdMap = new HashMap<Integer, Integer>();
+        //(userIdx, userId);
+        userIdxIdMap = new HashMap<Integer, String>();
+        //(recipeIdx, recipeId)
+        recipeIdxIdMap = new HashMap<Integer, Integer>();
 
         FileReader reader = null;
         BufferedReader in = null;
@@ -130,14 +134,14 @@ public class RecipeReviewsReader {
                 if (!recipeIdIndexMap.containsKey(recipeId)) {
                     recipeIdx = recipeIdIndexMap.size();
                     recipeIdIndexMap.put(recipeId, recipeIdx);
-                    recipeIndexIdMap.put(recipeIdx, recipeId);
+                    recipeIdxIdMap.put(recipeIdx, recipeId);
                 } else {
                     recipeIdx = recipeIdIndexMap.get(recipeId);
                 }
                 if (!userIdIndexMap.containsKey(userId)) {
                     userIdx = userIdIndexMap.size();
                     userIdIndexMap.put(userId, userIdx);
-                    userIndexIdMap.put(userIdx, userId);
+                    userIdxIdMap.put(userIdx, userId);
                 } else {
                     userIdx = userIdIndexMap.get(userId);
                 }
@@ -229,11 +233,11 @@ public class RecipeReviewsReader {
         return userRecipeStars;
     }
 
-    public Map<Integer, String> getUserIndexIdMap() {
-        return userIndexIdMap;
+    public Map<Integer, String> getUserIdxIdMap() {
+        return userIdxIdMap;
     }
 
-    public Map<Integer, Integer> getRecipeIndexIdMap() {
-        return recipeIndexIdMap;
+    public Map<Integer, Integer> getRecipeIdxIdMap() {
+        return recipeIdxIdMap;
     }
 }
