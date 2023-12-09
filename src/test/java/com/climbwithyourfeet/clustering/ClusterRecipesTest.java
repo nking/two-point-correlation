@@ -6,6 +6,8 @@ import algorithms.disjointSets.DisjointSet2Node;
 import algorithms.matrix.MatrixUtil;
 import algorithms.misc.Histogram;
 import algorithms.misc.MiscMath0;
+import algorithms.util.FormatArray;
+import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TDoubleList;
@@ -26,6 +28,9 @@ import org.knowm.xchart.style.Styler;
 import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import java.awt.*;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.*;
 
@@ -56,8 +61,18 @@ public class ClusterRecipesTest extends TestCase {
         reader.readUserProductUtilityMatrix(25);
         double[][] userRecipeStars = reader.getUserProductScore();
 
+        boolean printClusters = true;
+
+        final String sep = System.getProperty("file.separator");
+        String outDir = ResourceFinder.findOutputTestDirectory();
+        FileWriter pOut = null;
+        if (printClusters) {
+            String path = outDir + sep + "utility_matrix_clusters.csv";
+            pOut = new FileWriter(path, StandardCharsets.UTF_8);
+        }
+
         // when k = 2, takes many tries to get a decent random selection.
-        int k = 2;
+        int k = 4;//2;
         // k=50 took 7+-5 iterations for good svd.s
         // k=25 took 1 iterations ...
         // k=11 took 2 iterations ...
@@ -71,7 +86,7 @@ public class ClusterRecipesTest extends TestCase {
             } catch (IllegalArgumentException ex) {
                 continue;
             }
-            if (svd.s.length < 2 || svd.s[0] == 0. || svd.s[1] == 0.) {
+            if (svd.s.length < 2 || svd.s[0] == 0. || svd.s[1] == 0. || ((svd.s[0]/svd.s[1]) > 100)) {
                 continue;
             }
             if (svd.s[0] <= 1E4) {
@@ -123,6 +138,11 @@ public class ClusterRecipesTest extends TestCase {
             }
         }
         System.out.printf("%d non-zero projected points\n", indexes.size());
+
+        if (indexes.size() < 10) {
+            System.out.printf("not enough points to build a histogram needed for clustering.\n");
+            return;
+        }
 
         // calculating all pairs distances is on the order of 1E8 space complexity
         // calculating all non-zero projected pairs distances is < 1E6 space complexity
@@ -210,10 +230,10 @@ public class ClusterRecipesTest extends TestCase {
 
         double factor = 1.0;
         int critIdx = MiscMath0.findYMaxIndex(hist[1]);
-        double sep = factor * hist[0][critIdx];
+        double pointSep = factor * hist[0][critIdx];
 
         ClusterFinder3 finder = new ClusterFinder3();
-        List<TLongSet> groups = finder.findGroups(data, nNZ, sep);
+        List<TLongSet> groups = finder.findGroups(data, nNZ, pointSep);
 
         // get the original user ids using indexes
         List<TIntSet> groups0 = new ArrayList<TIntSet>();
@@ -237,7 +257,6 @@ public class ClusterRecipesTest extends TestCase {
             //System.out.printf("group %d userIds=%s\n", groups0UserIds.size() - 1,
             //        Arrays.toString(group0UserId.toArray()));
         }
-
         System.out.printf("\nfound %d clusters\n", groups0UserIds.size());
 
         // invert groups0 for cluster membership lookup
@@ -260,24 +279,39 @@ public class ClusterRecipesTest extends TestCase {
         }
         plotter.addXYData(x, y, Color.BLACK,"projected ("+projected.length+")");
 
+        if (printClusters) {
+            pOut.write(String.format("#cluster %d  userId   product scores\n", i));
+        }
+        Map<Integer, Set<String>> uniqueEntriesInClusters = new HashMap<>();
         for (i = 0; i < groups0.size(); ++i) {
             TIntSet group0 = groups0.get(i);
             x = new ArrayList<Double>();
             y = new ArrayList<Double>();
             TIntIterator iter = group0.iterator();
+            Set<String> entries = new HashSet<>();
+            uniqueEntriesInClusters.put(i, entries);
             while (iter.hasNext()) {
                 int oIdx = iter.next();
                 x.add(projected[oIdx][0]);
                 y.add(projected[oIdx][1]);
+                if (printClusters) {
+                    String str = String.format(" %6d  %10s  %s\n", i, reader.getUserIdxIdMap().get(oIdx),
+                            FormatArray.toString(userRecipeStars[oIdx], "%.0f"));
+                    pOut.write(str);
+                    entries.add(str);
+                }
             }
             plotter.addXYData(x, y, getNextColorRGB(i), "z " + Integer.toString(i) + " ("+group0.size()+")");
         }
 
         XYChart chart = plotter.getChart();
 
-        BitmapEncoder.saveBitmap(chart, "./bin/Projected_Chart", BitmapEncoder.BitmapFormat.PNG);
+        BitmapEncoder.saveBitmap(chart, outDir + sep + "projected_utility_matrix_clusters", BitmapEncoder.BitmapFormat.PNG);
 
-        int t = 1;
+        // looking for repeat entries... didn't clean the data
+        for (int cId : uniqueEntriesInClusters.keySet()) {
+            System.out.printf("\ncluster %d has %d unique rows of scores\n", cId, uniqueEntriesInClusters.get(cId).size());
+        }
         // TODO: consider affects of associating the users in projected that are not in projectedNZ (hence not in groups0)
         //  to groups0 by proximity.
 
@@ -286,8 +320,14 @@ public class ClusterRecipesTest extends TestCase {
 
         //TODO: consider comparison to UMap
 
-        //TODO: consider comparison to Latent Factor Analysis, iterative fit to factor matrices, excluding missing values
+        //TODO: consider comparison to Latent Factor Analysis, iterative fit to factor matrices while excluding missing values
 
+        if (printClusters) {
+            if (pOut != null) {
+                pOut.flush();
+                pOut.close();
+            }
+        }
     }
 
     public Color getNextColorRGB(int clrCount) {

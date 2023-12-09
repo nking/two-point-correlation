@@ -34,6 +34,24 @@ public class AmazonFoodReviewsReader {
     <pre>
         number of unique productIds =  74258
         number of unique userIds    = 256059
+        number of users with > 50 reviews = 260
+
+        from https://www.kaggle.com/code/naushads/1-2-amazon-fine-food-reviews-eda-data-cleaning-fe
+        There are 16 datapoints having 'ProfileName' as Null.
+        There are 27 datapoints having 'Summary' as Null.
+
+        from https://www.kaggle.com/code/naushads/1-2-amazon-fine-food-reviews-eda-data-cleaning-fe
+        +-------------------+--------+---------------------+
+        |                   | Count  | Percentage of Total |
+        +-------------------+--------+---------------------+
+        | Duplicate Reviews | 174562 |  30.70820154313278  |
+        |  Original Reviews | 393892 |  69.29179845686723  |
+        +-------------------+--------+---------------------+
+        We have about 1.75 E5 reviews(~30% of total reviews) which are duplicated across product variants.
+        Basically reviews by the same user at the same time with same review text.
+
+        TODO: write to outfile a version with these removed: same user with same review
+            see the writer file TODO...
 
         top 100 number of reviews for each product: [913, 632, 632, 632, 632, 623, 567, 564, 564, 564, 564, 564, 564,
         564, 564, 564, 556, 556, 542, 542, 542, 542, 542, 542, 542, 530, 530, 506, 506, 491, 488, 487, 487, 487, 487,

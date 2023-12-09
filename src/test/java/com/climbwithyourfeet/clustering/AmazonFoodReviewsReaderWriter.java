@@ -23,6 +23,14 @@ import java.util.*;
  */
 public class AmazonFoodReviewsReaderWriter {
 
+    /*
+        TODO: write to a file a version with these removed: same user with same review
+        - read in line
+        - remove id and product id and time
+        - look for duplicate strings by encoding and using a big data sketches API
+        -   something like HyperLogLog, apache datasketches ...
+    */
+
     private static final int nEntries = 568454;
 
     /*
