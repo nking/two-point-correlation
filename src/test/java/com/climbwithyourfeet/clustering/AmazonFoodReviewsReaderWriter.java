@@ -219,7 +219,9 @@ public class AmazonFoodReviewsReaderWriter {
         String path = testDir + sep + "amazon_fine_food_reviews.csv";
         File f = new File(path);
         if (!f.exists()) {
-            throw new IOException("could not find file at " + path);
+            throw new IOException("could not find file at " + path +
+                    " You can download it at https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews/"
+            + " and place it in src/test/resources.  size is 287MB");
         }
 
         // productId, lists of <userId, score>
