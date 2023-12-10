@@ -23,12 +23,31 @@ import java.util.*;
  */
 public class AmazonFoodReviewsReaderWriter {
 
-    /*
-        TODO: write to a file a version with these removed: same user with same review
-        - read in line
-        - remove id and product id and time
-        - look for duplicate strings by encoding and using a big data sketches API
-        -   something like HyperLogLog, apache datasketches ...
+        /*
+        TODO: write to a file a version that is cleaned for redundant entries.
+        redundant entries have the same summary, text, score, and other ratings.
+
+        A researcher who has cleaned the dataset noted that redundant entries
+        are nearly all redundant rows having same userId entity (though different productIds and presumably times).
+        from https://www.kaggle.com/code/naushads/1-2-amazon-fine-food-reviews-eda-data-cleaning-fe
+        "bout 1.75 E5 reviews(~30% of total reviews) which are duplicated across product variants.
+        Basically reviews by the same user at the same time with same review text."
+
+        To sort the entries by userid in a memory constrained environment, could try one of these approaches out of many:
+        - partition the datasets using a CDF created from a one-pass through the data, then sort
+            each partition into a file, then merge the files.
+
+        To find redundant entries with assumption of redundancy is within a single userid, for each read line of data,
+        remove id and product id and user id and time and use a set to identify that an identical rating already
+        exists for that user.  write to outfile the original lines for user's without redundant entries.
+
+        To write the outfile from the infile without intermediate file writing, if one has enough memory,
+        can for each read line of data, remove id and product id and user id and time and store results in a set
+        in an associate array keyed by userid, marking the userid as having redundant entries' when a query for
+        set membership shows an existing entry.
+        - To reduce memory used, one can use an ItemSketch datastructure from Apache datasketches API
+           (ItemSketch is a Frequent Items algorithms).
+           or a Bloom Filter or Ribbon Filter.
     */
 
     private static final int nEntries = 568454;
