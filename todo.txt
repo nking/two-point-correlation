@@ -1,3 +1,33 @@
+-- clean redundant user entries in amazon food reviews
+   class AmazonFoodReviewsReaderWriter
+
+    same product with different flavor or other characteristic, a 'variant' of
+    the product.
+    see https://medium.com/@pradhanshradhanjali300/amazon-fine-food-reviews-analysis-3874550a85ad
+    and https://www.kaggle.com/code/naushads/1-2-amazon-fine-food-reviews-eda-data-cleaning-fe
+
+    to use sub-samples of the full dataset, we need to reduce those multiple entries for a user
+    for variants of the same product (variants have different productIds)
+    into single entries.
+
+    to correct, need to resolve those productIds and decide the first of them in 
+    alphabetical order will be the canonical name, then rename the other productIds 
+    in the redundant group to the chosen canonical name.
+    then remove redunant entries.  will also provide a few different cleaned outputs.
+    -- find redundant entries by user to define product groups
+    -- make an alias map for the product group, choosing the first member to be the
+       canonical name
+    -- rename productids to the canonical name and remove redundancies
+    -- rewrite the file as _cleaned.csv
+    -- write 2 more versions of the file:
+       -- sorted by degeneracy using Matula-Beck Degeneracy ordering where
+         a vertex is an entry and the edge between vertexes is due to having
+         same productId.  write the file as _cleaned_sort_deg_ordering.csv
+       -- sorted by productId.  write the file as _cleaned_sort_prod.csv
+
+-- consider using the jax API and sparse matrices in place of CURDecomposition
+   in ClusterRecipesTest.java, but in a python script
+
 -- explore the union of Fast DCov algorithm
    and sketches in a streaming context
    also 
