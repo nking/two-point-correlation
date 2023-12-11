@@ -42,6 +42,8 @@ public class ClusterRecipesTest extends TestCase {
 
     public void test0() throws Exception {
 
+        //TODO: compare the clusters to results from KMeans (possibly w/ xmeans)
+
         // if we had recipe ingredients,
         //    we could use them to make content-based recommendations
         //    or item-item collaborative filtering
@@ -89,9 +91,7 @@ public class ClusterRecipesTest extends TestCase {
             if (svd.s.length < 2 || svd.s[0] == 0. || svd.s[1] == 0. || ((svd.s[0]/svd.s[1]) > 100)) {
                 continue;
             }
-            if (svd.s[0] <= 1E4) {
-                break;
-            }
+            break;
         }
         System.out.println("s=" + Arrays.toString(svd.s) + " after " + sTrys + " attempts");
 

@@ -121,11 +121,12 @@ public class AmazonFoodReviewsReader {
         }
 
         int nUniqueProducts = 0;
-        // resource is auto-closed when declared an initialized inside the try
-        try (FileInputStream in = new FileInputStream(inPath)) {
-            while (in.read() != -1) {
+        try (BufferedReader in = new BufferedReader(new FileReader(f))) {
+            String line;
+            while ((line = in.readLine()) != null) {
                 ++nUniqueProducts;
             }
+            --nUniqueProducts;
         }
 
         if (nRead >= nUniqueProducts) {
@@ -140,6 +141,7 @@ public class AmazonFoodReviewsReader {
         // key is userIdx, value = Map with key is productidx, value = score
         TIntObjectMap<TIntIntMap> userProductScoreMap = new TIntObjectHashMap<>();
 
+        String[] items;
         String productId;
         String userId;
         int score;
@@ -153,24 +155,29 @@ public class AmazonFoodReviewsReader {
         userIdxIdMap = new HashMap<Integer, String>();
         productIdxIdMap = new HashMap<Integer, String>();
 
-        FileInputStream in = null;
+        BufferedReader in = null;
         int i = 0;
         try {
-            in = new FileInputStream(inPath);
+            in = new BufferedReader(new FileReader(f));
 
             int productIdx;
             int userIdx;
-            int nB;
-            while (productIdIdxMap.size() < nRead) {
-                // read a line
-                nB = in.read();
-                if (nB == -1) {
+            String line = in.readLine();
+            if (line == null) {
+                throw new IOException("could not read a line from " + inPath);
+            }
+            while (line != null && productIdIdxMap.size() < nRead) {
+                line = line.trim();
+                if (line.isEmpty()) {
                     break;
                 }
-                productId = new String(in.readNBytes(nB), StandardCharsets.UTF_8);
-                nB = in.read();
-                userId = new String(in.readNBytes(nB), StandardCharsets.UTF_8);
-                score = in.read();
+                line = line.replaceAll("\"\"", "");
+
+                items = line.split(",");
+
+                productId = items[0].trim();
+                userId = items[1].trim();
+                score = Integer.parseInt(items[2].trim());
 
                 if (!productIdIdxMap.containsKey(productId)) {
                     productIdx = productIdIdxMap.size();
@@ -196,7 +203,6 @@ public class AmazonFoodReviewsReader {
                 //   and sort by created_time
                 userScoreMap.put(userIdx, score);
 
-
                 productScoreMap = userProductScoreMap.get(productIdx);
                 if (productScoreMap == null) {
                     productScoreMap = new TIntIntHashMap();
@@ -205,6 +211,7 @@ public class AmazonFoodReviewsReader {
                 productScoreMap.put(productIdx, score);
 
                 ++i;
+                line = in.readLine();
             }
         } finally {
             if (in != null) {
@@ -218,21 +225,26 @@ public class AmazonFoodReviewsReader {
             int lastIRead = i - 1;
             i = 0;
             try {
-                in = new FileInputStream(inPath);
+                in = new BufferedReader(new FileReader(f));
 
                 int productIdx;
                 int userIdx;
-                int nB;
-                while (true) {
-                    // read a line
-                    nB = in.read();
-                    if (nB == -1) {
+                String line = in.readLine();
+                if (line == null) {
+                    throw new IOException("could not read a line from " + inPath);
+                }
+                while (line != null && productIdIdxMap.size() < nRead) {
+                    line = line.trim();
+                    if (line.isEmpty()) {
                         break;
                     }
-                    productId = new String(in.readNBytes(nB), StandardCharsets.UTF_8);
-                    nB = in.read();
-                    userId = new String(in.readNBytes(nB), StandardCharsets.UTF_8);
-                    score = in.read();
+                    line = line.replaceAll("\"\"", "");
+
+                    items = line.split(",");
+
+                    productId = items[0].trim();
+                    userId = items[1].trim();
+                    score = Integer.parseInt(items[2].trim());
 
                     if (i < lastIRead || !userIdIdxMap.containsKey(userId)) {
                         ++i;
@@ -267,6 +279,7 @@ public class AmazonFoodReviewsReader {
                     productScoreMap.put(productIdx, score);
 
                     ++i;
+                    line = in.readLine();
                 }
             } finally {
                 if (in != null) {

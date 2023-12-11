@@ -1,9 +1,6 @@
 package com.climbwithyourfeet.clustering;
 
 import algorithms.util.ResourceFinder;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +28,7 @@ public class AmazonFoodReviewsReaderWriter {
     public static final String filePath0;
     public static final String filePathCleaned;
     public static final String filePathCleanedSortProd;
+    public static final String filePathCleanedDegSortProd;
     public static final String filePathProdUserScoreSortProd;
     static {
         try {
@@ -38,7 +36,8 @@ public class AmazonFoodReviewsReaderWriter {
             filePath0 = testDir + sep + "amazon_fine_food_reviews.csv";
             filePathCleaned = testDir + sep + "amazon_fine_food_reviews_cleaned.csv";
             filePathCleanedSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod.csv";
-            filePathProdUserScoreSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.bin";
+            filePathCleanedDegSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_deg_sort_prod.csv";
+            filePathProdUserScoreSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv";
         } catch (IOException e) {
             e.printStackTrace();
             throw new IllegalStateException("cannot find test resources directory");
@@ -269,7 +268,7 @@ public class AmazonFoodReviewsReaderWriter {
         writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
     }
 
-    private void writeProductUseScoreFile(String inFilePath, String outFilePath) throws IOException {
+    protected void writeProductUseScoreFile(String inFilePath, String outFilePath) throws IOException {
 
         /*
         0     1        2       3            4                    5                   6     7    8       9
@@ -282,7 +281,6 @@ public class AmazonFoodReviewsReaderWriter {
         col 6 is score : int
             (range 0 - 5?)
         */
-
         File f = new File(inFilePath);
         if (!f.exists()) {
             throw new IOException("could not find file at " + inFilePath);
@@ -293,24 +291,22 @@ public class AmazonFoodReviewsReaderWriter {
         String[] items;
         String productId;
         String userId;
-        Integer score;
+        String score;
 
         byte[] bytes = null;
         BufferedReader in = null;
-        FileOutputStream fs = null;
+        BufferedWriter out = null;
         // write productId, userId, score to fs
         int i = 0;
         try {
             in = new BufferedReader(new FileReader(f));
-            fs = new FileOutputStream(outFilePath);
+            out = new BufferedWriter(new FileWriter(new File(outFilePath)));
 
             String line = in.readLine();
             if (line == null) {
                 throw new IOException("could not read a line from " + inFilePath);
             }
             line = in.readLine();
-
-            //TODO: fix file parsing here
 
             // java doesn't support conditional constructs, so cannot easily
             // insist that a group starting with a " must end with a " too.
@@ -330,7 +326,7 @@ public class AmazonFoodReviewsReaderWriter {
                 userId = items[2].trim();
 
                 if (items.length == nCols) {
-                    score = Integer.parseInt(items[6]);
+                    score = items[6].trim();
                 } else {
                     //find 4 consecutive elements in items that are numbers, the 3rd is score
                     int nN = 0;
@@ -350,33 +346,29 @@ public class AmazonFoodReviewsReaderWriter {
                         ++j;
                     }
                     if (nN != 4) {
+                        // doesn't reach here
                         line = in.readLine();
                         ++i;
                         continue;
                     } else {
-                        score = Integer.parseInt(items[j0 + 2]);
+                        score = items[j0 + 2].trim();
                     }
                 }
 
-                bytes = productId.getBytes(StandardCharsets.UTF_8);
-                fs.write(bytes.length);
-                fs.write(bytes);
-                bytes = userId.getBytes(StandardCharsets.UTF_8);
-                fs.write(bytes.length);
-                fs.write(bytes);
-                fs.write(score);
-
-                if (i % 100 == 0) {
-                    fs.flush();
-                }
+                out.write(productId);
+                out.write(",");
+                out.write(userId);
+                out.write(",");
+                out.write(score);
+                out.write(eol);
 
                 ++i;
                 line = in.readLine();
             }
         } finally {
-            if (fs != null) {
-                fs.flush();
-                fs.close();
+            if (out != null) {
+                out.flush();
+                out.close();
             }
             if (in != null) {
                 in.close();
@@ -517,6 +509,19 @@ public class AmazonFoodReviewsReaderWriter {
             }
         }
 
+    }
+
+    public void writeSortedDegeneracyFileForCleanedInput() throws IOException {
+        File f = new File(filePathCleaned);
+        if (!f.exists()) {
+            writeCleanedFile();
+        }
+        writeDegeneracySortedFile(filePathCleaned, filePathCleanedDegSortProd, true);
+        writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
+    }
+
+    private void writeDegeneracySortedFile(String filePathCleaned, String filePathCleanedDegSortProd, boolean b) {
+        throw new UnsupportedOperationException("not yet implemented");
     }
 
 }
