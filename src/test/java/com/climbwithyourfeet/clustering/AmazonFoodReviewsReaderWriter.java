@@ -1,19 +1,11 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.matrix.MatrixUtil;
-import algorithms.sort.MiscSorter;
 import algorithms.util.ResourceFinder;
-import gnu.trove.iterator.TIntIntIterator;
-import gnu.trove.iterator.TIntObjectIterator;
-import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
 
 import java.io.*;
-import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -23,7 +15,35 @@ import java.util.*;
  */
 public class AmazonFoodReviewsReaderWriter {
 
+    /*
+    NOTE: if need the results to be "real-time", can build methods using Apache datasketches API's ItemSketch which
+    is a frequent items algorithm, and/or set membership query algorithms like the Bloom Filter or Ribbon Filter.
+    Also, for building a sparse utility matrix and using the top k eigenvectors associated with the largest eigenvalues
+    for use in projection (dimension reduction), can use the JAX API for sparse matrices.
+    The publicly available JAX is in python currently.
+     */
+
     private static final int nEntries = 568454;
+
+    private static final String sep = System.getProperty("file.separator");
+    private static final String eol = System.getProperty("line.separator");
+    private static final String testDir;
+    public static final String filePath0;
+    public static final String filePathCleaned;
+    public static final String filePathCleanedSortProd;
+    public static final String filePathProdUserScoreSortProd;
+    static {
+        try {
+            testDir = ResourceFinder.findTestResourcesDirectory();
+            filePath0 = testDir + sep + "amazon_fine_food_reviews.csv";
+            filePathCleaned = testDir + sep + "amazon_fine_food_reviews_cleaned.csv";
+            filePathCleanedSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod.csv";
+            filePathProdUserScoreSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.bin";
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("cannot find test resources directory");
+        }
+    }
 
     /*
     see test/resources/amazon_fine_food_reviews_README.txt
@@ -45,8 +65,30 @@ public class AmazonFoodReviewsReaderWriter {
          9   Text                    568454 non-null  object
     </pre>
      */
-    
-    public void writeProductUseScoreFile() throws IOException {
+
+    /**
+     * read the file amazon_fine_food_reviews.csv, remove redundant entries and write output files.
+     *
+     * Note that no text changes for canonicalization, etc have been performed in the cleaning as the text
+     * and summary aren't used currently for the single test using the file in this project.
+     *
+     * removing 171865 redundant entries.
+     *
+     * writes output files:
+     *    amazon_fine_food_reviews_cleaned.csv
+     *    amazon_fine_food_reviews_cleaned_sort_product.csv
+     <pre>
+     What this method does:
+      - finds redundant entries to define product groups
+      - makes an alias map for the product group, choosing the first member to be the canonical product name
+      - renames productids to the canonical name and removes redundancies
+      - write the remaining entries as amazon_fine_food_reviews_cleaned.csv
+      - also writes file:
+         -- entries sorted by productId.  write the file as amazon_fine_food_reviews_cleaned_sort_product.csv
+     </pre>
+     * @throws IOException thrown for missing input file or other file I/O exceptions
+     */
+    public void writeCleanedFile() throws IOException {
 
         /*
         0     1        2       3            4                    5                   6     7    8       9
@@ -60,35 +102,27 @@ public class AmazonFoodReviewsReaderWriter {
             (range 0 - 5?)
         */
 
-        final String sep = System.getProperty("file.separator");
-        String testDir = ResourceFinder.findTestResourcesDirectory();
-        String path = testDir + sep + "amazon_fine_food_reviews.csv";
-        File f = new File(path);
+        File f = new File(filePath0);
         if (!f.exists()) {
-            throw new IOException("could not find file at " + path);
+            throw new IOException("could not find file at " + filePath0 +
+                    " Are you missing the original amazon fine foods review file amazon_fine_food_reviews.csv?  " +
+                    " You can download it at https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews/" +
+                    " and place it in src/test/resources.  The file size is 287MB.");
         }
 
-        String outPath = testDir + sep + "amazon_fine_food_reviews_sub_prod_sort.bin";
-
-        int nCols = 10;
-
         String[] items;
-        String productId;
-        String userId;
-        int score;
+        String userId, prodId;
 
-        byte[] bytes = null;
+        Map<String, Set<String>> trLineProdIdMap = new HashMap<>();
+        Set<String> prodIds;
         BufferedReader in = null;
-        FileOutputStream fs = null;
-        // write productId, userId, score to fs
         int i = 0;
         try {
             in = new BufferedReader(new FileReader(f));
-            fs = new FileOutputStream(outPath);
 
             String line = in.readLine();
             if (line == null) {
-                throw new IOException("could not read a line from " + path);
+                throw new IOException("could not read a line from " + filePath0);
             }
             line = in.readLine();
 
@@ -105,8 +139,195 @@ public class AmazonFoodReviewsReaderWriter {
 
                 items = line.split(",");
 
-                productId = items[1];
+                if (items[items.length-1].trim().isEmpty() && items[items.length-2].trim().isEmpty()) {
+                    // this is not reached.  all have at least summary
+                    ++i;
+                    line = in.readLine();
+                    continue;
+                }
+
+                prodId = items[1];
                 userId = items[2];
+
+                // trim off first 3 items
+                int i0 = line.indexOf(userId) + userId.length();
+                line = line.substring(i0, line.length() - 1);
+
+                prodIds = trLineProdIdMap.get(line);
+                if (prodIds == null) {
+                    prodIds = new HashSet<String>();
+                    trLineProdIdMap.put(line, prodIds);
+                }
+                prodIds.add(prodId);
+
+                ++i;
+                line = in.readLine();
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+
+        Map<String, String> productIdAliasMap = new HashMap<>();
+        Iterator<Map.Entry<String, Set<String>>> iter = trLineProdIdMap.entrySet().iterator();
+        Map.Entry<String, Set<String>> entry;
+        String[] ps;
+        long nRemoving = 0;
+        while (iter.hasNext()) {
+            entry = iter.next();
+            //trLine = entry.getKey();
+            prodIds = entry.getValue();
+            if (prodIds.size() == 1) {
+                continue;
+            }
+            ps = prodIds.toArray(new String[prodIds.size()]);
+            Arrays.sort(ps);
+            for (String pId : ps) {
+                productIdAliasMap.put(pId, ps[0]);
+            }
+            nRemoving += (ps.length - 1);
+        }
+
+        // allow gc to reclaim this memory:
+        trLineProdIdMap = null;
+
+        //removing 171865 redundant entries
+        System.out.printf("removing %d redundant entries\n", nRemoving);
+        System.out.flush();
+
+        // rename productIds using alias map and skip any entries already in Set<String> trLineSet
+        // then perform the equiv of 'cat file | sort | uniq'
+
+        Set<String> lineSet = new HashSet<>();
+        String p0Id;
+        String trLine;
+
+        BufferedWriter out = null;
+        i = 0;
+        try {
+            in = new BufferedReader(new FileReader(f));
+            out = new BufferedWriter(new FileWriter(filePathCleaned));
+
+            String line = in.readLine();
+            if (line == null) {
+                throw new IOException("could not read a line from " + filePath0);
+            }
+            // write the comment line
+            out.write(line);
+            out.write(eol);
+
+            line = in.readLine();
+
+            while (line != null) {
+                if (line.trim().isEmpty()) {
+                    break;
+                }
+                items = line.split(",");
+
+                prodId = items[1];
+
+                p0Id = productIdAliasMap.get(prodId);
+                if (p0Id != null && !p0Id.equals(prodId)) {
+                    line = line.replaceFirst(prodId, p0Id);
+                }
+
+                // remove id string
+                trLine = line.substring(line.indexOf(",") + 1);
+
+                if (lineSet.contains(trLine)) {
+                    ++i;
+                    line = in.readLine();
+                    continue;
+                }
+                lineSet.add(trLine);
+
+                out.write(line);
+                out.write(eol);
+
+                ++i;
+                line = in.readLine();
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.flush();
+                out.close();
+            }
+        }
+
+    }
+
+    public void writeSortedProductFileForCleanedInput() throws IOException {
+        File f = new File(filePathCleaned);
+        if (!f.exists()) {
+            writeCleanedFile();
+        }
+        writeSortedFile(filePathCleaned, filePathCleanedSortProd, true);
+        writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
+    }
+
+    private void writeProductUseScoreFile(String inFilePath, String outFilePath) throws IOException {
+
+        /*
+        0     1        2       3            4                    5                   6     7    8       9
+        Id,ProductId,UserId,ProfileName,HelpfulnessNumerator,HelpfulnessDenominator,Score,Time,Summary,Text
+
+        reading in these features:
+
+        col 1 is productId : string
+        col 2 is user_id : string
+        col 6 is score : int
+            (range 0 - 5?)
+        */
+
+        File f = new File(inFilePath);
+        if (!f.exists()) {
+            throw new IOException("could not find file at " + inFilePath);
+        }
+
+        int nCols = 10;
+
+        String[] items;
+        String productId;
+        String userId;
+        Integer score;
+
+        byte[] bytes = null;
+        BufferedReader in = null;
+        FileOutputStream fs = null;
+        // write productId, userId, score to fs
+        int i = 0;
+        try {
+            in = new BufferedReader(new FileReader(f));
+            fs = new FileOutputStream(outFilePath);
+
+            String line = in.readLine();
+            if (line == null) {
+                throw new IOException("could not read a line from " + inFilePath);
+            }
+            line = in.readLine();
+
+            //TODO: fix file parsing here
+
+            // java doesn't support conditional constructs, so cannot easily
+            // insist that a group starting with a " must end with a " too.
+            // TODO: improve parsing for quoted if need the text fields.  for now, not using those
+            //Pattern pattern = Pattern.compile("^(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*)$");
+            //    TODO: improve on the pattern to use digits restriction in columns 0, 4,5,6,7
+            while (line != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    break;
+                }
+                line = line.replaceAll("\"\"", "");
+
+                items = line.split(",");
+
+                productId = items[1].trim();
+                userId = items[2].trim();
 
                 if (items.length == nCols) {
                     score = Integer.parseInt(items[6]);
@@ -193,10 +414,12 @@ public class AmazonFoodReviewsReaderWriter {
     /**
      * parse the original file, gather all entries, keyed by productId or userId, and then write them to file
      * by descending sort
+     * @param inFilePath path to file containing full line entries
+     * @param outFilePath path to write file sorted full line entries
      * @param sortByProduct if true sorts by number of product reviews, else sorts by number of user reviews
      * @throws IOException
      */
-    public void writeSortedProductUseScoreFile(boolean sortByProduct) throws IOException {
+    private void writeSortedFile(String inFilePath, String outFilePath, boolean sortByProduct) throws IOException {
 
         /*
         0     1        2       3            4                    5                   6     7    8       9
@@ -210,108 +433,58 @@ public class AmazonFoodReviewsReaderWriter {
             (range 0 - 5?)
         */
 
-        final String sep = System.getProperty("file.separator");
-        String testDir = ResourceFinder.findTestResourcesDirectory();
-        String path = testDir + sep + "amazon_fine_food_reviews.csv";
-        File f = new File(path);
+        File f = new File(inFilePath);
         if (!f.exists()) {
-            throw new IOException("could not find file at " + path +
-                    " You can download it at https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews/"
-            + " and place it in src/test/resources.  size is 287MB");
+            throw new IOException("could not find file at " + inFilePath +
+                    " Are you missing the original amazon fine foods review file?  " +
+                    " You can download it at https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews/" +
+                    " and place it in src/test/resources.  The file size is 287MB.");
         }
 
-        // productId, lists of <userId, score>
-        Map<String, List<String>> sMap = new HashMap<>();
+        /*
+        map with key = productId, value = line
+        or
+        map with key = userId, value = line
 
-        String outPath = testDir + sep;
-        if (sortByProduct) {
-            outPath = outPath + "amazon_fine_food_reviews_sub_prod_sort.bin";
-        } else {
-            outPath = outPath + "amazon_fine_food_reviews_sub_user_sort.bin";
-        }
-
-        int nCols = 10;
+        using a Red-Black tree to sort by natural ordering of keys
+        */
+        SortedMap<String, List<String>> sMap = new TreeMap<>();
 
         String[] items;
-        String productId;
-        String userId;
-        int score;
+        String key;
 
-        byte[] bytes = null;
         BufferedReader in = null;
+        String commentLine = null;
 
-        List<String> entries;
-        // write productId, userId, score to fs
+        List<String> lines;
         int i = 0;
         try {
             in = new BufferedReader(new FileReader(f));
 
             String line = in.readLine();
             if (line == null) {
-                throw new IOException("could not read a line from " + path);
+                throw new IOException("could not read a line from " + inFilePath);
             }
+            commentLine = line;
             line = in.readLine();
 
-            // java doesn't support conditional constructs, so cannot easily
-            // insist that a group starting with a " must end with a " too.
-            // TODO: improve parsing for quoted if need the text fields.  for now, not using thos
-            //Pattern pattern = Pattern.compile("^(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*),(\\S.*)$");
             while (line != null) {
-                line = line.trim();
-                if (line.isEmpty()) {
+                if (line.trim().isEmpty()) {
                     break;
                 }
-                line = line.replaceAll("\"\"", "");
-
-                items = line.split(",");
-
-                productId = items[1];
-                userId = items[2];
-
-                if (items.length == nCols) {
-                    score = Integer.parseInt(items[6]);
-                } else {
-                    //find 4 consecutive elements in items that are numbers, the 3rd is score
-                    int nN = 0;
-                    int j0 = -1;
-                    int j = 3;
-                    while (j < items.length && nN < 4) {
-                        try {
-                            Integer.parseInt(items[j]);
-                            if (j0 == -1) {
-                                j0 = j;
-                            }
-                            ++nN;
-                        } catch (NumberFormatException ex) {
-                            nN = 0;
-                            j0 = -1;
-                        }
-                        ++j;
-                    }
-                    if (nN != 4) {
-                        line = in.readLine();
-                        ++i;
-                        continue;
-                    } else {
-                        score = Integer.parseInt(items[j0 + 2]);
-                    }
-                }
+                items = line.replaceAll("\"\"", "").split(",");
 
                 if (sortByProduct) {
-                    entries = sMap.get(productId);
-                    if (entries == null) {
-                        entries = new ArrayList<String>();
-                        sMap.put(productId, entries);
-                    }
-                    entries.add(String.format("%s,%d", userId, score));
+                    key = items[1];
                 } else {
-                    entries = sMap.get(userId);
-                    if (entries == null) {
-                        entries = new ArrayList<String>();
-                        sMap.put(userId, entries);
-                    }
-                    entries.add(String.format("%s,%d", productId, score));
+                    key = items[2];
                 }
+                lines = sMap.get(key);
+                if (lines == null) {
+                    lines = new ArrayList<String>();
+                    sMap.put(key, lines);
+                }
+                lines.add(line);
 
                 ++i;
                 line = in.readLine();
@@ -322,102 +495,27 @@ public class AmazonFoodReviewsReaderWriter {
             }
         }
 
-        // count productId entries and sort descending by count
-        if (sortByProduct) {
-            System.out.printf("number of unique productIds = %d\n", sMap.size());
-        } else {
-            System.out.printf("number of unique userIds = %d\n", sMap.size());
-        }
-        String[] p = sMap.keySet().toArray(new String[sMap.size()]);
-        int[] nP = new int[p.length];
-        int[] iP = new int[p.length];
-        for (i = 0; i < p.length; ++i) {
-            nP[i] = sMap.get(p[i]).size();
-            iP[i] = i;
-        }
-        MiscSorter.sortByDecr(nP, iP);
-        int[] _nP = Arrays.copyOf(nP, 100);
-        if (sortByProduct) {
-            System.out.printf("top 100 number of reviews for each product: %s\n", Arrays.toString(_nP));
-        } else {
-            System.out.printf("top 100 number of reviews by each user: %s\n", Arrays.toString(_nP));
-        }
-
-        FileOutputStream fs = null;
+        BufferedWriter out = null;
         try  {
-            fs = new FileOutputStream(outPath);
+            out = new BufferedWriter(new FileWriter(new File(outFilePath)));
 
-            if (sortByProduct) {
-                for (i = 0; i < nP.length; ++i) {
-                    productId = p[iP[i]];
-                    entries = sMap.get(productId);
-                    for (String entry : entries) {
-                        items = entry.split(",");
-                        userId = items[0];
-                        score = Integer.parseInt(items[1]);
+            out.write(commentLine);
+            out.write(eol);
 
-                        bytes = productId.getBytes(StandardCharsets.UTF_8);
-                        fs.write(bytes.length);
-                        fs.write(bytes);
-                        bytes = userId.getBytes(StandardCharsets.UTF_8);
-                        fs.write(bytes.length);
-                        fs.write(bytes);
-                        fs.write(score);
-                    }
-                }
-            } else {
-                for (i = 0; i < nP.length; ++i) {
-                    userId = p[iP[i]];
-                    entries = sMap.get(userId);
-                    for (String entry : entries) {
-                        items = entry.split(",");
-                        productId = items[0];
-                        score = Integer.parseInt(items[1]);
-
-                        bytes = productId.getBytes(StandardCharsets.UTF_8);
-                        fs.write(bytes.length);
-                        fs.write(bytes);
-                        bytes = userId.getBytes(StandardCharsets.UTF_8);
-                        fs.write(bytes.length);
-                        fs.write(bytes);
-                        fs.write(score);
-                    }
+            for (Map.Entry<String, List<String>> stringListEntry : sMap.entrySet()) {
+                lines = stringListEntry.getValue();
+                for (String line : lines) {
+                    out.write(line);
+                    out.write(eol);
                 }
             }
 
         } finally {
-            if (fs != null) {
-                fs.flush();
-                fs.close();
+            if (out != null) {
+                out.flush();
+                out.close();
             }
         }
-
-
-        /*
-        // try to read from it
-        FileInputStream fsIn = null;
-        i = 0;
-        int nB;
-        try {
-            fsIn = new FileInputStream(outPath);
-
-            while (true) {
-                nB = fsIn.read();
-                if (nB == -1) {
-                    break;
-                }
-                productId = new String(fsIn.readNBytes(nB), StandardCharsets.UTF_8);
-                nB = fsIn.read();
-                userId = new String(fsIn.readNBytes(nB), StandardCharsets.UTF_8);
-                score = fsIn.read();
-                ++i;
-            }
-        } finally {
-            if (fsIn != null) {
-                fsIn.close();
-            }
-        }
-        */
 
     }
 

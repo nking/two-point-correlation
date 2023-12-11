@@ -26,8 +26,6 @@ public class AmazonFoodReviewsReader {
     //(productIdx, productId)
     private Map<Integer, String> productIdxIdMap;
 
-    private static final int nUniqueProducts = 74258;
-
     /*
     see test/resources/amazon_fine_food_reviews_README.txt
 
@@ -93,7 +91,7 @@ public class AmazonFoodReviewsReader {
      * @throws IOException exception while attempting to read the csv file
      */
     public void readUserProductUtilityMatrix() throws IOException {
-        readUserProductUtilityMatrix(nUniqueProducts);
+        readUserProductUtilityMatrix(null);
     }
 
     /**
@@ -107,23 +105,31 @@ public class AmazonFoodReviewsReader {
      *
      * @throws IOException exception while attempting to rad the csv file
      */
-    public void readUserProductUtilityMatrix(int nRead) throws IOException {
+    public void readUserProductUtilityMatrix(Integer nRead) throws IOException {
 
-        if (nRead < 0) {
+        if (nRead != null && nRead < 0) {
             throw new IllegalArgumentException("nRead must non-negative");
+        }
+
+        String inPath = AmazonFoodReviewsReaderWriter.filePathProdUserScoreSortProd;
+        File f = new File(inPath);
+        if (!f.exists()) {
+            AmazonFoodReviewsReaderWriter t = new AmazonFoodReviewsReaderWriter();
+            t.writeSortedProductFileForCleanedInput();
+            f = new File(inPath);
+            assert(f.exists());
+        }
+
+        int nUniqueProducts = 0;
+        // resource is auto-closed when declared an initialized inside the try
+        try (FileInputStream in = new FileInputStream(inPath)) {
+            while (in.read() != -1) {
+                ++nUniqueProducts;
+            }
         }
 
         if (nRead >= nUniqueProducts) {
             nRead = nUniqueProducts;
-        }
-
-        final String sep = System.getProperty("file.separator");
-        String testDir = ResourceFinder.findTestResourcesDirectory();
-        String outPath = testDir + sep + "amazon_fine_food_reviews_sub_prod_sort.bin";
-        File f = new File(outPath);
-        if (!f.exists()) {
-            AmazonFoodReviewsReaderWriter t = new AmazonFoodReviewsReaderWriter();
-            t.writeSortedProductUseScoreFile(true);
         }
 
         int nCols = 10;
@@ -150,7 +156,7 @@ public class AmazonFoodReviewsReader {
         FileInputStream in = null;
         int i = 0;
         try {
-            in = new FileInputStream(outPath);
+            in = new FileInputStream(inPath);
 
             int productIdx;
             int userIdx;
@@ -212,7 +218,7 @@ public class AmazonFoodReviewsReader {
             int lastIRead = i - 1;
             i = 0;
             try {
-                in = new FileInputStream(outPath);
+                in = new FileInputStream(inPath);
 
                 int productIdx;
                 int userIdx;
