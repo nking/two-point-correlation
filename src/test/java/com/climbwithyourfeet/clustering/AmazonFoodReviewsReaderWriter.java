@@ -1,6 +1,8 @@
 package com.climbwithyourfeet.clustering;
 
+import algorithms.sort.MiscSorter;
 import algorithms.util.ResourceFinder;
+import gnu.trove.set.TIntSet;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -259,6 +261,16 @@ public class AmazonFoodReviewsReaderWriter {
 
     }
 
+    /**
+     * writes a cleaned file if it doesn't already exist.
+     * reads the cleand file and writes files with content ordered by descending sort upon the number of users
+     * associated with a product,
+     * and then writes another file for the utility matrix entries only (productId, userId, score).
+     *
+     parse the original file, gather all entries, keyed by productId or userId, and then write them to file
+     by descending for sorting by number of users the product has or products the user has, dependening upon sort choice.
+     * @throws IOException
+     */
     public void writeSortedProductFileForCleanedInput() throws IOException {
         File f = new File(filePathCleaned);
         if (!f.exists()) {
@@ -405,7 +417,7 @@ public class AmazonFoodReviewsReaderWriter {
 
     /**
      * parse the original file, gather all entries, keyed by productId or userId, and then write them to file
-     * by descending sort
+     * by descending for sorting by number of users the product has or products the user has, dependening upon sort choice.
      * @param inFilePath path to file containing full line entries
      * @param outFilePath path to write file sorted full line entries
      * @param sortByProduct if true sorts by number of product reviews, else sorts by number of user reviews
@@ -437,18 +449,21 @@ public class AmazonFoodReviewsReaderWriter {
         map with key = productId, value = line
         or
         map with key = userId, value = line
-
-        using a Red-Black tree to sort by natural ordering of keys
         */
-        SortedMap<String, List<String>> sMap = new TreeMap<>();
+        Map<String, List<String>> sMap = new HashMap<>();
+
+        // key = sort by product or userid, value = list of userid or productid, respectively
+        Map<String, List<String>> s1S2Map = new HashMap<>();
 
         String[] items;
         String key;
+        String key2;
 
         BufferedReader in = null;
         String commentLine = null;
 
         List<String> lines;
+        List<String> s2List;
         int i = 0;
         try {
             in = new BufferedReader(new FileReader(f));
@@ -468,8 +483,10 @@ public class AmazonFoodReviewsReaderWriter {
 
                 if (sortByProduct) {
                     key = items[1];
+                    key2 = items[2];
                 } else {
                     key = items[2];
+                    key2 = items[1];
                 }
                 lines = sMap.get(key);
                 if (lines == null) {
@@ -477,6 +494,13 @@ public class AmazonFoodReviewsReaderWriter {
                     sMap.put(key, lines);
                 }
                 lines.add(line);
+
+                s2List = s1S2Map.get(key);
+                if (s2List == null) {
+                    s2List = new ArrayList<>();
+                    s1S2Map.put(key, s2List);
+                }
+                s2List.add(key2);
 
                 ++i;
                 line = in.readLine();
@@ -487,6 +511,22 @@ public class AmazonFoodReviewsReaderWriter {
             }
         }
 
+        // descending sort by decreasing number of values
+        int n = s1S2Map.size();
+        int[] nKey2s = new int[n];
+        String[] key1s = new String[n];
+        int[] kIdxs = new int[n];
+        i = 0;
+        for (Map.Entry<String, List<String>> entry : s1S2Map.entrySet()) {
+            key1s[i] = entry.getKey();
+            nKey2s[i] = entry.getValue().size();
+            kIdxs[i] = i;
+            ++i;
+        }
+        MiscSorter.sortByDecr(nKey2s, kIdxs);
+
+        // access sMap in order of sorted keys and write lines to out
+
         BufferedWriter out = null;
         try  {
             out = new BufferedWriter(new FileWriter(new File(outFilePath)));
@@ -494,8 +534,9 @@ public class AmazonFoodReviewsReaderWriter {
             out.write(commentLine);
             out.write(eol);
 
-            for (Map.Entry<String, List<String>> stringListEntry : sMap.entrySet()) {
-                lines = stringListEntry.getValue();
+            for (i = 0; i < n; ++i) {
+                key = key1s[kIdxs[i]];
+                lines = sMap.get(key);
                 for (String line : lines) {
                     out.write(line);
                     out.write(eol);
@@ -520,7 +561,8 @@ public class AmazonFoodReviewsReaderWriter {
         writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
     }
 
-    private void writeDegeneracySortedFile(String filePathCleaned, String filePathCleanedDegSortProd, boolean b) {
+    private void writeDegeneracySortedFile(String inFilePath, String outFilePath, boolean b) throws IOException {
+
         throw new UnsupportedOperationException("not yet implemented");
     }
 
