@@ -160,7 +160,7 @@ plt.show()
 
 
 '''
-projections near 0,0 are users who reviewed 1 product, but those products have been reviewed by many users
+projections near 0,0 are users who reviewed 1 product, but those products have been reviewed by many users.
 the ratings may be different.  e.g. user ADT0SRK1MGOEU rates product B006K2ZZ7K as a 4 while all other
 reviews of that product are 5.
 
@@ -168,16 +168,18 @@ projections to the left of center with 2nd coordinate being near 0
 are users with many reviews who have products in common
 
 projections above center with 1st coordinate being near 0
-are in clusters where a user has a couple of reviews and those users have a product in common.
+in clusters are users with a couple of reviews and those users have a product in common.
 
 projections to left and above center and not in clusters
 are users with several reviews having no products in common
 
 projections to left and above center that are in clusters
-are users with a few reviews that have 1 product in common.  all have the same high score for that product in common.
+are users with a few reviews that have 1 product in common.  a spot check shows that
+all have the same high score for that product in common.
 
 projections to left and below center that are in clusters
-are users with a few reviews that have 1 product in common.  all have the same high score for that product in common.
+are users with a few reviews that have 1 product in common.  a spot check shows that
+all have the same high score for that product in common.
 '''
 
 '''
