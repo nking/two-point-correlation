@@ -2,6 +2,10 @@ package com.climbwithyourfeet.clustering;
 
 import algorithms.sort.MiscSorter;
 import algorithms.util.ResourceFinder;
+import gnu.trove.iterator.TIntIntIterator;
+import gnu.trove.iterator.TIntObjectIterator;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.set.TIntSet;
 
 import java.io.*;
@@ -24,9 +28,9 @@ public class AmazonFoodReviewsReaderWriter {
 
     private static final int nEntries = 568454;
 
-    private static final String sep = System.getProperty("file.separator");
-    private static final String eol = System.getProperty("line.separator");
-    private static final String testDir;
+    public static final String sep = System.getProperty("file.separator");
+    public static final String eol = System.getProperty("line.separator");
+    public static final String testDir;
     public static final String filePath0;
     public static final String filePathCleaned;
     public static final String filePathCleanedSortProd;
@@ -305,7 +309,6 @@ public class AmazonFoodReviewsReaderWriter {
         String userId;
         String score;
 
-        byte[] bytes = null;
         BufferedReader in = null;
         BufferedWriter out = null;
         // write productId, userId, score to fs
@@ -412,6 +415,66 @@ public class AmazonFoodReviewsReaderWriter {
             }
         }
         */
+
+    }
+
+    protected void writeProductUseScoreFile(Integer nRead) throws IOException {
+
+        AmazonFoodReviewsReader reader = new AmazonFoodReviewsReader();
+        // key is productIdx, value = Map with key is useridx, value = score
+        int[] outputNUsers = new int[1];
+        TIntObjectMap<TIntIntMap> productUserScoreMap = reader.readSortedProductUserScoreFile(nRead, outputNUsers);
+
+        // traverse productUserScoreMap in order of decreasing number of users that reviews a product
+        int n = productUserScoreMap.size();
+        int[] nKey2s = new int[n];
+        int[] key1s = new int[n];
+        int[] kIdxs = new int[n];
+        TIntObjectIterator<TIntIntMap> iter = productUserScoreMap.iterator();
+        int i = 0;
+        while (iter.hasNext()) {
+            iter.advance();
+            key1s[i] = iter.key();
+            nKey2s[i] = iter.value().size();
+            kIdxs[i] = i;
+            ++i;
+        }
+        MiscSorter.sortByDecr(nKey2s, kIdxs);
+
+        String outFilePath = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc_" + nRead.toString() + ".csv";
+
+        int pIdx;
+        int uIdx;
+        int score;
+        BufferedWriter out = null;
+        TIntIntMap userScoreMap;
+        TIntIntIterator iter2;
+        try {
+            out = new BufferedWriter(new FileWriter(new File(outFilePath)));
+            for (i = 0; i < nRead && i < kIdxs.length; ++i) {
+                pIdx = key1s[kIdxs[i]];
+                userScoreMap = productUserScoreMap.get(pIdx);
+                iter2 = userScoreMap.iterator();
+                while (iter2.hasNext()) {
+                    iter2.advance();
+                    uIdx = iter2.key();
+                    score = iter2.value();
+                    out.write(Integer.toString(pIdx));
+                    out.write(",");
+                    out.write(Integer.toString(uIdx));
+                    out.write(",");
+                    out.write(Integer.toString(score));
+                    out.write(eol);
+                }
+            }
+        } finally {
+            if (out != null) {
+                out.flush();
+                out.close();
+            }
+        }
+
+        System.out.println("done writing file to " + outFilePath);
 
     }
 
@@ -551,19 +614,4 @@ public class AmazonFoodReviewsReaderWriter {
         }
 
     }
-
-    public void writeSortedDegeneracyFileForCleanedInput() throws IOException {
-        File f = new File(filePathCleaned);
-        if (!f.exists()) {
-            writeCleanedFile();
-        }
-        writeDegeneracySortedFile(filePathCleaned, filePathCleanedDegSortProd, true);
-        writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
-    }
-
-    private void writeDegeneracySortedFile(String inFilePath, String outFilePath, boolean b) throws IOException {
-
-        throw new UnsupportedOperationException("not yet implemented");
-    }
-
 }

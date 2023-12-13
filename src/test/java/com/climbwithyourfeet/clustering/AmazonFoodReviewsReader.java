@@ -1,21 +1,15 @@
 package com.climbwithyourfeet.clustering;
 
 import algorithms.matrix.MatrixUtil;
-import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class AmazonFoodReviewsReader {
 
@@ -106,6 +100,75 @@ public class AmazonFoodReviewsReader {
      * @throws IOException exception while attempting to rad the csv file
      */
     public void readUserProductUtilityMatrix(Integer nRead) throws IOException {
+
+        // key is productIdx, value = Map with key is useridx, value = score
+        int[] outputNUsers = new int[1];
+        TIntObjectMap<TIntIntMap> productUserScoreMap = readSortedProductUserScoreFile(nRead, outputNUsers);
+
+        userProductScore = MatrixUtil.zeros(outputNUsers[0], productUserScoreMap.size());
+
+        int productIdx;
+        int userIdx;
+        int score;
+
+        TIntIntMap userScoreMap;
+        TIntObjectIterator<TIntIntMap> iter = productUserScoreMap.iterator();
+        TIntIntIterator iter2;
+        while (iter.hasNext()){
+            iter.advance();
+            productIdx = iter.key();
+
+            userScoreMap = iter.value();
+            iter2 = userScoreMap.iterator();
+            while (iter2.hasNext()) {
+                iter2.advance();
+                userIdx = iter2.key();
+                score = iter2.value();
+                userProductScore[userIdx][productIdx] = score;
+            }
+        }
+
+        System.out.println("done creating utility matrix");
+
+        /*
+        //write utility to out
+        String outFilePath = AmazonFoodReviewsReaderWriter.testDir + AmazonFoodReviewsReaderWriter.sep
+                + "amazon_fine_food_reviews_cleaned_utility_" + Integer.toString(nRead) + ".csv";
+        BufferedWriter out = null;
+        int j;
+        int i;
+        String entry;
+        try {
+            out = new BufferedWriter(new FileWriter(outFilePath));
+            for (i = 0; i < userProductScore.length; ++i) {
+                for (j = 0; j < userProductScore[i].length; ++j) {
+                    entry = String.format("%d", (int) userProductScore[i][j]);
+                    out.write(entry);
+                    if (j < (userProductScore[i].length - 1)) {
+                        out.write(",");
+                    }
+                }
+                out.write(AmazonFoodReviewsReaderWriter.eol);
+            }
+        } finally {
+            if (out != null) {
+                out.flush();
+                out.close();
+            }
+        }
+        */
+    }
+
+    /**
+     * read read the sorted product user score file amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv until
+     * nRead number of products are read.
+     * @param nRead
+     * @return a map with key=productIdx, value=Map with key=userIdx, value=score.
+     * The original ids (strings) can be found using instance variables userIdxIdMap and productIdxIdMap.
+     * @param outputNUsers an array of length 1 that will be filled with the number of users in the returned map
+     * @throws IOException
+     */
+    public TIntObjectMap<TIntIntMap> readSortedProductUserScoreFile(Integer nRead, int[] outputNUsers) throws IOException {
 
         if (nRead != null && nRead < 0) {
             throw new IllegalArgumentException("nRead must non-negative");
@@ -292,31 +355,9 @@ public class AmazonFoodReviewsReader {
         System.out.printf("size of productUserScoreMap=%d\n", productUserScoreMap.size());
         System.out.flush();
 
-        printFrequencyMap(userProductScoreMap, "userProduct");
-        printFrequencyMap(productUserScoreMap, "productUser");
+        outputNUsers[0] = userIdIdxMap.size();
 
-        userProductScore = MatrixUtil.zeros(userIdIdxMap.size(), productIdIdxMap.size());
-
-        int productIdx;
-        int userIdx;
-
-        TIntObjectIterator<TIntIntMap> iter = productUserScoreMap.iterator();
-        TIntIntIterator iter2;
-        while (iter.hasNext()){
-            iter.advance();
-            productIdx = iter.key();
-
-            userScoreMap = iter.value();
-            iter2 = userScoreMap.iterator();
-            while (iter2.hasNext()) {
-                iter2.advance();
-                userIdx = iter2.key();
-                score = iter2.value();
-                userProductScore[userIdx][productIdx] = score;
-            }
-        }
-
-        System.out.println("done creating utility matrix");
+        return productUserScoreMap;
     }
 
     private void printFrequencyMap(TIntObjectMap<TIntIntMap> map, String label) {
