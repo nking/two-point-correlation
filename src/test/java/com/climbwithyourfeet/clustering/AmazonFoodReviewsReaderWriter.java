@@ -6,10 +6,8 @@ import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.set.TIntSet;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -30,7 +28,7 @@ public class AmazonFoodReviewsReaderWriter {
 
     public static final String sep = System.getProperty("file.separator");
     public static final String eol = System.getProperty("line.separator");
-    public static final String testDir;
+    public static final String testResDir;
     public static final String filePath0;
     public static final String filePathCleaned;
     public static final String filePathCleanedSortProd;
@@ -38,12 +36,12 @@ public class AmazonFoodReviewsReaderWriter {
     public static final String filePathProdUserScoreSortProd;
     static {
         try {
-            testDir = ResourceFinder.findTestResourcesDirectory();
-            filePath0 = testDir + sep + "amazon_fine_food_reviews.csv";
-            filePathCleaned = testDir + sep + "amazon_fine_food_reviews_cleaned.csv";
-            filePathCleanedSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod.csv";
-            filePathCleanedDegSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_deg_sort_prod.csv";
-            filePathProdUserScoreSortProd = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv";
+            testResDir = ResourceFinder.findTestResourcesDirectory();
+            filePath0 = testResDir + sep + "amazon_fine_food_reviews.csv";
+            filePathCleaned = testResDir + sep + "amazon_fine_food_reviews_cleaned.csv";
+            filePathCleanedSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod.csv";
+            filePathCleanedDegSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_deg_sort_prod.csv";
+            filePathProdUserScoreSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv";
         } catch (IOException e) {
             e.printStackTrace();
             throw new IllegalStateException("cannot find test resources directory");
@@ -441,7 +439,7 @@ public class AmazonFoodReviewsReaderWriter {
         }
         MiscSorter.sortByDecr(nKey2s, kIdxs);
 
-        String outFilePath = testDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc_" + nRead.toString() + ".csv";
+        String outFilePath = testResDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc_" + nRead.toString() + ".csv";
 
         int pIdx;
         int uIdx;

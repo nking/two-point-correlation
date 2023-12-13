@@ -7,7 +7,6 @@ import algorithms.matrix.MatrixUtil;
 import algorithms.misc.Histogram;
 import algorithms.misc.MiscMath0;
 import algorithms.util.FormatArray;
-import algorithms.util.ResourceFinder;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TDoubleList;
@@ -29,10 +28,9 @@ import org.knowm.xchart.style.markers.SeriesMarkers;
 
 import java.awt.*;
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -40,115 +38,25 @@ import java.util.*;
  */
 public class ClusterRecipesTest extends TestCase {
 
+    private Logger log = Logger.getLogger(this.getClass().getSimpleName());
+
     public void test0() throws Exception {
 
-        //TODO: compare the clusters to results from KMeans (possibly w/ xmeans)
+        /*
+        if (true) {
+            //AmazonFoodReviewsReader reader = new AmazonFoodReviewsReader();
+            //reader.readUserProductUtilityMatrix(25);
+            AmazonFoodReviewsReaderWriter a = new AmazonFoodReviewsReaderWriter();
+            a.writeSortedProductFileForCleanedInput();
+            //a.writeProductUseScoreFile(100);
+            return;
+        }*/
 
         // if we had recipe ingredients,
         //    we could use them to make content-based recommendations
         //    or item-item collaborative filtering
 
-        /*
-        utility map w/ 0s for missing entries
-         * 12008 users, 100 recipes.
-         *         8 users made 2 recipe reviews.
-         *         12000 users made 1 recipe review.
-         *         extremely sparse dataset
-         */
-        /*RecipeReviewsReader reader = new RecipeReviewsReader();
-        reader.readUserRecipeUtilityMatrix();
-        double[][] userRecipeStars = reader.getUserRecipeStars();
-        */
-        AmazonFoodReviewsReader reader = new AmazonFoodReviewsReader();
-        reader.readUserProductUtilityMatrix(25);
-        double[][] userRecipeStars = reader.getUserProductScore();
-
-        boolean printClusters = true;
-
-        final String sep = System.getProperty("file.separator");
-        String outDir = ResourceFinder.findOutputTestDirectory();
-        FileWriter pOut = null;
-        if (printClusters) {
-            String path = outDir + sep + "utility_matrix_clusters.csv";
-            pOut = new FileWriter(path, StandardCharsets.UTF_8);
-        }
-
-        // when k = 2, takes many tries to get a decent random selection.
-        int k = 4;//2;
-        // k=50 took 7+-5 iterations for good svd.s
-        // k=25 took 1 iterations ...
-        // k=11 took 2 iterations ...
-        // k=2 took 40+-30 iterations ...
-        MatrixUtil.SVDProducts svd = null;
-        int sTrys = 0;
-        while (true) {
-            ++sTrys;
-            try {
-                svd = CURDecomposition.calculateDecomposition(userRecipeStars, k).getApproximateSVD();
-            } catch (IllegalArgumentException ex) {
-                continue;
-            }
-            if (svd.s.length < 2 || svd.s[0] == 0. || svd.s[1] == 0. || ((svd.s[0]/svd.s[1]) > 100)) {
-                continue;
-            }
-            break;
-        }
-        System.out.println("s=" + Arrays.toString(svd.s) + " after " + sTrys + " attempts");
-
-        System.out.println("vT dimensions = " + svd.vT.length + ", " + svd.vT[0].length);
-
-        // reduce dimension to the 2 with largest eigenvalues
-        /*
-        m = 12008, n=100
-        A * V = U * D
-        A = [mxn] = U * D * V^T
-             U = [m x r]  cols are "concepts" (aka latent factors, latent dimensions)
-             D = [r X r]     diag is "concepts"
-             V^T = [r X n]   rows are "concepts"
-               V = [n x r]
-        U_p = (which is p=r columns of U from A = SVD(A).U * SVD(A).D * SVD(A).V^T
-             where length of each column is 18184
-        V^T_p = [p x n]
-        V_p = [n x p]   which is [100 x 2]
-
-        A * V_p = [m x p]
-           which gives us a columns of "concept" scores for each user (user is a row).
-           can perform clustering on the first 2 columns.
-        */
-        // vT is 25 x 100
-        int p = 2; // can do this for larger than 2 dimensions, but with increasing num of dimensions, distinguishing differences between points become smaller
-        double[][] vp = MatrixUtil.transpose(svd.vT); // 100 x 25
-        vp = MatrixUtil.copySubMatrix(vp, 0, vp.length - 1, 0, p - 1);
-        // [12008x100] * [100x2] = [12008 x 2]
-        double[][] projected = MatrixUtil.multiply(userRecipeStars, vp);
-
-        TDoubleList c0 = new TDoubleArrayList();
-        TDoubleList c1 = new TDoubleArrayList();
-        TIntList indexes = new TIntArrayList();
-        int i;
-        for (i = 0; i < projected.length; ++i) {
-            double x0 = projected[i][0];
-            double x1 = projected[i][1];
-            //if (!(x0 == 0. && x1 == 0.)) {
-            if (x0 != 0. && x1 != 0.) {
-                System.out.printf("%d [%.3f, %.3f]\n", i, x0, x1);
-                c0.add(x0);
-                c1.add(x1);
-                indexes.add(i);
-            }
-        }
-        System.out.printf("%d non-zero projected points\n", indexes.size());
-
-        if (indexes.size() < 10) {
-            System.out.printf("not enough points to build a histogram needed for clustering.\n");
-            return;
-        }
-
-        // calculating all pairs distances is on the order of 1E8 space complexity
-        // calculating all non-zero projected pairs distances is < 1E6 space complexity
-        // calculating all one member non-zero projected pairs distances is ~ 1.5E7 space complexity
-
-        /* find clusters within the 2 projected columns of the non-zero points.
+        /* find clusters within the 2 projected columns of the user-recipe utility matrix.
          these are clusters of user's "concepts 0" and "concepts 1".
          see MMDS chaps 9 and 11.
          TODO: consider comparison to Latent Factor Analysis
@@ -158,160 +66,199 @@ public class ClusterRecipesTest extends TestCase {
          http://www.mmds.org/
          */
 
-        /* make a histogram of the differences.
-        Note that the crossValidationRiskEstimator algorithm expects that the data range of X was normalized
-        to be between 0 and 1, inclusive.  Also, that h=1/m where m is pEst.length.
-        */
-        double[][] projectedNZ = MatrixUtil.zeros(c0.size(), 2);
-        for (i = 0; i < c0.size(); ++i) {
-            projectedNZ[i][0] = c0.get(i);
-            projectedNZ[i][1] = c1.get(i);
+        /*
+        need to build the utility matrix of users vs products and reduce the dimensions to 2 using SVD or CUR Decomposition.
+
+        I opted to use the sparse matrix tensors and linear algebra available from the pytorch API.
+        see script src/test/python/AmazonFoodReviewsSparseUtilityMatrixHandler.py
+        which requires files written by
+        AmazonFoodReviewsReaderWriter a = new AmazonFoodReviewsReaderWriter();
+        a.writeSortedProductFileForCleanedInput();
+
+        this file reads files written by AmazonFoodReviewsSparseUtilityMatrixHandler.py
+        and uses the FindClusters3 class to find the clusters in the 2 subsets of projected data.
+
+         */
+
+        String eol = System.getProperty("line.separator");
+        String fSep = System.getProperty("file.separator");
+
+        String inFilePath = AmazonFoodReviewsReaderWriter.testResDir + AmazonFoodReviewsReaderWriter.sep +
+                "amazon_fine_food_reviews_projected_sep.txt";
+
+        File f = new File(inFilePath);
+        if (!f.exists()) {
+            log.severe("ERROR: file " + inFilePath + " does not exist.  You must run the python script at " +
+                    " src/test/python/AmazonFoodReviewsSparseUtilityMatrixHandler.py to write it.");
+            return;
         }
 
-        int nNZ = projectedNZ.length;
-
-        TDoubleList diffsNZ = new TDoubleArrayList();
-        int j;
-        for (i = 0; i < nNZ; ++i) {
-            for (j = i+1; j < nNZ; ++j) {
-                diffsNZ.add(calcDist(projectedNZ[i], projectedNZ[j]));
+        Double critSep = null;
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new FileReader(f));
+            critSep = Double.parseDouble(in.readLine().trim());
+        } finally {
+            if (in != null) {
+                in.close();
             }
         }
 
-        long _n = (long)(nNZ * Math.log(nNZ)/Math.log(2));
-        System.out.printf("projectedNZ.length=%d,diffsNZ.size=%d.  n*lg(n)=%d\n", nNZ, diffsNZ.size(), _n);
-
-        // normalize diffsNZ to mean=0 and min=0, max=1
-        //double[] mean = new double[1];
-        //double[] stdev = new double[1];
-        //double[] normProjectedNZ = Standardization.standardUnitNormalization(diffsNZ.toArray(), 1, mean, stdev);
-        double[] minMaxProjectedNZ = minMaxScaling(diffsNZ.toArray());
-
-        assert(diffsNZ.size() == minMaxProjectedNZ.length);
-
-        double[] data = minMaxProjectedNZ;
-
-        int n = diffsNZ.size();
-
-        TIntSet nBinsS = new TIntHashSet();
-        //nBinsS.add(Histogram.numberOfBinsFreedmanDiaconis(data));
-        nBinsS.add(Histogram.numberOfBinsSturges(n));
-        nBinsS.add(Histogram.numberOfBinsDoane(data));
-        nBinsS.add(Histogram.numberOfBinsRice(n));
-        nBinsS.add(Histogram.numberOfBinsSqrt(n));
-        TIntList nBins = new TIntArrayList(nBinsS.toArray());
-        nBins.sort();
-        for (int nB = 5; nB < nBins.get(0); ++nB) {
-            nBins.add(nB);
+        if (critSep == null) {
+            throw new IOException("ERROR: file " + inFilePath + " does not exist.  You must run the python script at " +
+                    " src/test/python/AmazonFoodReviewsSparseUtilityMatrixHandler.py to write it.");
         }
-        nBins.sort();
-        double minS = Double.POSITIVE_INFINITY;
-        int minNBins = 0;
-        for (i = 0; i < nBins.size(); ++i) {
-            int nB = nBins.get(i);
-            if (nB == 0) {
-                continue;
+
+        for (int subsetNumber : new int[]{1, 2}) {
+
+            inFilePath = AmazonFoodReviewsReaderWriter.testResDir + AmazonFoodReviewsReaderWriter.sep +
+                    "amazon_fine_food_reviews_projected_subset_"+subsetNumber+"_diffs.csv";
+
+            f = new File(inFilePath);
+            if (!f.exists()) {
+                log.severe("ERROR: file " + inFilePath + " does not exist.  You must run the python script at " +
+                        " src/test/python/AmazonFoodReviewsSparseUtilityMatrixHandler.py to write it.");
+                return;
             }
-            // hist[0] are the bin centers
-            // hist[1] are the bin counts
-            double[][] hist = Histogram.createHistogram(data, nB, 1.,0.);
-            if (hist.length < 2 || hist[0].length < 5) {
-                continue;
-            }
-            double[] pEst = divide(hist[1], data.length);
-            double s = Histogram.crossValidationRiskEstimator(data.length, hist[0][1] - hist[0][0], pEst);
-            if (s < minS) {
-                minS = s;
-                minNBins = nB;
-            }
-        }
-        System.out.printf("smallest risk nBins=%d, all nBins tried=%s\n", minNBins, Arrays.toString(nBins.toArray()));
-        double[][] hist = Histogram.createHistogram(data, minNBins, 1.,0.);
 
-        double factor = 1.0;
-        int critIdx = MiscMath0.findYMaxIndex(hist[1]);
-        double pointSep = factor * hist[0][critIdx];
+            // userId1,userId2
+            List<String> userId1 = new ArrayList<String>();
+            List<String> userId2 = new ArrayList<String>();
+            TDoubleList distance = new TDoubleArrayList();
 
-        ClusterFinder3 finder = new ClusterFinder3();
-        List<TLongSet> groups = finder.findGroups(data, nNZ, pointSep);
-
-        // get the original user ids using indexes
-        List<TIntSet> groups0 = new ArrayList<TIntSet>();
-        List<Set<String>> groups0UserIds = new ArrayList<Set<String>>();
-        for (TLongSet group : groups) {
-            TIntSet group0 = new TIntHashSet();
-            groups0.add(group0);
-
-            Set<String> group0UserId = new HashSet<String>();
-            groups0UserIds.add(group0UserId);
-
-            TLongIterator iter = group.iterator();
-            while (iter.hasNext()) {
-                long idx = iter.next();
-                int oIdx = indexes.get((int)idx);
-                group0.add(oIdx);
-
-                String uId = reader.getUserIdxIdMap().get(oIdx);
-                group0UserId.add(uId);
-            }
-            //System.out.printf("group %d userIds=%s\n", groups0UserIds.size() - 1,
-            //        Arrays.toString(group0UserId.toArray()));
-        }
-        System.out.printf("\nfound %d clusters\n", groups0UserIds.size());
-
-        // invert groups0 for cluster membership lookup
-        /*TIntIntMap userIdClusterMap = new TIntIntHashMap();
-        for (i = 0; i < groups0.size(); ++i) {
-            TIntSet group0 = groups0.get(i);
-            TIntIterator iter = group0.iterator();
-            while (iter.hasNext()) {
-                int idx = iter.next();
-                userIdClusterMap.put(idx, i);
-            }
-        }*/
-
-        ScatterChart01 plotter = new ScatterChart01();
-        List<Double> x = new ArrayList<Double>();
-        List<Double> y = new ArrayList<Double>();
-        for (i = 0; i < projected.length; ++i) {
-            x.add(projected[i][0]);
-            y.add(projected[i][1]);
-        }
-        plotter.addXYData(x, y, Color.BLACK,"projected ("+projected.length+")");
-
-        if (printClusters) {
-            pOut.write(String.format("#cluster %d  userId   product scores\n", i));
-        }
-        Map<Integer, Set<String>> uniqueEntriesInClusters = new HashMap<>();
-        for (i = 0; i < groups0.size(); ++i) {
-            TIntSet group0 = groups0.get(i);
-            x = new ArrayList<Double>();
-            y = new ArrayList<Double>();
-            TIntIterator iter = group0.iterator();
-            Set<String> entries = new HashSet<>();
-            uniqueEntriesInClusters.put(i, entries);
-            while (iter.hasNext()) {
-                int oIdx = iter.next();
-                x.add(projected[oIdx][0]);
-                y.add(projected[oIdx][1]);
-                if (printClusters) {
-                    String str = String.format(" %6d  %10s  %s\n", i, reader.getUserIdxIdMap().get(oIdx),
-                            FormatArray.toString(userRecipeStars[oIdx], "%.0f"));
-                    pOut.write(str);
-                    entries.add(str);
+            String[] items = null;
+            in = null;
+            try {
+                in = new BufferedReader(new FileReader(f));
+                String line = in.readLine();
+                if (line == null) {
+                    throw new IOException("could not read a line from " + inFilePath);
+                }
+                while (line != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) {
+                        break;
+                    }
+                    items = line.split(",");
+                    //userId1,useerId2,dist
+                    userId1.add(items[0]);
+                    userId2.add(items[1]);
+                    distance.add(Double.parseDouble(items[2]));
+                    line = in.readLine();
+                }
+            } finally {
+                if (in != null) {
+                    in.close();
                 }
             }
-            plotter.addXYData(x, y, getNextColorRGB(i), "z " + Integer.toString(i) + " ("+group0.size()+")");
+
+            int n = distance.size();
+            log.info(String.format("read %d distances\n", n));
+
+            //distances.size() == n0*(n0-1)/2.
+            int n0 = (int) Math.ceil(Math.sqrt(n * 2 - 1));// sqrt(2*nd+1)
+
+            inFilePath = AmazonFoodReviewsReaderWriter.testResDir + AmazonFoodReviewsReaderWriter.sep +
+                    "amazon_fine_food_reviews_projected_subset_"+subsetNumber+".csv";
+            f = new File(inFilePath);
+            if (!f.exists()) {
+                log.severe("ERROR: file " + inFilePath + " does not exist.  You must run the python script at " +
+                        " src/test/python/AmazonFoodReviewsSparseUtilityMatrixHandler.py to write it.");
+                return;
+            }
+
+            // these indexes are also the pair indexes in ClusterFinder3
+            Map<Integer, String> projLineIdUserId = new HashMap<>();
+            List<Double> xProj = new ArrayList<>();
+            List<Double> yProj = new ArrayList<>();
+            in = null;
+            int i = 0;
+            try {
+                in = new BufferedReader(new FileReader(f));
+                String line = in.readLine();
+                if (line == null) {
+                    throw new IOException("could not read a line from " + inFilePath);
+                }
+                while (line != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) {
+                        break;
+                    }
+                    items = line.split(",");
+                    // userId,proj[0],proj[1]
+
+                    projLineIdUserId.put(i, items[0]);
+                    xProj.add(Double.parseDouble(items[1]));
+                    yProj.add(Double.parseDouble(items[2]));
+
+                    line = in.readLine();
+                    ++i;
+                }
+            } finally {
+                if (in != null) {
+                    in.close();
+                }
+            }
+            assert (i == n0);
+
+
+            ClusterFinder3 finder = new ClusterFinder3();
+            List<TLongSet> groups = finder.findGroups(distance.toArray(), n0, critSep);
+
+            System.out.printf("\nfound %d clusters\n", groups.size());
+
+            ScatterChart01 plotter = new ScatterChart01();
+            plotter.addXYData(xProj, yProj, Color.BLACK, "projected (" + xProj.size() + ")");
+
+            List<Double> xC;
+            List<Double> yC;
+            for (i = 0; i < groups.size(); ++i) {
+                TLongSet group = groups.get(i);
+                xC = new ArrayList<Double>();
+                yC = new ArrayList<Double>();
+                TLongIterator iter2 = group.iterator();
+                while (iter2.hasNext()) {
+                    int idx = (int) iter2.next();
+                    xC.add(xProj.get(idx));
+                    yC.add(yProj.get(idx));
+                }
+                plotter.addXYData(xC, yC, getNextColorRGB(i), "z " + Integer.toString(i) + " (" + group.size() + ")");
+            }
+
+            XYChart chart = plotter.getChart();
+
+            String outFilePath = "." + fSep + "bin" + fSep + "test-classes" + fSep +
+                    "amazon_fine_food_reviews_projected_subset_"+subsetNumber+"_clusters.png";
+            BitmapEncoder.saveBitmap(chart, outFilePath, BitmapEncoder.BitmapFormat.PNG);
+
+            log.info("wrote " + outFilePath);
+
+            outFilePath = "." + fSep + "bin" + fSep + "test-classes" + fSep +
+                    "amazon_fine_food_reviews_projected_subset_"+subsetNumber+"_clusters.csv";
+            BufferedWriter out = null;
+            try {
+                out = new BufferedWriter(new FileWriter(outFilePath));
+                out.write("#cluster %d  userId\n");
+                for (i = 0; i < groups.size(); ++i) {
+                    TLongIterator iter2 = groups.get(i).iterator();
+                    out.write(Integer.toString(i));
+                    out.write(",");
+                    while (iter2.hasNext()) {
+                        int idx = (int) iter2.next();
+                        out.write(projLineIdUserId.get(idx));
+                        out.write(eol);
+                    }
+                }
+            } finally {
+                if (out != null) {
+                    out.flush();
+                    out.close();
+                }
+            }
+
+            log.info("wrote " + outFilePath);
         }
 
-        XYChart chart = plotter.getChart();
-
-        BitmapEncoder.saveBitmap(chart, outDir + sep + "projected_utility_matrix_clusters", BitmapEncoder.BitmapFormat.PNG);
-
-        // looking for repeat entries... didn't clean the data
-        for (int cId : uniqueEntriesInClusters.keySet()) {
-            System.out.printf("\ncluster %d has %d unique rows of scores\n", cId, uniqueEntriesInClusters.get(cId).size());
-        }
         // TODO: consider affects of associating the users in projected that are not in projectedNZ (hence not in groups0)
         //  to groups0 by proximity.
 
@@ -322,12 +269,7 @@ public class ClusterRecipesTest extends TestCase {
 
         //TODO: consider comparison to Latent Factor Analysis, iterative fit to factor matrices while excluding missing values
 
-        if (printClusters) {
-            if (pOut != null) {
-                pOut.flush();
-                pOut.close();
-            }
-        }
+
     }
 
     public Color getNextColorRGB(int clrCount) {
@@ -405,7 +347,7 @@ public class ClusterRecipesTest extends TestCase {
          * the sets are clusters.
          */
         public List<TLongSet> findGroups(double[] diffs, int n0, double sep) {
-            initMap(diffs.length);
+            initMap(n0);
             findClustersIterative(diffs, n0, sep);
             List<TLongSet> groupList = prune();
             return groupList;
@@ -435,7 +377,7 @@ public class ClusterRecipesTest extends TestCase {
         }
     }
 
-    // adapter from https://knowm.org/open-source/xchart/xchart-example-code/
+    // adapted from https://knowm.org/open-source/xchart/xchart-example-code/
     public class ScatterChart01 implements ExampleChart<XYChart> {
 
         final XYChart chart;

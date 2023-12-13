@@ -221,8 +221,8 @@ e.g.:
   instead of porting it to python.
      will use that to read in amazon_fine_food_reviews_projected_subset_1_diffs.csv and
      amazon_fine_food_reviews_projected_subset_2_diffs.csv and amazon_fine_food_reviews_projected_sep.csv
-  (5) write to test/resources
-      userId, cluster number
+  (5) write to bin/test-classes/
+      userId, cluster number  csv file and png file
 '''
 
 p1 = []
@@ -282,9 +282,8 @@ from scipy.signal import argrelextrema
 yh, xh = np.histogram(diffs, bins=100, density=False, weights=None)
 max_ind = argrelextrema(yh, np.greater)
 
-#take the mean of the first 2
-crit_sep = (xh[max_ind[0][0]] + xh[max_ind[0][1]])/2.
-print(f"sep={crit_sep}\n") #sep=0.065
+crit_sep = xh[max_ind][0]
+print(f"sep={crit_sep}\n")
 
 write_crit_sep_to_file(crit_sep, "amazon_fine_food_reviews_projected_sep.txt")
 
