@@ -36,12 +36,15 @@
     finding the background (surface) density distribution using histograms of the point separations.
     Once the critical distance for point association is determined, the algorithm finds points associated with
     one another, that is, clusters.
+  </p>
 
+<p>
     A few more details on the background surface density:
     The location of the background points in 2-dimensional space are likely an exponential distribution such as
     poisson or gaussian which means that a histogram formed from the 2-point separations can be fit by
     a Generalized Extreme Value (GEV) curve.  The peak gives us the background density and separations smaller than
-    that are clustered.  One often assumes that the clustering scale should be 2.5 times the background noise scale.
+    that are clustered.  One often assumes that the clustering scale should be 2.5 times the background noise scale,
+    that is, the critical separation should be 2-3 times smaller than the separation found for background points.
 </p>
 
 <p> The algorithm runtime complexity is roughly <b>O(N X log<sub>2</sub>(N))</b>.  A previous version used an
