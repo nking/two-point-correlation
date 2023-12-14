@@ -46,7 +46,7 @@ public class LungCancerReader {
     public void readData() throws IOException {
         int missingValue = -1;
         int nRows = 32;
-        int nCols = 37;
+        int nCols = 57;
         y = new int[nRows];
         x = MatrixUtil.zeros(nRows, nCols);
 
@@ -57,7 +57,7 @@ public class LungCancerReader {
 
         final String sep = System.getProperty("file.separator");
         String testDir = ResourceFinder.findTestResourcesDirectory();
-        String path = testDir + sep + "ucl_ml_datasets" + sep + "lung+cancer" + "lung-cancer_data.txt";
+        String path = testDir + sep + "ucl_ml_datasets" + sep + "lung+cancer" + sep + "lung-cancer_data.txt";
         File f = new File(path);
         if (!f.exists()) {
             throw new IOException("could not find file at " + path);
@@ -75,13 +75,14 @@ public class LungCancerReader {
 
             String line = in.readLine();
             boolean missingData;
-            while (line != null) {
+            while (line != null && i < nRows) {
                 line = line.trim();
                 if (line.isEmpty()) {
                     break;
                 }
                 missingData = false;
                 items = line.split(",");
+                assert(items.length == nCols);
                 y[i] = Integer.parseInt(items[0]);
                 for (j = 1; j < items.length; ++j) {
                     if (items[j].equals("?")) {
