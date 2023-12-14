@@ -1,5 +1,11 @@
 downloaded from
-https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews/
+https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews
+
+also see:
+https://snap.stanford.edu/data/web-FineFoods.html/
+
+citation:
+J. McAuley and J. Leskovec. From amateurs to connoisseurs: modeling the evolution of user expertise through online reviews. WWW, 2013.
 
 Description:
 568,454 food reviews Amazon users left for 10 years, up to October 2012
