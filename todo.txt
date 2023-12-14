@@ -1,3 +1,6 @@
+-- consider using the jax API and sparse matrices in place of CURDecomposition
+   in ClusterRecipesTest.java, but in a python script
+
 -- explore the union of Fast DCov algorithm
    and sketches in a streaming context
    also 

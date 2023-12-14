@@ -1,3 +1,10 @@
+.DS_Store
+*~
+*.swp
+*.swm
+*.swn
+*.swo
+.idea
 tmpdata/
 bin
 TEST*txt
