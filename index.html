@@ -29,14 +29,46 @@
     <section class="main-content">
       <p><img src="images/snapshot.001.png" width="250" height="250"> <img src="images/snapshot.002.png" width="250" height="250"> <img src="images/snapshot.004.png" width="250" height="250"></p>
 
-<p>The code is a <b>density based clustering algorithm</b>. The algorithm does not require prior knowledge of the number of clusters, nor does it require a separation distance for association of points, and the algorithm finds non-convex cluster shapes in a statistically based manner that is reproducable. The algorithm learns the association separation distance of points by the statistics of the data itself and applies that in a critical threshold for membership of points within a cluster.</p>
+<p>This project's algorithm is an <b>unsupervised density based clustering algorithm</b>.
+    The algorithm does not require prior knowledge of the number of clusters, nor does it require a separation distance
+    for association of points.  The algorithm finds convex and non-convex cluster shapes in a statistically based manner
+    that is reproducable. The algorithm learns the association distance of cluster membership by
+    finding the background (surface) density distribution using histograms of the point separations.
+    Once the critical distance for point association is determined, the algorithm finds points associated with
+    one another, that is, clusters.
 
-<p>The algorithm, in an unsupervised manner, constructs a distance transform for every non-point relative to the nearest point in the dataset.  Histograms are formed from the inverse square root of the distance transform and the first peaks in the histogram are fit to derive the critical density.  The critical separation between 2 points is then calculated from the critical density and a factor above background.  Any points closer to one another than the critical separation are within clustering distance of one another.</p>
+    A few more details on the background surface density:
+    The location of the background points in 2-dimensional space are likely an exponential distribution such as
+    poisson or gaussian which means that a histogram formed from the 2-point separations can be fit by
+    a Generalized Extreme Value (GEV) curve.  The peak gives us the background density and separations smaller than
+    that are clustered.  One often assumes that the clustering scale should be 2.5 times the background noise scale.
+</p>
 
-<p>The results are available as data and visualized through generated html plots. 
+<p> The algorithm runtime complexity is roughly <b>O(N X log<sub>2</sub>(N))</b>.  A previous version used an
+    <b>O(N)</b> distance transform for the point separations, but the dataset must be dense for that
+    to be an advantage.
+</p>
+
+<!--constructs a distance transform for every non-point relative to the nearest point in the dataset.
+Histograms are formed from the inverse square root of the distance transform and the first peaks in the histogram
+are fit to derive the critical density.  The critical separation between 2 points is then calculated from the critical
+density and a factor above background.  Any points closer to one another than the critical separation are
+within clustering distance of one another.-->
+
+<p>
+    Several dataset examples are shown below.
 The scatter plots and histograms below use <a href="http://d3js.org">d3 js</a></p>
 
-<p>Usage as an API:</p>
+<p>
+The same process can be used with the distances calculated from a brute force O(n^2) approach.
+    This is demonstrated on a subset of the Amazon Fine Food Reviews dataset, which is very large, but sparse,
+    that is a utility matrix of users versus products score is very spase.
+    For this I put the java and python code in the test directory.  The python code uses
+    pytorch's sparse matrix and sparse linear algebra and matplotlib.pyplot. The java code uses a cluster finder from
+    this project and xchart.
+</p>
+
+        <p>Usage as an API:</p>
 
 <pre>
     To use the code with default settings:
@@ -66,13 +98,14 @@ The scatter plots and histograms below use <a href="http://d3js.org">d3 js</a></
 <p>The citation for use of this code in a publication is:</p>
 
 <pre>
-For use before Sep, 2015 
+<pre>
+For use before Sep, 2015
     http://code.google.com/p/two-point-correlation/, 
     Nichole King,  "Unsupervised Clustering Based Upon Voids in Two-Point Correlation". March 15, 2013.
 
 else
     https://github.com/nking/two-point-correlation
-    Nichole King,  "Unsupervised Density Based Clustering Using Distance Transforms". September 25, 2015.
+    Nichole King,  "Unsupervised Density Based Clustering". September 25, 2015.
 
 The code is licensed under the MIT license, usable for commercial and non-commercial purposes:
     http://opensource.org/licenses/mit-license.php
@@ -89,12 +122,7 @@ Similarly, "k-means clustering" requires knowledge of the number of clusters bef
 The core of the algorithm here is was what I needed to create awhile back for work applied to galaxy surveys.  The addition published here is automation of the background determination and large improvements of the
 overall algorithm.  I'm using it in a computer vision project for segmentation.</p>
 
-<h2>
-<a id="performance-metrics" class="anchor" href="#performance-metrics" aria-hidden="true"><span class="octicon octicon-link"></span></a>Performance Metrics</h2>
-
 <blockquote>
-<p>The runtime complexity is roughly O(N<sub>pixels</sub> X log<sub>2</sub>(N<sub>pixels</sub>)) where N<sub>pixels</sub> is the width times height of the image.
-The space complexity is roughly platform word size X width X height, so for a width of 5000 and height of 5000, the code must be run with java arguments to increase the stack size or the data must be reduced in size... like knapsack, the code is using dynamic programmining using arrays that are as long as needed for capacity.</p>
 
 <hr>
 <h2>
@@ -140,7 +168,31 @@ The space complexity is roughly platform word size X width X height, so for a wi
 <img src="images/snapshot_no_clusters_06_dt.png" width="300">
 <hr>
 
-      <footer class="site-footer">
+    <hr>
+    <h2>
+        <a id="amazon-food-reviews" class="anchor" href="#amazon-food-reviews"
+           aria-hidden="true"><span class="octicon octicon-link">
+        </span></a>Clustering in 2 subsets of the Amazon Fine Food Reviews Dataset</h2>
+
+    <p>The utility matrix of user scores for products projected to 2-dimensions using the largest eigvenvalue eigenvectors:</p>
+    <p><img src="images/amazon_fine_food_reviews_projected.png" width="300">
+    </p>
+    <p>A zoom in of the projected utility matrix:</p>
+    <p><img src="images/amazon_fine_food_reviews_projected_zoom.png" width="300">
+    </p>
+    <p>A subset of the projected utility matrix, used to determine critical density for clustering and same subset
+        with clusters plotted:</p>
+    <p><img src="images/amazon_fine_food_reviews_projected_subset_1.png" width="300">
+    <img src="images/amazon_fine_food_reviews_projected_subset_1_clusters.png" width="300">
+    </p>
+    <p>Another subset of the projected utility matrix.  The clustering uses the critical density determined from subset 1:</p>
+    <p><img src="images/amazon_fine_food_reviews_projected_subset_2.png" width="300">
+        <img src="images/amazon_fine_food_reviews_projected_subset_2_clusters.png" width="300">
+    </p>
+    <hr>
+
+
+    <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/nking/two-point-correlation">two-point-correlation</a> is maintained by <a href="https://github.com/nking">nking</a>.</span>
 
         <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
