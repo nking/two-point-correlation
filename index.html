@@ -174,10 +174,36 @@ overall algorithm.  I'm using it in a computer vision project for segmentation.<
            aria-hidden="true"><span class="octicon octicon-link">
         </span></a>Clustering in 2 subsets of the Amazon Fine Food Reviews Dataset</h2>
 
-    <p>The utility matrix of user scores for products projected to 2-dimensions using the largest eigvenvalue eigenvectors:</p>
+    <p><b>The utility matrix of user scores for products projected to 2-dimensions using the largest eigvenvalue eigenvectors:</b></p>
     <p><img src="images/amazon_fine_food_reviews_projected.png" width="300">
     </p>
-    <p>A zoom in of the projected utility matrix:</p>
+    A few notes of what the projection shows:
+    <ul>
+        <li>
+        projections near 0,0 are users who reviewed 1 product, but those products have been reviewed by many users.
+        the ratings may be different.</li>
+        <li>
+        projections to the left of center with y coordinate being near 0
+        are users with many reviews who have products in common
+        </li><li>
+        projections above center with x being near 0
+        in clusters are users with a couple of reviews and those users have a product in common.
+    </li><li>
+        projections to left and above center and not in clusters
+        are users with several reviews having no products in common
+    </li><li>
+        projections to left and above center that are in clusters
+        are users with a few reviews that have 1 product in common.  a spot check shows that
+        all have the same high score for that product in common.
+    </li><li>
+        projections to left and below center that are in clusters
+        are users with a few reviews that have 1 product in common.  a spot check shows that
+        all have the same high score for that product in common.
+    </li>
+</ul>
+
+
+    <p><b>A zoom in of the projected utility matrix:</b></p>
     <p><img src="images/amazon_fine_food_reviews_projected_zoom.png" width="300">
     </p>
     <p>A subset of the projected utility matrix, used to determine critical density for clustering and same subset
