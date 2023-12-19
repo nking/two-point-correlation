@@ -17,6 +17,7 @@ to import packages into this venv after it has been activated:
    pip3 install numpy
    pip3 install torch
    pip3 install matplotlib
+   pip3 install scikit-learn
 
 Misc other:
 

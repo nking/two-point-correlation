@@ -74,7 +74,9 @@ def crossValidationRiskEstimator(n_data, h, pEst):
 
 prods = {}
 users = {}
-csv_path = os.getcwd() + "/../../test/resources/amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv"
+#csv_path = os.getcwd() + "/../../test/resources/amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv"
+csv_path = os.getcwd() + "/../../test/resources/amazon_fine_food_reviews_cleaned2_sort_prod_pr_us_sc.csv"
+filename_out = "amazon_fine_food_reviews_cleaned2_projected.csv" # has 10% less entries, a little noise is removed.
 #csv_path = os.getcwd() + "/../../test/resources/amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc_25.csv"
 #csv_path = os.getcwd() + "/../../test/resources/amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc_100.csv"
 with open(csv_path) as fp:
@@ -110,11 +112,10 @@ tensor([[0., 0., 3., 0.],
 # values are scores
 indexes = [[],[]]
 data = []
-
+#data_sk = []
 # make reverse dictionaries to look up product and user id strings
 prods_idx_to_id = {}
 users_idx_to_id = {}
-
 with open(csv_path) as fp:
     for line in fp:
         pr,u,s = line.rsplit(",")
@@ -124,18 +125,21 @@ with open(csv_path) as fp:
         users_idx_to_id[u_idx] = u
         indexes[0].append(u_idx)
         indexes[1].append(p_idx)
-        data.append(int(s.rstrip("\n")))
+        score = int(s.rstrip("\n"))
+        data.append(score)
+        #data_sk.append((u_idx, p_idx, score))
 
 print(f"read the indices and data for sparse utility matrix\n")
 
-import torch
+#from scipy.sparse import coo_array
+#sparse_utility_2 = coo_array((data, (indexes[0], indexes[1])), shape=(n_users, n_prods))
+## can convert with .tocsr() etc
 
+import torch
 indexes = torch.tensor(indexes, )
 data = torch.tensor(data, dtype=torch.float32)
 sparse_utility = torch.sparse_coo_tensor(indexes, data, [n_users, n_prods])
-
 print(f"have sparse utility matrix\n")
-
 seed = 12345
 torch.manual_seed(seed)
 u,s,v = torch.svd_lowrank(sparse_utility, q=2, niter=2, M=None)
@@ -146,18 +150,19 @@ print(f"s={s}\n")
 # projected = sparse_utility * v
 projected = torch.sparse.mm(sparse_utility, v)
 assert(projected.shape[1] == 2)
-
 print(f"projected.shape={projected.shape}\n")
 
 p = projected.numpy()
 
 # write to csv file.  userId[i], projected[i][0], projected[i][1]
-write_projected_to_file(p, users_idx_to_id, "amazon_fine_food_reviews_cleaned_projected.csv")
+write_projected_to_file(p, users_idx_to_id, filename_out)
 
 import matplotlib.pyplot as plt
 plt.scatter(projected[:,0].numpy(), projected[:,1].numpy(), s=1)
 plt.show()
 
+if True:
+    exit()
 
 '''
 projections near 0,0 are users who reviewed 1 product, but those products have been reviewed by many users.
