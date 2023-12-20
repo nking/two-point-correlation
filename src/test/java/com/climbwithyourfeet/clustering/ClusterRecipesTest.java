@@ -33,6 +33,11 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /**
+ * This class previously used RecipeReviewsReader but is now using the Amazon fine food
+ * review reader.
+ *
+ * Also, the CURDecomposition has been removed to use pytorch sparse eigenvector methods
+ * in the python script.
  *
  * @author nichole
  */
