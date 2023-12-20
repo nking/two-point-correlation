@@ -47,8 +47,14 @@
     that is, the critical separation should be 2-3 times smaller than the separation found for background points.
 </p>
 
-<p> The algorithm runtime complexity is roughly <b>O(N X log<sub>2</sub>(N))</b>.  A previous version used an
-    <b>O(N)</b> distance transform for the point separations, but the dataset must be dense for that
+<p> The algorithm runtime complexity is roughly <b>O(N X log<sub>2</sub>(N))</b>.  
+For calculating a critical distance between points, the algorithm uses KNearestNeighbors 
+with a runtime complexity on the order of
+O(N * log_2(N) + n_nearest_edges * log_2(k)) ~ O(N * log_2(N)).
+For the distance between point pairs close enough to be associated (i.e. clustered in this context), 
+a 2D QuadTree is used for a runtime complexity of O(n).
+A previous version used an
+    O(N) distance transform for the point separations, but the dataset must be dense for that
     to be an advantage.
 </p>
 
