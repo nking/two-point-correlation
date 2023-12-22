@@ -25,6 +25,8 @@ to import packages into this venv after it has been activated:
    pip3 install jupyter_contrib_nbextensions
    pip3 install catboost
    pip3 install shap
+   pip3 install hyperopt
+   pip3 install xgboost
 
 Misc other:
 
