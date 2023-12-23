@@ -33,6 +33,11 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /**
+ * This class previously used RecipeReviewsReader but is now using the Amazon fine food
+ * review reader.
+ *
+ * Also, the CURDecomposition has been removed to use pytorch sparse eigenvector methods
+ * in the python script.
  *
  * @author nichole
  */
@@ -47,8 +52,9 @@ public class ClusterRecipesTest extends TestCase {
             //AmazonFoodReviewsReader reader = new AmazonFoodReviewsReader();
             //reader.readUserProductUtilityMatrix(25);
             AmazonFoodReviewsReaderWriter a = new AmazonFoodReviewsReaderWriter();
-            a.writeSortedProductFileForCleanedInput();
+            //a.writeSortedProductFileForCleanedInput();
             //a.writeProductUseScoreFile(100);
+            a.writeSortedProductFileForCleanedInput2();
             return;
         }*/
 
@@ -59,7 +65,9 @@ public class ClusterRecipesTest extends TestCase {
         /* find clusters within the 2 projected columns of the user-recipe utility matrix.
          these are clusters of user's "concepts 0" and "concepts 1".
          see MMDS chaps 9 and 11.
-         TODO: consider comparison to Latent Factor Analysis
+         TODO: consider comparison to Latent Factor Analysis.
+              unfortunately, need dense matrices for this, even
+              if implementing from scratch using Expectation-Maximization.
          TODO: consider comparison to use of UMap
 
          "Mining of Massive Datasets" by Leskovec, Rajaraman, and Ullman.
@@ -261,15 +269,6 @@ public class ClusterRecipesTest extends TestCase {
 
         // TODO: consider affects of associating the users in projected that are not in projectedNZ (hence not in groups0)
         //  to groups0 by proximity.
-
-        //TODO: consider global and regional affects that can be applied to userRecipeStars
-        // as summarized in MMDS ch09-recsys2.pdf
-
-        //TODO: consider comparison to UMap
-
-        //TODO: consider comparison to Latent Factor Analysis, iterative fit to factor matrices while excluding missing values
-
-
     }
 
     public Color getNextColorRGB(int clrCount) {

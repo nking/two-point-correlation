@@ -1,6 +1,9 @@
 package com.climbwithyourfeet.clustering;
 
+import algorithms.matrix.MatrixUtil;
 import junit.framework.TestCase;
+import no.uib.cipr.matrix.DenseMatrix;
+import no.uib.cipr.matrix.SVD;
 
 /**
  *
@@ -16,8 +19,18 @@ public class LungCancerDataTest extends TestCase {
         double[][] x = reader.getX();
         int[] y = reader.getY();
 
-        //TODO: consider Xgboost or LightGBM
+        int p = 2;
+        SVD svd = SVD.factorize(new DenseMatrix(x));
+        double[][] v = MatrixUtil.convertToRowMajor(svd.getVt());
+        double[][] vp = MatrixUtil.copySubMatrix(v, 0, v.length - 1, 0, p - 1);
+
+        double[][] projected = MatrixUtil.multiply(x, vp);
+
+        // rewriting in python to use existing libraries
+
+        //TODO: consider Xgboost (need alot of data though) or LightGBM
         //TODO: like authors of paper, consider Knn and discriminant plane
 
     }
+
 }

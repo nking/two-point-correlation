@@ -6,6 +6,7 @@ import gnu.trove.iterator.TIntIntIterator;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.*;
 import java.util.*;
@@ -32,16 +33,16 @@ public class AmazonFoodReviewsReaderWriter {
     public static final String filePath0;
     public static final String filePathCleaned;
     public static final String filePathCleanedSortProd;
-    public static final String filePathCleanedDegSortProd;
     public static final String filePathProdUserScoreSortProd;
+    public static final String filePathProdUserScoreSortProd2;
     static {
         try {
             testResDir = ResourceFinder.findTestResourcesDirectory();
             filePath0 = testResDir + sep + "amazon_fine_food_reviews.csv";
             filePathCleaned = testResDir + sep + "amazon_fine_food_reviews_cleaned.csv";
             filePathCleanedSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod.csv";
-            filePathCleanedDegSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_deg_sort_prod.csv";
             filePathProdUserScoreSortProd = testResDir + sep + "amazon_fine_food_reviews_cleaned_sort_prod_pr_us_sc.csv";
+            filePathProdUserScoreSortProd2 = testResDir + sep + "amazon_fine_food_reviews_cleaned2_sort_prod_pr_us_sc.csv";
         } catch (IOException e) {
             e.printStackTrace();
             throw new IllegalStateException("cannot find test resources directory");
@@ -280,6 +281,136 @@ public class AmazonFoodReviewsReaderWriter {
         }
         writeSortedFile(filePathCleaned, filePathCleanedSortProd, true);
         writeProductUseScoreFile(filePathCleanedSortProd, filePathProdUserScoreSortProd);
+    }
+
+    /**
+     * takes as input, the user product score file that is sorted by product, and removes
+     * an entries for a user that has reviewed 1 product and that product has been reviewed by no others.
+     * @throws IOException
+     */
+    public void writeSortedProductFileForCleanedInput2() throws IOException {
+        File f = new File(filePathProdUserScoreSortProd);
+        if (!f.exists()) {
+            writeSortedProductFileForCleanedInput();
+        }
+        removeSingleSingleEntries(filePathProdUserScoreSortProd, filePathProdUserScoreSortProd2);
+    }
+
+    private void removeSingleSingleEntries(String inFilePath, String outFilePath) throws IOException {
+        File f = new File(inFilePath);
+        if (!f.exists()) {
+            throw new IOException("could not find file at " + inFilePath);
+        }
+
+        Map<String, Set<String>> userProductMap = new HashMap<>();
+        Map<String, Set<String>> productUserMap = new HashMap();
+
+        BufferedReader in = null;
+        int i = 0;
+
+        try {
+            in = new BufferedReader(new FileReader(f));
+
+            String[] items;
+            String line = in.readLine();
+            String productId;
+            String userId;
+            Set<String> set;
+            if (line == null) {
+                throw new IOException("could not read a line from " + inFilePath);
+            }
+            while (line != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    break;
+                }
+                line = line.replaceAll("\"\"", "");
+
+                items = line.split(",");
+
+                productId = items[0].trim();
+                userId = items[1].trim();
+
+                set = productUserMap.get(productId);
+                if (set == null) {
+                    set = new HashSet<>();
+                    productUserMap.put(productId, set);
+                }
+                set.add(userId);
+
+                set = userProductMap.get(userId);
+                if (set == null) {
+                    set = new HashSet<>();
+                    userProductMap.put(userId, set);
+                }
+                set.add(productId);
+
+                ++i;
+                line = in.readLine();
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+
+        Set<String> rmU = new HashSet<>();
+        Iterator<Map.Entry<String, Set<String>>> iter = userProductMap.entrySet().iterator();
+        Map.Entry<String, Set<String>> entry;
+        String productId;
+        while (iter.hasNext()) {
+            entry = iter.next();
+            if (userProductMap.get(entry.getKey()).size() == 1) {
+                productId = entry.getValue().iterator().next();
+                if (productUserMap.get(productId).size() == 1) {
+                    rmU.add(entry.getKey());
+                }
+            }
+        }
+
+        // re-read file and write to outFilePath for entries not in rmU
+        BufferedWriter out = null;
+        // write productId, userId, score to fs
+        i = 0;
+        try {
+            in = new BufferedReader(new FileReader(f));
+            out = new BufferedWriter(new FileWriter(new File(outFilePath)));
+
+            String[] items;
+            String line = in.readLine();
+            String userId;
+            Set<String> set;
+            if (line == null) {
+                throw new IOException("could not read a line from " + inFilePath);
+            }
+            while (line != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    break;
+                }
+
+                items = line.split(",");
+                userId = items[1].trim();
+
+                if (!rmU.contains(userId)) {
+                    out.write(line);
+                    out.write(eol);
+                }
+
+                ++i;
+                line = in.readLine();
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.flush();
+                out.close();
+            }
+        }
+
+        System.out.println("done writing " + outFilePath);
     }
 
     protected void writeProductUseScoreFile(String inFilePath, String outFilePath) throws IOException {

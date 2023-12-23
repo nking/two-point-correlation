@@ -17,6 +17,16 @@ to import packages into this venv after it has been activated:
    pip3 install numpy
    pip3 install torch
    pip3 install matplotlib
+   pip3 install scikit-learn
+   pip3 install graphviz
+   pip3 install plotly
+   pip3 install six
+   pip3 install ipywidgets
+   pip3 install jupyter_contrib_nbextensions
+   pip3 install catboost
+   pip3 install shap
+   pip3 install hyperopt
+   pip3 install xgboost
 
 Misc other:
 
