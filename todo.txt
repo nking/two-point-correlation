@@ -8,6 +8,9 @@
    alternatively, can capture the random generator state and re-read it
    in optionally 
 
+-- for LungCancer.ipynb consider adding some of the shap value variable interaction
+plots for the variables that most affect the model.
+
 -- for the Amazon Fine Food dataset, if want to explore variatonal auto-encoder
    latent space Z to compare that as a  non-linear projection to the
    SVD based projections, can use COO sparse matrices: tf.sparse.SparseTensor
