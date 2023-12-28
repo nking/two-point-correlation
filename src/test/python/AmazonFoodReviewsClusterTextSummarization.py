@@ -5,7 +5,6 @@ import pandas as pd
 import tiktoken
 from openai import OpenAI
 
-client = OpenAI()
 #openai-1.6.1-py3
 from ast import literal_eval
 import time
@@ -156,8 +155,6 @@ out_embeddings_path = os.getcwd() + "/../../test/resources/" + \
                       "amazon_fine_food_reviews_cleaned_embeddings_" + str(top_n) + ".csv"
 
 # embedding model parameters
-from openai import OpenAI
-
 client = OpenAI(
     # This is the default and can be omitted
     api_key=os.environ.get("OPENAI_API_KEY"),
