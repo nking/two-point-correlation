@@ -142,13 +142,20 @@ df.head(2)
 df.shape
 #(396400, 10)
 
-## for now, keeping it sorted by product id, but openai example uses Time
-top_n = 1000
-#df = df.sort_values("Time").tail(top_n * 2)  # first cut to first 2k entries, assuming less than half will be fil
-# for openai embeddings free rate limit, we have 3 per minute.  1000 requests = 5.6 hours
-# so reducing to 100
-top_n = 100
-df = df.head(2 * top_n)
+# NOTE: for openai embeddings free rate limit, we have 3 per minute.  1000 requests = 5.6 hours
+# so for a first quick look, will use top_n = 100 and choose from the data sorted by productId,
+# though that leads to a natural clustering already.
+# if increase the limit back up to top_n=1000, then should use the sorted by Time option.
+# NOTE: after have run the requests, can store them in a csv file and read from that
+if True:
+    # quick first run
+    top_n = 100
+    df = df.head(2 * top_n)
+else:
+    # use 1000 entries
+    top_n = 1000
+    df = df.sort_values("Time").tail(top_n * 2)  # first cut to first 2k entries, assuming less than half will be fil
+
 df.drop("Time", axis=1, inplace=True)
 
 out_embeddings_path = os.getcwd() + "/../../test/resources/" + \
@@ -184,6 +191,7 @@ matrix.shape
 
 #for now, use KMeans and assumption of number of clusters
 from sklearn.cluster import KMeans
+
 
 n_clusters = 4
 kmeans = KMeans(n_clusters=n_clusters, init="k-means++", random_state=42)
