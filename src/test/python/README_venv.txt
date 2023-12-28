@@ -27,6 +27,13 @@ to import packages into this venv after it has been activated:
    pip3 install shap
    pip3 install hyperopt
    pip3 install xgboost
+   pip3 install pandas
+   pip3 install openai
+   pip3 install tiktoken
+
+NOTE: use of openai in the Amazon...TextSummaization.py code requires
+you to get an openai api key and install it.
+https://platform.openai.com/docs/quickstart?context=python
 
 Misc other:
 

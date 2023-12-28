@@ -162,6 +162,9 @@ plt.scatter(projected[:,0].numpy(), projected[:,1].numpy(), s=1)
 plt.show()
 
 if True:
+    print("See the rest of the cluster exploration in \n src/test/java/com/climbwithyourfeet/clustering/ClusterRecipesTest.java")
+    print("or src/test/resources/amazon_fine_food_reviews_projected*png")
+    print("or TMP/amazon_fine_food_reviews_projected_subset_?_clusters.png")
     exit()
 
 '''
