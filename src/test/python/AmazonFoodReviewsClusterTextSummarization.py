@@ -177,7 +177,7 @@ df = df[df.n_tokens <= max_tokens].tail(top_n)
 len(df)
 
 if True:
-    # free limit is 3 per minute.  with 1000 requests we have 5.6 hours with polite requests
+    # write to file
     df["embedding"] = df.combined.apply(lambda x: get_embedding(x, model=embedding_model))
     df.to_csv(out_embeddings_path)
 else:
