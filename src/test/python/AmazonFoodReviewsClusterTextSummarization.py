@@ -10,7 +10,7 @@ from ast import literal_eval
 import time
 
 #@retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-def get_embedding(text: str, model="text-similarity-davinci-001", **kwargs) : #-> List[float]:
+def get_embedding(text: str, model="davinci-003", **kwargs) : #-> List[float]:
     #openai.api_key
     #https://platform.openai.com/docs/quickstart?context=python
     # replace newlines, which can negatively affect performance.
@@ -189,7 +189,8 @@ matrix = np.vstack(df.embedding.values)
 matrix.shape
 #(100, 1536)
 
-#for now, use KMeans and assumption of number of clusters
+#for quick look at clusters and their content, 
+# will use KMeans and assumption of number of clusters
 from sklearn.cluster import KMeans
 
 
@@ -241,7 +242,7 @@ for i in range(n_clusters):
     )
     response = client.completions.create(
         model="gpt-3.5-turbo-instruct",
-        #model="text-davinci-003",
+        #model="text-davinci-003", see https://platform.openai.com/docs/guides/text-generation
         prompt=f'What do the following customer reviews have in common?\n\nCustomer reviews:\n"""\n{reviews}\n"""\n\nTheme:',
         temperature=0,
         max_tokens=64,
