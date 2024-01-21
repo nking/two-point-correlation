@@ -27,6 +27,13 @@ to import packages into this venv after it has been activated:
    pip3 install shap
    pip3 install hyperopt
    pip3 install xgboost
+   pip3 install pandas
+   pip3 install openai
+   pip3 install tiktoken
+
+NOTE: use of openai in the Amazon...TextSummaization.py code requires
+you to get an openai api key and install it.
+https://platform.openai.com/docs/quickstart?context=python
 
 Misc other:
 
@@ -37,3 +44,11 @@ for interactive use:
 to make a jupytper notebook:
    pip3 install jupyter
    jupyter notebook
+
+I wasn't successful with converting jupyter notebook to pdf
+outside of the browser normal print functions.
+The notebook version 7 isn't currently compatible with various combinations of
+of libraries including nbconvert, nbclassic, nor jupyter_contrib_nbextensions for
+the conversion to pdf feature.
+(the notebook_shim incorrectly references an obsolete notebook.base package)
+

@@ -3,6 +3,18 @@
    also 
        Dai et al. 2015, "Active Sampling Count Sketch (ASCS) for Online Sparse Estimation of a Trillion Scale Covariance Matrix"
 
+-- LungCancer.ipynb : consider writing the k randomly sampled dataset indices 
+   to a file in bin/test-classes and add a flag to read in the input.
+   alternatively, can capture the random generator state and re-read it
+   in optionally 
+
+-- for LungCancer.ipynb consider adding some of the shap value variable interaction
+plots for the variables that most affect the model.
+
+-- for the Amazon Fine Food dataset, if want to explore variatonal auto-encoder
+   latent space Z to compare that as a  non-linear projection to the
+   SVD based projections, can use COO sparse matrices: tf.sparse.SparseTensor
+   https://www.tensorflow.org/guide/sparse_tensor
    
 -- edit the README.txt and documentation
 -- update the wiki github io web pages
