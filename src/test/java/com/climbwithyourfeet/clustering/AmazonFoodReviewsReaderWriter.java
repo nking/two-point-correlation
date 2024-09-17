@@ -303,7 +303,7 @@ public class AmazonFoodReviewsReaderWriter {
         }
 
         Map<String, Set<String>> userProductMap = new HashMap<>();
-        Map<String, Set<String>> productUserMap = new HashMap();
+        Map<String, Set<String>> productUserMap = new HashMap<>();
 
         BufferedReader in = null;
         int i = 0;
