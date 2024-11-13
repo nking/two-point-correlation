@@ -6,11 +6,17 @@ import time
 import warnings
 from itertools import cycle, islice
 
+# adapted from https://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_comparison.html
+
+from TwoPtCorr import TwoPtCorr
+
 n_samples = 500
 seed = 30
 noisy_circles = datasets.make_circles(
     n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed
 )
+
+blobs = datasets.make_blobs(n_samples=n_samples, random_state=seed)
 
 # ============
 # Set up cluster parameters
@@ -49,7 +55,8 @@ datasets = [
             "min_samples": 7,
             "xi": 0.08,
         },
-    )
+    ),
+    (blobs, {"min_samples": 7, "xi": 0.1, "min_cluster_size": 0.2}),
  ]
 
 
@@ -65,19 +72,23 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
 
     dbscan = cluster.DBSCAN(eps=params["eps"])
 
-    gmm = mixture.GaussianMixture(
-        n_components=params["n_clusters"],
-        covariance_type="full",
-        random_state=params["random_state"],
-    )
-    #gmm = mixture.BayesianGaussianMixture(
+    #gmm = mixture.GaussianMixture(
     #    n_components=params["n_clusters"],
     #    covariance_type="full",
     #    random_state=params["random_state"],
-    #    weight_concentration_prior_type='dirichlet_process'
-    # )
+    #)
+    gmm = mixture.BayesianGaussianMixture(
+        n_components=params["n_clusters"],
+        covariance_type="full",
+        random_state=params["random_state"],
+        weight_concentration_prior_type='dirichlet_process'
+    )
+
+    #NOTE: this is not set-up as a solver because it's not tuned like the java code
+    twoptcorr = TwoPtCorr()
 
     clustering_algorithms = (
+        ("twoptcorr", twoptcorr),
         ("DBSCAN", dbscan),
         ("Gaussian\nMixture", gmm),
     )
@@ -118,7 +129,7 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
                     cycle(
                         [
                             ## from https://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
-                            "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
+                            "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46", "#008941", "#006FA6", "#A30059",
 "#FFDBE5", "#7A4900", "#0000A6", "#63FFAC", "#B79762", "#004D43", "#8FB0FF", "#997D87",
 "#5A0007", "#809693", "#FEFFE6", "#1B4400", "#4FC601", "#3B5DFF", "#4A3B53", "#FF2F80",
 "#61615A", "#BA0900", "#6B7900", "#00C2A0", "#FFAA92", "#FF90C9", "#B903AA", "#D16100",
@@ -130,7 +141,7 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
 "#575329", "#00FECF", "#B05B6F", "#8CD0FF", "#3B9700", "#04F757", "#C8A1A1", "#1E6E00",
 "#7900D7", "#A77500", "#6367A9", "#A05837", "#6B002C", "#772600", "#D790FF", "#9B9700",
 "#549E79", "#FFF69F", "#201625", "#72418F", "#BC23FF", "#99ADC0", "#3A2465", "#922329",
-"#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C"
+"#5B4534", "#FDE8DC", "#404E55", "#0089A3", "#CB7E98", "#A4E804", "#324E72", "#6A3A4C", "#000000"
                             '''
                             "#377eb8",
                             "#ff7f00",
@@ -144,7 +155,8 @@ for i_dataset, (dataset, algo_params) in enumerate(datasets):
                             '''
                         ]
                     ),
-                    int(max(y_pred) + 1),
+                    #int(max(y_pred) + 1),
+                    int(max(y_pred)),
                 )
             )
         )
