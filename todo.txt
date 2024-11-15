@@ -1,8 +1,8 @@
 -- low priority: one day, tidy up the project into multidimensional
    examples and the subset of them which are distributed by
    a member of the exponential family of distributions such as Poisson
-   (in the law of large numbers, all the spatial point distribution 
-   process approach gaussian, so organize by number density too).
+   (by Central Limit Theorem as n becomes large, spatial point distribution 
+   processes approach gaussian, so organize by number density too).
    -- include ML in the examples
 
 -- explore the union of Fast DCov algorithm
