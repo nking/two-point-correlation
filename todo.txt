@@ -5,6 +5,23 @@
    processes approach gaussian, so organize by number density too).
    -- include ML in the examples
 
+-- consider adding to src/main/python/MoreClustering.py 
+   consider adding VAE w/ normalizing flows (though computationally expensive
+    unless using fast jacobians like triangular jacobians to make
+    inverse of function faster):
+    https://youtu.be/qgTvgBCOyn8?si=W-1uh5oLMM-AaDqx
+    -- see NICE additive coupling layers.
+       partitions latent variables z into 2 disjoint subsets, the 2nd of which
+       becomes shifts of the first partition. the forward mapping
+       results in det|Jacobian|=1
+       so a neural network can use several NICE layers to be very expressive.
+       - is volume preserving.
+    -- see use of Real NVP which scales in addition to the shift of NICE:
+    https://github.com/VincentStimper/resampled-base-flows
+    https://pypi.org/project/normflows/
+       - is not volume preserving.
+
+
 -- explore the union of Fast DCov algorithm
    and sketches in a streaming context
    also 

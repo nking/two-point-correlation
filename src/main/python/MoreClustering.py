@@ -6,6 +6,42 @@ import time
 import warnings
 from itertools import cycle, islice
 
+'''
+consider adding VAE w/ normalizing flows (though computationally expensive
+    unless using fast jacobians like triangular jacobians to make
+    inverse of function faster):
+    https://youtu.be/qgTvgBCOyn8?si=W-1uh5oLMM-AaDqx
+    -- see NICE additive coupling layers.
+       partitions latent variables z into 2 disjoint subsets, the 2nd of which
+       becomes shifts of the first partition. the forward mapping
+       results in det|Jacobian|=1
+       so a neural network can use several NICE layers to be very expressive.
+       - is volume preserving.
+    -- see use of Real NVP which scales in addition to the shift of NICE:
+    https://github.com/VincentStimper/resampled-base-flows
+    https://pypi.org/project/normflows/
+       - is not volume preserving.
+    -- masked autoregresive flow:
+       - continuous autoregressive models can be considered flow models using gaussian
+       - can use MADE to compute in parallel the parameters
+         - likelihood eval in parallel too
+         - lower tridiagonal jacobian to speed up inversion
+         - but sampling is sequential and slow
+           -- Inverse Autoregressive Flow attempts to address the sampling bottleneck
+              but the trade-off is that evaluating likelihoods becomes sequential and
+              slow.  hard to use during training, but easy to use on data that is generated
+              via cached z1, z2, ....
+         - like autoregressive models, the likelihoods can be computed exactly
+    => MAF : fast likelihhod eval, slow sequential sampling
+             good for fast raining
+       IAF : fast sampling, slow sequential likelihood eval. 
+             good for fast real-time generation
+    ==> parallel wavenet used a distilled MAF then IAF using likehood eval during training
+        and can be run in parallel.  wavenet is not masked.
+    -- gausianization flows
+
+'''
+
 # adapted from https://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_comparison.html
 
 from TwoPtCorr import TwoPtCorr
