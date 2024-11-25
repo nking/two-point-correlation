@@ -18,8 +18,8 @@ consider adding VAE w/ normalizing flows (though computationally expensive
        so a neural network can use several NICE layers to be very expressive.
        - is volume preserving.
     -- see use of Real NVP which scales in addition to the shift of NICE:
-    https://github.com/VincentStimper/resampled-base-flows
-    https://pypi.org/project/normflows/
+       https://github.com/VincentStimper/resampled-base-flows
+       https://pypi.org/project/normflows/
        - is not volume preserving.
     -- masked autoregresive flow:
        - continuous autoregressive models can be considered flow models using gaussian
@@ -36,6 +36,9 @@ consider adding VAE w/ normalizing flows (though computationally expensive
              good for fast raining
        IAF : fast sampling, slow sequential likelihood eval. 
              good for fast real-time generation
+       see:
+           https://goodboychan.github.io/python/coursera/tensorflow_probability/icl/2021/09/08/01-AutoRegressive-flows-and-RealNVP.html
+           though it is not unsupervised, like the 2ptcorr, dbscan, and mixture model below
     ==> parallel wavenet used a distilled MAF then IAF using likehood eval during training
         and can be run in parallel.  wavenet is not masked.
     -- gausianization flows
