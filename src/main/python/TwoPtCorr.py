@@ -9,8 +9,12 @@ from scipy.signal import find_peaks, peak_prominences
 
 '''
 NOTE: this critical point separation method is not precisely the same as the java code.
-Neither this code nor the java code premise scale well with increasing dimension
+Neither this code nor the java code scale well with increasing dimension
 because euclidean distance differences diminish with increasing dimension.
+
+NOTE: one could consider an iterative approach to improve the estimate to th critical
+separation point by using a clustering metric that works on non-convex data
+(e.g. do not use a silhouette based metric).
 '''
 
 class UnionFind:
