@@ -22,10 +22,10 @@ import java.util.logging.Logger;
  */
 public class GroupFinder {
 
-    private DisjointSet2Helper disjointSetHelper = null;
+    protected DisjointSet2Helper disjointSetHelper = null;
 
     // key = pixIdx, value = disjoint set node with key pixIdx
-    private TLongObjectMap<DisjointSet2Node<Long>> pixNodes = null;
+    protected TLongObjectMap<DisjointSet2Node<Long>> pixNodes = null;
 
     protected boolean use4Neighbors = false;
 

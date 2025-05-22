@@ -716,7 +716,7 @@ public class PairwiseSeparations {
             input[0] = counts[i];
             input[1] = counts[i + 1];
             int n2 = a1 - a0 + 1;
-            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);
+            float[] output = interp.linearInterp(input, n2);
             for (int j = 0; j < n2; ++j) {
                 outputValues.add(j + a0);
                 outputCounts.add(Math.round(output[j]));
@@ -856,7 +856,7 @@ public class PairwiseSeparations {
             input[1] = counts[i + 1];
             int n2 = a1 - a0 + 1;
 
-            float[] output = interp.linearInterp(input, n2, 0, Integer.MAX_VALUE);
+            float[] output = interp.linearInterp(input, n2);
 
             for (int j = 0; j < n2; ++j) {
                 outV.add(j + a0);

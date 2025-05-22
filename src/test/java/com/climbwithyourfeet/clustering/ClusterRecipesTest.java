@@ -1,22 +1,12 @@
 package com.climbwithyourfeet.clustering;
 
-import algorithms.connected.ConnectedValuesGroupFinder;
-import algorithms.dimensionReduction.CURDecomposition;
-import algorithms.disjointSets.DisjointSet2Node;
-import algorithms.matrix.MatrixUtil;
-import algorithms.misc.Histogram;
+import algorithms.disjointSets.UnionFind;
 import algorithms.misc.MiscMath0;
-import algorithms.util.FormatArray;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.TDoubleList;
-import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.hash.TLongObjectHashMap;
-import gnu.trove.set.TIntSet;
 import gnu.trove.set.TLongSet;
-import gnu.trove.set.hash.TIntHashSet;
+import gnu.trove.set.hash.TLongHashSet;
 import junit.framework.TestCase;
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.XYChart;
@@ -334,7 +324,13 @@ public class ClusterRecipesTest extends TestCase {
         }
     }
 
-    static class ClusterFinder3 extends ConnectedValuesGroupFinder {
+    static class ClusterFinder3 {
+
+        protected UnionFind uf;
+
+        protected int minimumNumberInCluster = 3;
+
+        protected Logger log = Logger.getLogger(this.getClass().getName());
 
         /**
          *
@@ -346,19 +342,36 @@ public class ClusterRecipesTest extends TestCase {
          * the sets are clusters.
          */
         public List<TLongSet> findGroups(double[] diffs, int n0, double sep) {
-            initMap(n0);
-            findClustersIterative(diffs, n0, sep);
-            List<TLongSet> groupList = prune();
+            uf = new UnionFind(n0);
+            findClusters(diffs, n0, sep);
+            List<TLongSet> groupList = extractClusters();
             return groupList;
         }
-        private void initMap(int n) {
-            super.pixNodes = new TLongObjectHashMap<DisjointSet2Node<Long>>();
-            for (int i = 0; i < n; ++i) {
-                DisjointSet2Node<Long> pNode = disjointSetHelper.makeSet(new DisjointSet2Node<Long>(Long.valueOf(i)));
-                pixNodes.put(i, pNode);
+
+        protected List<TLongSet> extractClusters() {
+
+            // key = repr node index, value = set of pixels w/ repr
+            Map<Integer, Set<Integer>> reprMap = uf.getComponents();
+
+            // rewrite the above into a list
+            List<TLongSet> groups = new ArrayList<TLongSet>();
+
+            for (Map.Entry<Integer, Set<Integer>> entry : reprMap.entrySet()) {
+                if (entry.getValue().size() >= minimumNumberInCluster) {
+                    TLongSet set = new TLongHashSet();
+                    groups.add(set);
+                    for (int idx : entry.getValue()) {
+                        set.add(idx);
+                    }
+                }
             }
+
+            log.finest("number of groups =" + groups.size());
+
+            return groups;
         }
-        private void findClustersIterative(double[] diffs, int n0, double sep) {
+
+        private void findClusters(double[] diffs, int n0, double sep) {
             int dIdx = 0;
             int n = diffs.length;
             double d;
@@ -368,7 +381,9 @@ public class ClusterRecipesTest extends TestCase {
                 for (j = i+1; j < n0; ++j) {
                     d = Math.abs(diffs[dIdx]);
                     if (d <= sep) {
-                        processPair(i, j);
+                        if (uf.find(i) != uf.find(j)) {
+                            uf.union(i, j);
+                        }
                     }
                     ++dIdx;
                 }
